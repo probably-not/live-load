@@ -14,7 +14,14 @@ defmodule LiveLoad.MixProject do
       elixirc_paths: elixirc_path(Mix.env()),
       deps: deps(),
       name: "LiveLoad",
-      description: "A load testing framework for simulating real, distributed, live load on your application.",
+      description:
+        "./README.md"
+        |> Path.expand()
+        |> File.read!()
+        |> String.split("<!-- HEX PACKAGE DESCRIPTION START -->")
+        |> Enum.at(1)
+        |> String.split("<!-- HEX PACKAGE DESCRIPTION END -->")
+        |> List.first(),
       source_url: @source_url,
       homepage_url: @homepage_url,
       package: [
