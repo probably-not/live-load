@@ -4,6 +4,20 @@ This changelog follows the same style that I have seen LiveView, Phoenix, and El
 
 I'll try to make sure that I maintain it - probably should create some sort of automated process for it... who knows.
 
+## 0.0.1-rc.1
+
+Like I said on the rc.0, this is just a base release. No changes, other than the fact that I got the CI/CD workflow working.
+
+There's literally no code written yet.
+
+### Bug fixes
+
+### Enhancements
+
+### Deprecations
+
+### Removal of previously deprecated functionality
+
 ## 0.0.1-rc.0
 
 This is a base release, to set up the repository, the project, initial workflows, and more.
