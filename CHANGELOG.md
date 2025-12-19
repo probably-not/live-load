@@ -4,6 +4,18 @@ This changelog follows the same style that I have seen LiveView, Phoenix, and El
 
 I'll try to make sure that I maintain it - probably should create some sort of automated process for it... who knows.
 
+## 0.0.1-rc.3
+
+Just one last one before I am ready to get started. Just wanted to get the README and the disclaimer out there.
+
+### Bug fixes
+
+### Enhancements
+
+### Deprecations
+
+### Removal of previously deprecated functionality
+
 ## 0.0.1-rc.2
 
 Still no code, but I realized that my version and my changelog are out of sync. This is why I need to figure out a way to automate this...
