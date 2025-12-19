@@ -1,7 +1,7 @@
 defmodule LiveLoad.MixProject do
   use Mix.Project
 
-  @version "0.0.1-rc.3"
+  @version "0.0.1-rc.4"
   @source_url "https://github.com/probably-not/live-load"
   @homepage_url @source_url
 
@@ -21,7 +21,8 @@ defmodule LiveLoad.MixProject do
         |> String.split("<!-- HEX PACKAGE DESCRIPTION START -->")
         |> Enum.at(1)
         |> String.split("<!-- HEX PACKAGE DESCRIPTION END -->")
-        |> List.first(),
+        |> List.first()
+        |> String.trim(),
       source_url: @source_url,
       homepage_url: @homepage_url,
       package: [

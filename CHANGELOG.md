@@ -4,6 +4,18 @@ This changelog follows the same style that I have seen LiveView, Phoenix, and El
 
 I'll try to make sure that I maintain it - probably should create some sort of automated process for it... who knows.
 
+## 0.0.1-rc.4
+
+Well, I screwed that one up... so let's try one more but with a shorted package description.
+
+### Bug fixes
+
+### Enhancements
+
+### Deprecations
+
+### Removal of previously deprecated functionality
+
 ## 0.0.1-rc.3
 
 Just one last one before I am ready to get started. Just wanted to get the README and the disclaimer out there.
