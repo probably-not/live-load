@@ -15,7 +15,7 @@ defmodule Mix.Tasks.InitPlaywright do
     playwright_source = Path.join([assets_dir, "node_modules", "playwright"])
     playwright_core_source = Path.join([assets_dir, "node_modules", "playwright-core"])
 
-    archive_path = Path.join(priv_dir, "playwright_bundle.tar.gz")
+    archive_path = Path.join([priv_dir, version, "playwright_bundle.tar.gz"])
 
     :erl_tar.create(
       String.to_charlist(archive_path),
