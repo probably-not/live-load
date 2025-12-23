@@ -4,10 +4,10 @@ defmodule Mix.Tasks.InitPlaywright do
   @moduledoc false
   use Mix.Task
 
-  def run(_opts) do
+  def run([version]) do
     assets_dir = "assets"
     File.mkdir_p!(assets_dir)
-    System.cmd("npm", ["install", "playwright"], cd: assets_dir)
+    System.cmd("npm", ["install", "playwright@#{version}"], cd: assets_dir)
 
     priv_dir = "priv/playwright"
     File.mkdir_p!(priv_dir)
