@@ -1,7 +1,20 @@
 defmodule LiveLoad.Browser.Playwright.Decompressor do
   @moduledoc false
 
-  def extract!(version) do
+  def extract!(version) when is_binary(version) do
+    version
+    |> Version.parse!()
+    |> Version.to_string()
+    |> do_extract()
+  end
+
+  def extract!(%Version{} = version) do
+    version
+    |> Version.to_string()
+    |> do_extract()
+  end
+
+  defp do_extract(version) when is_binary(version) do
     archive = Application.app_dir(:live_load, ["priv", "playwright", version, "playwright_bundle.tar.gz"])
     dest = Application.app_dir(:live_load, ["priv", "playwright", version, "bin"])
     File.rm_rf!(dest)
