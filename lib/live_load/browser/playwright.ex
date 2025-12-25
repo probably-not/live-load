@@ -1,0 +1,52 @@
+defmodule LiveLoad.Browser.Playwright do
+  @moduledoc false
+
+  @behaviour LiveLoad.Browser
+
+  use Supervisor
+
+  alias LiveLoad.Browser.Playwright.Decompressor
+
+  @type option() ::
+          {:playwright_cli_path, Path.t()}
+          | {:name, GenServer.name()}
+          | {:playwright_version, Version.version()}
+          | {:startup_timeout, pos_integer()}
+
+  @impl LiveLoad.Browser
+  def start_link(opts) do
+    validations = [
+      :playwright_cli_path,
+      name: __MODULE__,
+      playwright_version: playwright_version_from_env(),
+      startup_timeout: 1000
+    ]
+
+    opts = Keyword.validate!(opts, validations)
+
+    {name, opts} = Keyword.pop!(opts, :name)
+    {timeout, opts} = Keyword.pop!(opts, :startup_timeout)
+    {playwright_version, opts} = Keyword.pop!(opts, :playwright_version)
+
+    {playwright_cli_path, _opts} =
+      Keyword.pop_lazy(opts, :playwright_cli_path, fn ->
+        Decompressor.extract!(playwright_version)
+      end)
+
+    Supervisor.start_link(__MODULE__, {playwright_cli_path, timeout}, name: name)
+  end
+
+  @impl Supervisor
+  def init({playwright_cli_path, timeout}) do
+    children = [
+      {PlaywrightEx.Supervisor, [executable: playwright_cli_path, timeout: timeout]}
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  @default_playwright_version "1.57.0"
+  defp playwright_version_from_env do
+    Application.get_env(:live_load, :playwright_version, @default_playwright_version)
+  end
+end
