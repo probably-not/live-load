@@ -1,4 +1,4 @@
-defmodule LiveLoad.Browser.Playwright.Decompressor do
+defmodule LiveLoad.Browser.Connection.Playwright.Decompressor do
   @moduledoc false
 
   def extract!(version) when is_binary(version) do

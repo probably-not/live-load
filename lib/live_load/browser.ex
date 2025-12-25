@@ -1,19 +1,3 @@
 defmodule LiveLoad.Browser do
-  @moduledoc """
-  `LiveLoad.Browser` defines a behaviour for how to connect to browsers with LiveLoad.
-  By default, implementations for a local Playwright instance (`LiveLoad.Browser.Playwright`)
-  and for a remote Playwright instance via the Chrome DevTools Protocol (`LiveLoad.Browser.RemotePlaywright`)
-  are included in LiveLoad and can be looked at as reference implementations for implementing other browsers.
-  """
-
-  @type t() :: module()
-
-  @type context() :: term()
-  @type page() :: term()
-  @type element() :: term()
-
-  @type option() :: LiveLoad.Browser.Playwright.option() | {atom(), term()}
-  @type opts() :: [option()]
-
-  @callback start_link(opts :: opts()) :: GenServer.on_start() | Supervisor.on_start()
+  @moduledoc false
 end

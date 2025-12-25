@@ -1,11 +1,11 @@
-defmodule LiveLoad.Browser.Playwright do
+defmodule LiveLoad.Browser.Connection.Playwright do
   @moduledoc false
 
-  @behaviour LiveLoad.Browser
+  @behaviour LiveLoad.Browser.Connection
 
   use Supervisor
 
-  alias LiveLoad.Browser.Playwright.Decompressor
+  alias LiveLoad.Browser.Connection.Playwright.Decompressor
 
   @type option() ::
           {:playwright_cli_path, Path.t()}
@@ -13,7 +13,7 @@ defmodule LiveLoad.Browser.Playwright do
           | {:playwright_version, Version.version()}
           | {:startup_timeout, pos_integer()}
 
-  @impl LiveLoad.Browser
+  @impl LiveLoad.Browser.Connection
   def start_link(opts) do
     validations = [
       :playwright_cli_path,
