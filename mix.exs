@@ -33,7 +33,12 @@ defmodule LiveLoad.MixProject do
       ],
       aliases: aliases(),
       docs: docs(),
-      dialyzer: [plt_file: {:no_warn, "priv/plts/dialyzer.plt"}, plt_add_deps: :app_tree],
+      dialyzer: [
+        plt_file: {:no_warn, "priv/plts/project.plt"},
+        plt_core_path: "priv/plts/core.plt",
+        plt_add_deps: :app_tree,
+        ignore_warnings: ".dialyzer.ignore-warnings.exs"
+      ],
       test_coverage: [tool: ExCoveralls]
     ]
   end
