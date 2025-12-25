@@ -6,6 +6,8 @@ defmodule LiveLoad.Browser do
   are included in LiveLoad and can be looked at as reference implementations for implementing other browsers.
   """
 
+  @type t() :: module()
+
   @type context() :: term()
   @type page() :: term()
   @type element() :: term()
