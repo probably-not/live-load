@@ -12,6 +12,12 @@ defmodule LiveLoad.Browser.Connection.Playwright do
           | {:playwright_version, Version.version()}
           | {:startup_timeout, pos_integer()}
 
+  @impl true
+  def new_context(%LiveLoad.Browser{} = browser) do
+    playwright_browser = browser.private.playwright_connection_browser
+    PlaywrightEx.Browser.new_context(playwright_browser.guid, timeout: 10_000)
+  end
+
   @impl LiveLoad.Browser.Connection
   def start_link(opts) do
     validations = [
@@ -33,6 +39,12 @@ defmodule LiveLoad.Browser.Connection.Playwright do
       end)
 
     Supervisor.start_link(__MODULE__, {playwright_cli_path, timeout}, name: name)
+  end
+
+  @impl true
+  def after_start(%LiveLoad.Browser{} = browser) do
+    {:ok, playwright_browser} = PlaywrightEx.launch_browser(:chromium, timeout: 10_000)
+    LiveLoad.Browser.put_private(browser, :playwright_connection_browser, playwright_browser)
   end
 
   @impl Supervisor

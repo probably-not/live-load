@@ -48,4 +48,12 @@ defmodule LiveLoad.Browser.Connection do
       defoverridable after_stop: 1
     end
   end
+
+  ##############################
+  ####### Connection API #######
+  ##############################
+
+  def new_context(%LiveLoad.Browser{connection: {mod, _opts}} = browser) do
+    mod.new_context(browser)
+  end
 end
