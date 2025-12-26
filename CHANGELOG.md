@@ -4,6 +4,22 @@ This changelog follows the same style that I have seen LiveView, Phoenix, and El
 
 I'll try to make sure that I maintain it - probably should create some sort of automated process for it... who knows.
 
+## 0.0.1-rc.5
+
+I've done a bunch of experimentation since the last release.
+This code is still pretty much unusable...
+But I figured, if there's anyone who has installed it for some reason, here's some progress that I've made.
+You can see how this is shaping up, and take a look at my comments and todos throughout the code.
+I'm still not going to really put anything into the Changelog yet - I'll probably strip the changelog when I actually release later on.
+
+### Bug fixes
+
+### Enhancements
+
+### Deprecations
+
+### Removal of previously deprecated functionality
+
 ## 0.0.1-rc.4
 
 Well, I screwed that one up... so let's try one more but with a shorted package description.
