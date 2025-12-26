@@ -14,16 +14,24 @@ defmodule LiveLoad.Browser.Context do
   """
 
   alias __MODULE__
+  alias LiveLoad.Browser
 
   @type t() :: %__MODULE__{
-          browser: LiveLoad.Browser.t(),
+          browser: Browser.t(),
           private: %{optional(atom()) => term()}
         }
 
   defstruct [:browser, private: %{}]
 
-  def new(%LiveLoad.Browser{} = browser) do
+  def new(%Browser{} = browser) do
     %Context{browser: browser}
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and runs the `new_context/1` callback found on the implementation.
+  """
+  def navigate(%Context{browser: %Browser{connection: {mod, _opts}}} = context, url) do
+    mod.navigate(context, url)
   end
 
   @spec put_private(context :: t(), key :: atom(), value :: term()) :: t
