@@ -15,7 +15,8 @@ defmodule LiveLoad do
     Application.ensure_all_started(:amoc)
     scenarios = discover_scenarios(opts)
     # TODO: Start up FLAME Pool (or Pools, if we have regionality involved?)
-    Enum.map(scenarios, &run_scenario/1)
+    Enum.each(scenarios, &run_scenario/1)
+    {:ok, nil}
   end
 
   defp discover_scenarios(_opts) do

@@ -33,7 +33,7 @@ defmodule LiveLoad.Browser do
   @doc """
   Delegates to the connection implementation on the browser and runs the `new_context/1` callback found on the implementation.
   """
-  @spec new_context(browser :: Browser.t()) :: {:ok, Context.t()} | {:error, term()}
+  @spec new_context(browser :: Browser.t()) :: {:ok, Browser.Context.t()} | {:error, term()}
   def new_context(%Browser{connection: {mod, _opts}} = browser) do
     mod.new_context(browser)
   end

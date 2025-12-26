@@ -62,7 +62,7 @@ defmodule LiveLoad.Scenario do
         LiveLoad.Scenario.Runner.run(__MODULE__, user_id, opts)
       end
 
-      def config, do: %{}
+      def config, do: {:ok, %{}}
       defoverridable config: 0
     end
   end

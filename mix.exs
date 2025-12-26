@@ -37,6 +37,7 @@ defmodule LiveLoad.MixProject do
         plt_file: {:no_warn, "priv/plts/project.plt"},
         plt_core_path: "priv/plts/core.plt",
         plt_add_deps: :app_tree,
+        plt_add_apps: [:amoc],
         ignore_warnings: ".dialyzer.ignore-warnings.exs"
       ],
       test_coverage: [tool: ExCoveralls]
