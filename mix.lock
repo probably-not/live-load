@@ -19,7 +19,7 @@
   "makeup_erlang": {:hex, :makeup_erlang, "1.0.2", "03e1804074b3aa64d5fad7aa64601ed0fb395337b982d9bcf04029d68d51b6a7", [:mix], [{:makeup, "~> 1.0", [hex: :makeup, repo: "hexpm", optional: false]}], "hexpm", "af33ff7ef368d5893e4a267933e7744e46ce3cf1f61e2dccf53a111ed3aa3727"},
   "nimble_options": {:hex, :nimble_options, "1.1.1", "e3a492d54d85fc3fd7c5baf411d9d2852922f66e69476317787a7b2bb000a61b", [:mix], [], "hexpm", "821b2470ca9442c4b6984882fe9bb0389371b8ddec4d45a9504f00a66f650b44"},
   "nimble_parsec": {:hex, :nimble_parsec, "1.4.2", "8efba0122db06df95bfaa78f791344a89352ba04baedd3849593bfce4d0dc1c6", [:mix], [], "hexpm", "4b21398942dda052b403bbe1da991ccd03a053668d147d53fb8c4e0efe09c973"},
-  "playwright_ex": {:git, "https://github.com/ftes/playwright_ex.git", "fecf965de8c87709fd81881da72ab0d4ec005d59", [ref: "fecf965de8c87709fd81881da72ab0d4ec005d59"]},
+  "playwright_ex": {:hex, :playwright_ex, "0.3.0", "f7da6263ca608b1fcef0b0f0a27b8d847fd18d9c938c85d3171dfd9bb97a9a1a", [:mix], [{:nimble_options, "~> 1.1", [hex: :nimble_options, repo: "hexpm", optional: false]}], "hexpm", "3f741eeaa983bda70f213dc835fb16daa5a2648d9290c75f2c8122c42589112a"},
   "recase": {:hex, :recase, "0.8.1", "ab98cd35857a86fa5ca99036f575241d71d77d9c2ab0c39aacf1c9b61f6f7d1d", [:mix], [], "hexpm", "9fd8d63e7e43bd9ea385b12364e305778b2bbd92537e95c4b2e26fc507d5e4c2"},
   "remixed_remix": {:hex, :remixed_remix, "2.0.2", "17305cc2219193c5c443fb5e59e7c67e77a70a80db55fa95068355c0de3bd575", [:mix], [], "hexpm", "2d73083e2e1ad31f742275323c4ad3c184924932346721447e8e5905326a99c4"},
   "statistex": {:hex, :statistex, "1.1.0", "7fec1eb2f580a0d2c1a05ed27396a084ab064a40cfc84246dbfb0c72a5c761e5", [:mix], [], "hexpm", "f5950ea26ad43246ba2cce54324ac394a4e7408fdcf98b8e230f503a0cba9cf5"},
