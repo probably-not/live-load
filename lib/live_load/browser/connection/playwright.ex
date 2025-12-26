@@ -21,8 +21,14 @@ defmodule LiveLoad.Browser.Connection.Playwright do
     playwright_browser = browser.private.playwright_connection_browser
 
     case PlaywrightEx.Browser.new_context(playwright_browser.guid, timeout: 10_000) do
-      {:ok, context} -> browser |> Context.new() |> Context.put_private(:playwright_connection_context, context)
-      {:error, _reason} = error -> error
+      {:ok, context} ->
+        browser
+        |> Context.new()
+        |> Context.put_private(:playwright_connection_context, context)
+        |> then(&{:ok, &1})
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -30,12 +36,12 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def navigate(%Context{} = context, url) do
     if frame = context.private[:playwright_connection_frame] do
       do_navigate(frame, url)
-      context
+      {:ok, context}
     else
       with {:ok, context} <- initialize_context_frame(context) do
         frame = context.private.playwright_connection_frame
         do_navigate(frame, url)
-        context
+        {:ok, context}
       end
     end
   end
