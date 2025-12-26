@@ -22,7 +22,7 @@ defmodule LiveLoad.Browser.Connection do
   #############################
   ##### Browser Callbacks #####
   #############################
-  @callback new_context(browser :: LiveLoad.Browser.t()) :: {:ok, term()} | {:error, term()}
+  @callback new_context(browser :: LiveLoad.Browser.t()) :: {:ok, LiveLoad.Browser.Context.t()} | {:error, term()}
 
   ##############################
   ## Lifecycle Hook Callbacks ##
@@ -53,6 +53,7 @@ defmodule LiveLoad.Browser.Connection do
   ####### Connection API #######
   ##############################
 
+  @doc false
   def new_context(%LiveLoad.Browser{connection: {mod, _opts}} = browser) do
     mod.new_context(browser)
   end

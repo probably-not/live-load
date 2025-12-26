@@ -4,7 +4,10 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   use Supervisor
   use LiveLoad.Browser.Connection
 
-  alias LiveLoad.Browser.Connection.Playwright.Decompressor
+  alias __MODULE__
+  alias LiveLoad.Browser
+  alias LiveLoad.Browser.Connection
+  alias LiveLoad.Browser.Context
 
   @type option() ::
           {:playwright_cli_path, Path.t()}
@@ -12,13 +15,17 @@ defmodule LiveLoad.Browser.Connection.Playwright do
           | {:playwright_version, Version.version()}
           | {:startup_timeout, pos_integer()}
 
-  @impl true
-  def new_context(%LiveLoad.Browser{} = browser) do
+  @impl Connection
+  def new_context(%Browser{} = browser) do
     playwright_browser = browser.private.playwright_connection_browser
-    PlaywrightEx.Browser.new_context(playwright_browser.guid, timeout: 10_000)
+
+    case PlaywrightEx.Browser.new_context(playwright_browser.guid, timeout: 10_000) do
+      {:ok, context} -> browser |> Context.new() |> Context.put_private(:playwright_connection_context, context)
+      {:error, _reason} = error -> error
+    end
   end
 
-  @impl LiveLoad.Browser.Connection
+  @impl Connection
   def start_link(opts) do
     validations = [
       :playwright_cli_path,
@@ -35,16 +42,16 @@ defmodule LiveLoad.Browser.Connection.Playwright do
 
     {playwright_cli_path, _opts} =
       Keyword.pop_lazy(opts, :playwright_cli_path, fn ->
-        Decompressor.extract!(playwright_version)
+        Playwright.Decompressor.extract!(playwright_version)
       end)
 
     Supervisor.start_link(__MODULE__, {playwright_cli_path, timeout}, name: name)
   end
 
-  @impl true
-  def after_start(%LiveLoad.Browser{} = browser) do
+  @impl Connection
+  def after_start(%Browser{} = browser) do
     {:ok, playwright_browser} = PlaywrightEx.launch_browser(:chromium, timeout: 10_000)
-    LiveLoad.Browser.put_private(browser, :playwright_connection_browser, playwright_browser)
+    Browser.put_private(browser, :playwright_connection_browser, playwright_browser)
   end
 
   @impl Supervisor
