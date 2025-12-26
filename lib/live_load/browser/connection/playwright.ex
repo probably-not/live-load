@@ -26,6 +26,37 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   end
 
   @impl true
+  def navigate(%Context{} = context, url) do
+    if frame = context.private[:playwright_connection_frame] do
+      do_navigate(frame, url)
+      context
+    else
+      with {:ok, context} <- initialize_context_frame(context) do
+        frame = context.private.playwright_connection_frame
+        do_navigate(frame, url)
+        context
+      end
+    end
+  end
+
+  defp initialize_context_frame(%Context{} = context) do
+    playwright_context = context.private.playwright_connection_context
+
+    case PlaywrightEx.BrowserContext.new_page(playwright_context.guid, timeout: 10_000) do
+      {:ok, %{main_frame: frame}} -> {:ok, Context.put_private(context, :playwright_connection_frame, frame)}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  defp do_navigate(frame, %URI{} = url) do
+    do_navigate(frame, URI.to_string(url))
+  end
+
+  defp do_navigate(frame, url) when is_binary(url) do
+    PlaywrightEx.Frame.goto(frame.guid, url: url, timeout: 10_000)
+  end
+
+  @impl true
   def after_start(%Browser{} = browser) do
     {:ok, playwright_browser} = PlaywrightEx.launch_browser(:chromium, timeout: 10_000)
     Browser.put_private(browser, :playwright_connection_browser, playwright_browser)

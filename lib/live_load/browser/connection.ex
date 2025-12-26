@@ -5,6 +5,9 @@ defmodule LiveLoad.Browser.Connection do
   is included in LiveLoad and can be looked at as reference implementation for implementing other browsers.
   """
 
+  alias LiveLoad.Browser
+  alias LiveLoad.Browser.Context
+
   @type t() :: module()
 
   @type context() :: term()
@@ -22,15 +25,16 @@ defmodule LiveLoad.Browser.Connection do
   #############################
   ##### Browser Callbacks #####
   #############################
-  @callback new_context(browser :: LiveLoad.Browser.t()) :: {:ok, LiveLoad.Browser.Context.t()} | {:error, term()}
+  @callback new_context(browser :: Browser.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback navigate(context :: Context.t(), url :: String.t() | URI.t()) :: {:ok, Context.t()} | {:error, term()}
 
   ##############################
   ## Lifecycle Hook Callbacks ##
   ##############################
-  @callback before_start(browser :: LiveLoad.Browser.t()) :: LiveLoad.Browser.t()
-  @callback after_start(browser :: LiveLoad.Browser.t()) :: LiveLoad.Browser.t()
-  @callback before_stop(browser :: LiveLoad.Browser.t()) :: LiveLoad.Browser.t()
-  @callback after_stop(browser :: LiveLoad.Browser.t()) :: :ok
+  @callback before_start(browser :: Browser.t()) :: Browser.t()
+  @callback after_start(browser :: Browser.t()) :: Browser.t()
+  @callback before_stop(browser :: Browser.t()) :: Browser.t()
+  @callback after_stop(browser :: Browser.t()) :: :ok
 
   defmacro __using__(opts) do
     quote location: :keep, bind_quoted: [opts: opts] do
@@ -54,7 +58,7 @@ defmodule LiveLoad.Browser.Connection do
   ##############################
 
   @doc false
-  def new_context(%LiveLoad.Browser{connection: {mod, _opts}} = browser) do
+  def new_context(%Browser{connection: {mod, _opts}} = browser) do
     mod.new_context(browser)
   end
 end
