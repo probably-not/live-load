@@ -74,7 +74,7 @@ defmodule LiveLoad.MixProject do
     [
       # Core Dependencies
       {:flame, "~> 0.5.3"},
-      {:amoc, "~> 4.0"},
+      {:amoc, "~> 4.0", runtime: false},
       {:telemetry, "~> 1.0"},
       {:playwright_ex, github: "ftes/playwright_ex", ref: "fecf965de8c87709fd81881da72ab0d4ec005d59"},
       ## Testing and Development Dependencies
