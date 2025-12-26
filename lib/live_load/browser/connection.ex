@@ -1,9 +1,8 @@
 defmodule LiveLoad.Browser.Connection do
   @moduledoc """
   `LiveLoad.Browser.Connection` defines a behaviour for how to connect to browsers with LiveLoad.
-  By default, implementations for a local Playwright instance (`LiveLoad.Browser.Connection.Playwright`)
-  and for a remote Playwright instance via the Chrome DevTools Protocol (`LiveLoad.Browser.Connection.RemotePlaywright`)
-  are included in LiveLoad and can be looked at as reference implementations for implementing other browsers.
+  By default, an implementation for a Playwright instance (`LiveLoad.Browser.Connection.Playwright`)
+  is included in LiveLoad and can be looked at as reference implementation for implementing other browsers.
   """
 
   @type t() :: module()
