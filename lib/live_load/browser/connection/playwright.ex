@@ -14,6 +14,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
 
   @impl true
   defdelegate start_link(opts), to: LiveLoad.Browser.Connection.Playwright.Supervisor
+  defdelegate child_spec(opts), to: LiveLoad.Browser.Connection.Playwright.Supervisor
 
   @impl true
   def new_context(%Browser{} = browser) do
