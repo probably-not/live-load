@@ -1,9 +1,8 @@
 defmodule LiveLoad.Browser.Connection.Playwright do
   @moduledoc false
 
-  @behaviour LiveLoad.Browser.Connection
-
   use Supervisor
+  use LiveLoad.Browser.Connection
 
   alias LiveLoad.Browser.Connection.Playwright.Decompressor
 
