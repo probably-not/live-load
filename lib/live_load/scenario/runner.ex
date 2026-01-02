@@ -7,16 +7,34 @@ defmodule LiveLoad.Scenario.Runner do
 
   @spec run(scenario :: module(), user_id :: Scenario.user_id(), config :: Scenario.config()) :: Scenario.user_result()
   def run(scenario, user_id, opts) do
-    {:ok, pid} = :gen_statem.start_link(__MODULE__, {scenario, user_id, opts}, [])
-    :gen_statem.call(pid, :wait, :infinity)
+    ref = make_ref()
+
+    try do
+      :gen_statem.enter_loop(
+        __MODULE__,
+        [],
+        :initializing,
+        %{ref: ref, user_id: user_id, opts: opts, scenario: scenario},
+        [
+          {:next_event, :internal, :initializing}
+        ]
+      )
+    catch
+      :exit, :normal ->
+        receive do
+          {^ref, :result, result} -> result
+        after
+          0 -> :ok
+        end
+    end
   end
 
   @impl true
   def callback_mode, do: :state_functions
 
   @impl true
-  def init({scenario, user_id, opts}) do
-    {:ok, :initializing, %{user_id: user_id, opts: opts, scenario: scenario}, {:next_event, :internal, :initializing}}
+  def init(_) do
+    raise "unreachable"
   end
 
   def initializing(:internal, :initializing, data) do
@@ -49,12 +67,8 @@ defmodule LiveLoad.Scenario.Runner do
     {:next_state, :done, {data, {:error, reason}}, [{{:timeout, :stop}, 0, :stop}]}
   end
 
-  def done({:timeout, :stop}, :stop, _data) do
+  def done({:timeout, :stop}, :stop, {data, result}) do
+    send(self(), {data.ref, :result, result})
     {:stop, :normal}
-  end
-
-  def done({:call, from}, :wait, {_data, result}) do
-    :gen_statem.reply(from, result)
-    :keep_state_and_data
   end
 end
