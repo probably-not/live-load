@@ -19,13 +19,12 @@ defmodule LiveLoad.Scenario do
   > you are creating scenarios with `use LiveLoad.Scenario` will make certain
   > that any scenario you create will be stable and runnable by LiveLoad.
 
-  > ### `use LiveLoad.Scenario` {: .info}
+  > ### The `c:config/1` callback {: .info}
   >
   > When you `use LiveLoad.Scenario`, the `LiveLoad.Scenario` module will
-  > set `@behaviour LiveLoad.Scenario` and define an empty `c:config/1`
-  > function for you. If you don't need any configurable parts in your
-  > scenario, this injected callback can remain and does not need to be
-  > overriden by your scenario module.
+  > define an empty `c:config/1` function for you which will return an empty map.
+  > If you don't need any configurable parts in your scenario, this injected
+  > callback can remain and does not need to be overriden by your scenario module.
   """
 
   @typedoc "Any module implementing the `LiveLoad.Scenario` behaviour."
@@ -134,15 +133,19 @@ defmodule LiveLoad.Scenario do
       }
 
       @impl :amoc_scenario
+      @doc false
       def init do
         LiveLoad.Scenario.Init.init(__MODULE__)
       end
 
       @impl :amoc_scenario
+      @doc false
       def start(user_id, opts) do
         LiveLoad.Scenario.Runner.run(__MODULE__, user_id, opts)
       end
 
+      @impl LiveLoad.Scenario
+      @doc false
       def config(_opts), do: {:ok, %{}}
       defoverridable config: 1
     end
