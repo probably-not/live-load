@@ -7,9 +7,10 @@ defmodule LiveLoad do
   @type opts() :: [option()]
 
   # TODO: Spec results
-  @type results() :: term()
+  @type result() :: {LiveLoad.Scenario.t(), term()}
+  @type results() :: [result()]
 
-  @spec run(opts :: opts()) :: {:ok, results()} | {:error, term()}
+  @spec run(opts :: opts()) :: results() | {:error, term()}
   def run(opts) do
     scenarios = discover_scenarios(opts)
     # TODO: Start up FLAME Pool (or Pools, if we have regionality involved?)
