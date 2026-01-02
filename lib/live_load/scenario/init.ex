@@ -4,6 +4,7 @@ defmodule LiveLoad.Scenario.Init do
   def init(scenario) do
     runner_pid = :amoc_config.get(:runner_pid)
     heartbeat_timeout = :amoc_config.get(:heartbeat_timeout_seconds)
+    scenario_timeout = :amoc_config.get(:scenario_timeout)
 
     plan = [
       {:all,
@@ -23,7 +24,8 @@ defmodule LiveLoad.Scenario.Init do
        scenario_config: scenario.config(),
        __config__: %{
          runner_pid: runner_pid,
-         heartbeat_timeout: to_timeout(second: heartbeat_timeout)
+         heartbeat_timeout: to_timeout(second: heartbeat_timeout),
+         scenario_timeout: scenario_timeout
        }
      }}
   end

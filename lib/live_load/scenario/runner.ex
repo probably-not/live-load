@@ -46,7 +46,10 @@ defmodule LiveLoad.Scenario.Runner do
     :amoc_coordinator.add({data.scenario, :heartbeat}, data.user_id)
 
     {:next_state, :waiting_for_completion, data,
-     [{{:timeout, :heartbeat}, data.opts.__config__.heartbeat_timeout, :heartbeat}]}
+     [
+       {{:timeout, :heartbeat}, data.opts.__config__.heartbeat_timeout, :heartbeat},
+       {:state_timeout, data.opts.__config__.scenario_timeout, :scenario_timeout}
+     ]}
   end
 
   def waiting_for_completion({:call, _from}, :wait, _data) do
@@ -65,6 +68,10 @@ defmodule LiveLoad.Scenario.Runner do
 
   def waiting_for_completion(:info, {:DOWN, _ref, :process, _pid, reason}, data) do
     {:next_state, :done, {data, {:error, reason}}, [{{:timeout, :stop}, 0, :stop}]}
+  end
+
+  def waiting_for_completion(:state_timeout, :scenario_timeout, data) do
+    {:next_state, :done, {data, {:error, :timeout}}, [{{:timeout, :stop}, 0, :stop}]}
   end
 
   def done({:timeout, :stop}, :stop, {data, result}) do
