@@ -8,6 +8,9 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   alias LiveLoad.Browser
   alias LiveLoad.Browser.Context
 
+  @typedoc """
+  Options passed in to `PlaywrightEx` in order to start up the Playwright instance.
+  """
   @type option() ::
           {:playwright_cli_path, Path.t()}
           | {:name, GenServer.name()}
@@ -15,12 +18,14 @@ defmodule LiveLoad.Browser.Connection.Playwright do
           | {:startup_timeout, pos_integer()}
 
   @impl true
+  @doc false
   defdelegate start_link(opts), to: LiveLoad.Browser.Connection.Playwright.Supervisor
 
   @doc false
   defdelegate child_spec(opts), to: LiveLoad.Browser.Connection.Playwright.Supervisor
 
   @impl true
+  @doc false
   def new_context(%Browser{} = browser) do
     playwright_browser = browser.private.playwright_connection_browser
 
@@ -37,6 +42,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   end
 
   @impl true
+  @doc false
   def navigate(%Context{} = context, url) do
     if frame = context.private[:playwright_connection_frame] do
       do_navigate(frame, url)
@@ -68,6 +74,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   end
 
   @impl true
+  @doc false
   def after_start(%Browser{} = browser) do
     {:ok, playwright_browser} = PlaywrightEx.launch_browser(:chromium, timeout: 10_000)
     Browser.put_private(browser, :playwright_connection_browser, playwright_browser)
