@@ -31,30 +31,7 @@ defmodule LiveLoad.Scenario do
 
       @impl :amoc_scenario
       def init do
-        runner_pid = :amoc_config.get(:runner_pid)
-        heartbeat_timeout = :amoc_config.get(:heartbeat_timeout_seconds)
-
-        plan = [
-          {:all,
-           fn {:timeout, _count} ->
-             send(runner_pid, {:scenario_timeout, __MODULE__, node()})
-           end}
-        ]
-
-        # We manually increase the coordinator timeout by a few seconds.
-        # The heartbeat will run on the heartbeat timeout, and will die off
-        # when the running process completes.
-        coordinator_timeout = heartbeat_timeout + 3
-        :amoc_coordinator.start({__MODULE__, :heartbeat}, plan, coordinator_timeout)
-
-        {:ok,
-         %{
-           scenario_config: config(),
-           __config__: %{
-             runner_pid: runner_pid,
-             heartbeat_timeout: to_timeout(second: heartbeat_timeout)
-           }
-         }}
+        LiveLoad.Scenario.Init.init(__MODULE__)
       end
 
       @impl :amoc_scenario
