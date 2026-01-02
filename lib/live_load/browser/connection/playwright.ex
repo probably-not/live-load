@@ -45,12 +45,13 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def navigate(%Context{} = context, url) do
     if frame = context.private[:playwright_connection_frame] do
-      do_navigate(frame, url)
-      {:ok, context}
+      with {:ok, _} <- do_navigate(frame, url) do
+        {:ok, context}
+      end
     else
-      with {:ok, context} <- initialize_context_frame(context) do
-        frame = context.private.playwright_connection_frame
-        do_navigate(frame, url)
+      with {:ok, context} <- initialize_context_frame(context),
+           frame = context.private.playwright_connection_frame,
+           {:ok, _} <- do_navigate(frame, url) do
         {:ok, context}
       end
     end
