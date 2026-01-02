@@ -44,11 +44,7 @@ defmodule LiveLoad.Scenario.Runner do
   end
 
   def initializing(:internal, :initializing, data) do
-    Task.Supervisor.async_nolink(LiveLoad.Scenario.Runner.TaskSupervisor, data.scenario, :run, [
-      data.user_id,
-      data.opts.scenario_config
-    ])
-
+    partitioned_async_nolink(data.scenario, data.user_id, data.opts.scenario_config)
     :amoc_coordinator.add({data.scenario, :heartbeat}, data.user_id)
 
     {:next_state, :waiting_for_completion, data,
@@ -83,5 +79,14 @@ defmodule LiveLoad.Scenario.Runner do
   def done({:timeout, :stop}, :stop, {data, result}) do
     send(self(), {data.ref, :result, result})
     {:stop, :normal}
+  end
+
+  defp partitioned_async_nolink(scenario, user_id, config) do
+    Task.Supervisor.async_nolink(
+      {:via, PartitionSupervisor, {LiveLoad.Scenario.Runner.TaskSupervisor, user_id}},
+      scenario,
+      :run,
+      [user_id, config]
+    )
   end
 end
