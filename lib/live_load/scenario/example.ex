@@ -3,6 +3,11 @@ defmodule LiveLoad.Scenario.Example do
   use LiveLoad.Scenario
 
   @impl true
+  def config(opts) do
+    {:ok, Map.new(opts)}
+  end
+
+  @impl true
   def run(user_id, config) do
     # credo:disable-for-next-line
     dbg(user_id)
