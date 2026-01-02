@@ -3,10 +3,13 @@ defmodule LiveLoad.Scenario.Example do
   use LiveLoad.Scenario
 
   @impl true
-  def run(_user_id, _config) do
-    # dbg(user_id)
-    # dbg(config)
-    # dbg(node())
+  def run(user_id, config) do
+    # credo:disable-for-next-line
+    dbg(user_id)
+    # credo:disable-for-next-line
+    dbg(config)
+    # credo:disable-for-next-line
+    dbg(node())
 
     Process.sleep(60_000)
     :ok
