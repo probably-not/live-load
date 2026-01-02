@@ -5,6 +5,19 @@ defmodule LiveLoad.Scenario.Runner do
 
   alias LiveLoad.Scenario
 
+  defmodule Data do
+    @moduledoc false
+    @type t() :: %__MODULE__{
+            ref: reference(),
+            scenario: Scenario.t(),
+            user_id: Scenario.user_id(),
+            opts: Scenario.config(),
+            task_pid: pid() | nil,
+            result: Scenario.user_result()
+          }
+    defstruct [:ref, :scenario, :user_id, :opts, :task_pid, :result]
+  end
+
   @spec run(scenario :: module(), user_id :: Scenario.user_id(), config :: Scenario.config()) :: Scenario.user_result()
   def run(scenario, user_id, opts) do
     ref = make_ref()
@@ -20,7 +33,7 @@ defmodule LiveLoad.Scenario.Runner do
         __MODULE__,
         [],
         :initializing,
-        %{ref: ref, user_id: user_id, opts: opts, scenario: scenario},
+        %Data{ref: ref, user_id: user_id, opts: opts, scenario: scenario},
         [
           {:next_event, :internal, :initializing}
         ]
@@ -43,41 +56,42 @@ defmodule LiveLoad.Scenario.Runner do
     raise "unreachable"
   end
 
-  def initializing(:internal, :initializing, data) do
-    partitioned_async_nolink(data.scenario, data.user_id, data.opts.scenario_config)
+  def initializing(:internal, :initializing, %Data{} = data) do
+    %Task{} = task = partitioned_async_nolink(data.scenario, data.user_id, data.opts.scenario_config)
     :amoc_coordinator.add({data.scenario, :heartbeat}, data.user_id)
 
-    {:next_state, :waiting_for_completion, data,
+    {:next_state, :waiting_for_completion, %{data | task_pid: task.pid},
      [
        {{:timeout, :heartbeat}, data.opts.__config__.heartbeat_timeout, :heartbeat},
        {:state_timeout, data.opts.__config__.scenario_timeout, :scenario_timeout}
      ]}
   end
 
-  def waiting_for_completion({:call, _from}, :wait, _data) do
+  def waiting_for_completion({:call, _from}, :wait, %Data{} = _data) do
     {:keep_state_and_data, :postpone}
   end
 
-  def waiting_for_completion({:timeout, :heartbeat}, :heartbeat, data) do
+  def waiting_for_completion({:timeout, :heartbeat}, :heartbeat, %Data{} = data) do
     :amoc_coordinator.add({data.scenario, :heartbeat}, data.user_id)
     {:keep_state_and_data, [{{:timeout, :heartbeat}, data.opts.__config__.heartbeat_timeout, :heartbeat}]}
   end
 
-  def waiting_for_completion(:info, {ref, result}, data) do
+  def waiting_for_completion(:info, {ref, result}, %Data{} = data) do
     Process.demonitor(ref, [:flush])
-    {:next_state, :done, {data, result}, [{{:timeout, :stop}, 0, :stop}]}
+    {:next_state, :done, %{data | result: result}, [{{:timeout, :stop}, 0, :stop}]}
   end
 
-  def waiting_for_completion(:info, {:DOWN, _ref, :process, _pid, reason}, data) do
-    {:next_state, :done, {data, {:error, reason}}, [{{:timeout, :stop}, 0, :stop}]}
+  def waiting_for_completion(:info, {:DOWN, _ref, :process, _pid, reason}, %Data{} = data) do
+    {:next_state, :done, %{data | result: {:error, reason}}, [{{:timeout, :stop}, 0, :stop}]}
   end
 
-  def waiting_for_completion(:state_timeout, :scenario_timeout, data) do
-    {:next_state, :done, {data, {:error, :timeout}}, [{{:timeout, :stop}, 0, :stop}]}
+  def waiting_for_completion(:state_timeout, :scenario_timeout, %Data{} = data) do
+    {:next_state, :done, %{data | result: {:error, :timeout}}, [{{:timeout, :stop}, 0, :stop}]}
   end
 
-  def done({:timeout, :stop}, :stop, {data, result}) do
-    send(self(), {data.ref, :result, result})
+  def done({:timeout, :stop}, :stop, %Data{} = data) do
+    Process.exit(data.task_pid, :kill)
+    send(self(), {data.ref, :result, data.result})
     {:stop, :normal}
   end
 
