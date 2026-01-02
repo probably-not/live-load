@@ -1,5 +1,7 @@
 defmodule LiveLoad.Browser.Connection.Playwright do
-  @moduledoc false
+  @moduledoc """
+  An implementation of `LiveLoad.Browser.Connection` that uses the `PlaywrightEx` library to run and communicate with a Playwright instance.
+  """
 
   use LiveLoad.Browser.Connection
 
@@ -14,6 +16,8 @@ defmodule LiveLoad.Browser.Connection.Playwright do
 
   @impl true
   defdelegate start_link(opts), to: LiveLoad.Browser.Connection.Playwright.Supervisor
+
+  @doc false
   defdelegate child_spec(opts), to: LiveLoad.Browser.Connection.Playwright.Supervisor
 
   @impl true
