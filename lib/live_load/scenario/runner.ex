@@ -9,6 +9,12 @@ defmodule LiveLoad.Scenario.Runner do
   def run(scenario, user_id, opts) do
     ref = make_ref()
 
+    # A trick learned from the AMoC docs:
+    # Instead of creating a new process and linking it,
+    # we simply take over the current process with `:gen_statem.enter_loop`.
+    # Since AMoC raises processes properly, this means that the `:gen_statem`
+    # engine can take over the current process and run the loop internally,
+    # and we can avoid creating one of the extra processes per user.
     try do
       :gen_statem.enter_loop(
         __MODULE__,
