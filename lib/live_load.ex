@@ -21,8 +21,6 @@ defmodule LiveLoad do
     [LiveLoad.Scenario.Example]
   end
 
-  # TODO: Amoc takes full control of the node - that's why we need to do all of this
-  # start and stop stuff every time. Should we use the peer module to initialize things under their own nodes?
   # TODO: How are we running scenarios?
   # - Raise FLAME nodes with Trackable that stays alive until we are done running the test
   # - Collect all nodes from FLAME pools.
