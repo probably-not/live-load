@@ -39,15 +39,20 @@ defmodule LiveLoad.Browser.Connection do
   defmacro __using__(opts) do
     quote location: :keep, bind_quoted: [opts: opts] do
       @behaviour LiveLoad.Browser.Connection
+
+      @doc false
       def before_start(browser), do: browser
       defoverridable before_start: 1
 
+      @doc false
       def after_start(browser), do: browser
       defoverridable after_start: 1
 
+      @doc false
       def before_stop(browser), do: browser
       defoverridable before_stop: 1
 
+      @doc false
       def after_stop(browser), do: :ok
       defoverridable after_stop: 1
     end
