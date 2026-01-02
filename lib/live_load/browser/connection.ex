@@ -1,6 +1,7 @@
 defmodule LiveLoad.Browser.Connection do
   @moduledoc """
   `LiveLoad.Browser.Connection` defines a behaviour for how to connect to browsers with LiveLoad.
+
   By default, an implementation for a Playwright instance (`LiveLoad.Browser.Connection.Playwright`)
   is included in LiveLoad and can be looked at as reference implementation for implementing other browsers.
   """
@@ -8,6 +9,7 @@ defmodule LiveLoad.Browser.Connection do
   alias LiveLoad.Browser
   alias LiveLoad.Browser.Context
 
+  @typedoc "Any module implementing the `LiveLoad.Browser.Connection` behaviour."
   @type t() :: module()
 
   @type context() :: term()
@@ -31,9 +33,17 @@ defmodule LiveLoad.Browser.Connection do
   ##############################
   ## Lifecycle Hook Callbacks ##
   ##############################
+
+  @doc "A hook called before the supervision tree for the browser is initialized in `LiveLoad.Browser.start_link/2`"
   @callback before_start(browser :: Browser.t()) :: Browser.t()
+
+  @doc "A hook called after the supervision tree for the browser is initialized in `LiveLoad.Browser.start_link/2`."
   @callback after_start(browser :: Browser.t()) :: Browser.t()
+
+  @doc "A hook called before the supervision tree for the browser is stopped in `LiveLoad.Browser.stop/3`"
   @callback before_stop(browser :: Browser.t()) :: Browser.t()
+
+  @doc "A hook called after the supervision tree for the browser is stopped in `LiveLoad.Browser.stop/3`"
   @callback after_stop(browser :: Browser.t()) :: :ok
 
   defmacro __using__(opts) do
