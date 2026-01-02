@@ -2,11 +2,11 @@ defmodule LiveLoad.Scenario do
   @moduledoc false
 
   @type t() :: module()
-  @type config() :: map()
+  @type config() :: map() | keyword() | struct()
   @type user_id() :: integer() | binary()
   @type user_result() :: :ok | {:ok, term()} | {:error, term()} | term()
 
-  @callback config() :: {:ok, config()} | {:error, term()}
+  @callback config(opts :: keyword()) :: {:ok, config()} | {:error, term()}
   @callback run(user_id :: user_id(), config :: config()) :: user_result()
 
   defmacro __using__(opts) do
@@ -64,6 +64,15 @@ defmodule LiveLoad.Scenario do
         """
       }
 
+      @required_variable %{
+        name: :scenario_config_opts,
+        default_value: [],
+        description: ~c"""
+        INTERNAL VARIABLE.
+        The config opts keyword list that is passed to the scenario's config/1 callback.
+        """
+      }
+
       @impl :amoc_scenario
       def init do
         LiveLoad.Scenario.Init.init(__MODULE__)
@@ -74,8 +83,8 @@ defmodule LiveLoad.Scenario do
         LiveLoad.Scenario.Runner.run(__MODULE__, user_id, opts)
       end
 
-      def config, do: {:ok, %{}}
-      defoverridable config: 0
+      def config(_opts), do: {:ok, %{}}
+      defoverridable config: 1
     end
   end
 end
