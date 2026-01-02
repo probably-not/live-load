@@ -4,6 +4,23 @@ This changelog follows the same style that I have seen LiveView, Phoenix, and El
 
 I'll try to make sure that I maintain it - probably should create some sort of automated process for it... who knows.
 
+## 0.0.1-rc.6
+
+Alright, more things shaping up! For anyone who for some reason has pulled this library in and is looking at the documentation,
+you will start to see that I have been making a lot of updates. First, the LiveLoad.Scenario module and it's functionality is fairly closed.
+Obviusly there's still a lot of work to do here, but the overall runner functionality is working and solid - configs, amoc, timeouts, some tricks.
+I did a lot more experimentation to try and understand amoc as well - so running should be pretty easy from now. I think next up I'll get back to
+fleshing out the browser and making sure that scenarios have access to them and that they can use them. Should I make scenarios effect based? That
+may make testing a bit simpler... I haven't thought about testing yet (it's usually the last thing I think about)...
+
+### Bug fixes
+
+### Enhancements
+
+### Deprecations
+
+### Removal of previously deprecated functionality
+
 ## 0.0.1-rc.5
 
 I've done a bunch of experimentation since the last release.
