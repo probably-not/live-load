@@ -22,7 +22,7 @@ defmodule LiveLoad.Browser.Connection do
   #############################
   ##### Process Callbacks #####
   #############################
-  @callback start_link(opts :: opts()) :: GenServer.on_start() | Supervisor.on_start()
+  @callback child_spec(opts :: opts()) :: Supervisor.child_spec()
 
   #############################
   ##### Browser Callbacks #####
@@ -49,6 +49,10 @@ defmodule LiveLoad.Browser.Connection do
   defmacro __using__(opts) do
     quote location: :keep, bind_quoted: [opts: opts] do
       @behaviour LiveLoad.Browser.Connection
+
+      @doc false
+      def child_spec(_opts), do: %{id: __MODULE__, start: {Function, :identity, [:ignore]}, restart: :temporary}
+      defoverridable child_spec: 1
 
       @doc false
       def before_start(browser), do: browser

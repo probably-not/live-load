@@ -33,7 +33,23 @@ defmodule LiveLoad.Browser.Supervisor do
       nil ->
         raise RuntimeError, """
         The connection could not be found under the given supervisor!
-        This is a critical issue and should be reported to the maintainers.
+
+        The `LiveLoad.Browser.Supervisor.connection_pid!/1` function should
+        only be called by `LiveLoad.Browser.Connection` implementations which
+        implement the `child_spec/1` callback of the behaviour, allowing them to
+        initialize a proper supervision tree for the browser connection.
+
+        If the `child_spec/1` callback has not been implemented and your
+        `LiveLoad.Browser.Connection` implementation requires the current PID of
+        the connection process and it is not a named local process that can be
+        accessed via the process name, this is an issue in the implementation and the
+        implmentation must ensure that the `child_spec/1` callback returns a full
+        child spec, or ensure that the implementation has a properly configured name.
+
+        If your `LiveLoad.Browser.Connection` implementation does not require the
+        current PID of the connection process and this function has not been called
+        by your implementation's code, this may be an issue in `LiveLoad` itself,
+        and should be reported to the maintainers.
 
         Please file issues at: https://github.com/probably-not/live-load/issues.
         """
