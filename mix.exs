@@ -1,7 +1,7 @@
 defmodule LiveLoad.MixProject do
   use Mix.Project
 
-  @version "0.0.1-rc.6"
+  @version "0.0.1-rc.7"
   @source_url "https://github.com/probably-not/live-load"
   @homepage_url @source_url
 
@@ -29,7 +29,7 @@ defmodule LiveLoad.MixProject do
         maintainers: ["Coby Benveniste"],
         licenses: ["MIT"],
         links: %{"GitHub" => @source_url, "Home Page" => @homepage_url},
-        files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG*"]
+        files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG*", "DEVLOG*"]
       ],
       aliases: aliases(),
       docs: docs(),
@@ -98,12 +98,13 @@ defmodule LiveLoad.MixProject do
   defp docs do
     [
       extras: [
+        "DEVLOG.md": [title: "Devlog"],
         "CHANGELOG.md": [title: "Changelog"],
         "README.md": [title: "README"]
       ],
       groups_for_extras: [],
       skip_undefined_reference_warnings_on: Path.wildcard("**/*.md"),
-      main: "LiveLoad"
+      main: "Devlog"
     ]
   end
 end
