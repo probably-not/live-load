@@ -1,7 +1,7 @@
 defmodule LiveLoad.MixProject do
   use Mix.Project
 
-  @version "0.0.1-rc.7"
+  @version "0.0.1-rc.8"
   @source_url "https://github.com/probably-not/live-load"
   @homepage_url @source_url
 
@@ -104,7 +104,7 @@ defmodule LiveLoad.MixProject do
       ],
       groups_for_extras: [],
       skip_undefined_reference_warnings_on: Path.wildcard("**/*.md"),
-      main: "Devlog"
+      main: "devlog"
     ]
   end
 end
