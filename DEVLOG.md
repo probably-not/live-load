@@ -12,6 +12,11 @@ I'll cut a release, and update the Devlog. The Changelog is going to be fully re
 
 A Devlog? Whaaaaat???
 
+Also, a quick change in the `LiveLoad.Browser.Connection` behaviour - instead of it requiring `start_link` as a callback,
+I am requiring `child_spec` as a callback. This way, things that have global processes can simply use the default `child_spec`
+implementation which returns `:ignore` in the supervision tree. I stole this pattern from the
+(`Phoenix.PubSub.Adapter`)[https://hexdocs.pm/phoenix_pubsub/Phoenix.PubSub.Adapter.html] behaviour.
+
 ## 0.0.1-rc.6
 
 Alright, more things shaping up! For anyone who for some reason has pulled this library in and is looking at the documentation,
