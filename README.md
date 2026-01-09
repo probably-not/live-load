@@ -4,9 +4,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Hex version badge](https://img.shields.io/hexpm/v/live_load.svg)](https://hex.pm/packages/live_load)
 
-## TODOs:
-- [ ] Set up expert as the override for Lexical so I can upgrade Elixir and Erlang versions. Lexical does not support the latest versions since development has moved to Expert.
-
 <!-- README START -->
 
 <!-- HEX PACKAGE DESCRIPTION START -->
