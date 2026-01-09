@@ -37,6 +37,9 @@ defmodule LiveLoad.Scenario do
   """
   @type config() :: map() | keyword() | struct() | term()
 
+  @typedoc false
+  @type internal_config() :: %{runner_pid: pid(), heartbeat_timeout: timeout(), scenario_timeout: timeout()}
+
   @typedoc "The user ID passed to the `c:run/3` callback. It can be either an integer or a binary."
   @type user_id() :: integer() | binary()
 

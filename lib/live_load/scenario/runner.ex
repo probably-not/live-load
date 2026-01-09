@@ -7,25 +7,28 @@ defmodule LiveLoad.Scenario.Runner do
 
   defmodule Data do
     @moduledoc false
+
+    @type config() :: %{scenario_config: Scenario.config(), __config__: Scenario.internal_config()}
+
     @type t() :: %__MODULE__{
             ref: reference(),
             scenario: Scenario.t(),
             context: Scenario.Context.t(),
             user_id: Scenario.user_id(),
-            opts: Scenario.config(),
+            config: config(),
             task_pid: pid() | nil,
             result: Scenario.user_result()
           }
-    defstruct [:ref, :scenario, :context, :user_id, :opts, :task_pid, :result]
+    defstruct [:ref, :scenario, :context, :user_id, :config, :task_pid, :result]
   end
 
   @spec run(
           scenario :: module(),
           context :: Scenario.Context.t(),
           user_id :: Scenario.user_id(),
-          config :: %{scenario_config: Scenario.config(), __config__: map()}
+          config :: Data.config()
         ) :: Scenario.user_result()
-  def run(scenario, context, user_id, opts) do
+  def run(scenario, context, user_id, config) do
     ref = make_ref()
 
     # A trick learned from the AMoC docs:
@@ -39,7 +42,7 @@ defmodule LiveLoad.Scenario.Runner do
         __MODULE__,
         [],
         :initializing,
-        %Data{ref: ref, user_id: user_id, opts: opts, scenario: scenario, context: context},
+        %Data{ref: ref, user_id: user_id, config: config, scenario: scenario, context: context},
         [
           {:next_event, :internal, :initializing}
         ]
@@ -63,13 +66,13 @@ defmodule LiveLoad.Scenario.Runner do
   end
 
   def initializing(:internal, :initializing, %Data{} = data) do
-    %Task{} = task = partitioned_async_nolink(data.scenario, data.context, data.user_id, data.opts.scenario_config)
+    %Task{} = task = partitioned_async_nolink(data.scenario, data.context, data.user_id, data.config.scenario_config)
     :amoc_coordinator.add({data.scenario, :heartbeat}, data.user_id)
 
     {:next_state, :waiting_for_completion, %{data | task_pid: task.pid},
      [
-       {{:timeout, :heartbeat}, data.opts.__config__.heartbeat_timeout, :heartbeat},
-       {:state_timeout, data.opts.__config__.scenario_timeout, :scenario_timeout}
+       {{:timeout, :heartbeat}, data.config.__config__.heartbeat_timeout, :heartbeat},
+       {:state_timeout, data.config.__config__.scenario_timeout, :scenario_timeout}
      ]}
   end
 
@@ -79,7 +82,7 @@ defmodule LiveLoad.Scenario.Runner do
 
   def waiting_for_completion({:timeout, :heartbeat}, :heartbeat, %Data{} = data) do
     :amoc_coordinator.add({data.scenario, :heartbeat}, data.user_id)
-    {:keep_state_and_data, [{{:timeout, :heartbeat}, data.opts.__config__.heartbeat_timeout, :heartbeat}]}
+    {:keep_state_and_data, [{{:timeout, :heartbeat}, data.config.__config__.heartbeat_timeout, :heartbeat}]}
   end
 
   def waiting_for_completion(:info, {ref, result}, %Data{} = data) do
