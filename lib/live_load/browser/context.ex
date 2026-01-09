@@ -30,6 +30,15 @@ defmodule LiveLoad.Browser.Context do
 
   @doc """
   Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.stop_context/1` callback
+  found on the implementation.
+  """
+  def stop(%Context{browser: %Browser{connection: {mod, _opts}}} = context) do
+    mod.stop_context(context)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
   runs the `c:LiveLoad.Browser.Connection.navigate/2` callback
   found on the implementation.
   """

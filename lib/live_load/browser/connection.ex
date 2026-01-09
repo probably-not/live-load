@@ -24,6 +24,7 @@ defmodule LiveLoad.Browser.Connection do
   ##### Browser Callbacks #####
   #############################
   @callback new_context(browser :: Browser.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback stop_context(context :: Context.t()) :: :ok | {:error, term()}
   @callback navigate(context :: Context.t(), url :: String.t() | URI.t()) :: {:ok, Context.t()} | {:error, term()}
   @callback wait_for_selector(context :: Context.t(), selector :: String.t()) :: {:ok, Context.t()} | {:error, term()}
 

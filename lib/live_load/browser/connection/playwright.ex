@@ -35,6 +35,16 @@ defmodule LiveLoad.Browser.Connection.Playwright do
 
   @impl true
   @doc false
+  def stop_context(%Context{} = context) do
+    if playwright_context = context.private[:playwright_connection_context] do
+      PlaywrightEx.BrowserContext.close(playwright_context.guid, timeout: command_timeout(context.browser))
+    else
+      :ok
+    end
+  end
+
+  @impl true
+  @doc false
   def navigate(%Context{} = context, url) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, _} <- do_navigate(frame, url, command_timeout(context.browser)) do
