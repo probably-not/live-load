@@ -8,7 +8,7 @@ defmodule LiveLoad.Scenario.Example do
   end
 
   @impl true
-  def run(user_id, config) do
+  def run(_context, user_id, config) do
     # credo:disable-for-next-line
     dbg(user_id)
     # credo:disable-for-next-line

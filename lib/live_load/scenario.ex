@@ -5,7 +5,7 @@ defmodule LiveLoad.Scenario do
   A `LiveLoad.Scenario` runs in a distributed fashion. Nodes are elastically created
   via LiveLoad whenever a load test is being performed. On each node, the `c:config/1`
   callback is called once, to initialize the node's configuration, and a set of user
-  processes are created and run to simulate the load by calling the scenario's `c:run/2`
+  processes are created and run to simulate the load by calling the scenario's `c:run/3`
   callback with the current user ID and the config that was created for this node.
 
   > ### `use LiveLoad.Scenario` {: .warning}
@@ -33,20 +33,20 @@ defmodule LiveLoad.Scenario do
   @typedoc """
   A config that is created by the `c:config/1` callback on initialization of the `LiveLoad.Scenario`.
 
-  A config can be any term, as it will simply be passed into the `c:run/2` callback and can be handled by the scenario.
+  A config can be any term, as it will simply be passed into the `c:run/3` callback and can be handled by the scenario.
   """
   @type config() :: map() | keyword() | struct() | term()
 
-  @typedoc "The user ID passed to the `c:run/2` callback. It can be either an integer or a binary."
+  @typedoc "The user ID passed to the `c:run/3` callback. It can be either an integer or a binary."
   @type user_id() :: integer() | binary()
 
   @typedoc """
-  The result that is returned by the `c:run/2` callback.
+  The result that is returned by the `c:run/3` callback.
 
   Result values are discarded and ignored by LiveLoad, as they have no bearing
   on the results of the load test. However, whether or not the result was successful
   is tracked. Successful results are qualified as `:ok` or `{:ok, ignored}`. Any other
-  value that is returned by the `c:run/2` callback will be qualified as an error and
+  value that is returned by the `c:run/3` callback will be qualified as an error and
   marked as failed in the results of the load test.
   """
   @type user_result() :: :ok | {:ok, term()} | {:error, term()}
@@ -55,7 +55,7 @@ defmodule LiveLoad.Scenario do
   Invoked once per node that LiveLoad is running the load test on.
   `c:config/1` will receive any options passed in to `LiveLoad.run/1`
   that have not been consumed yet and can return a config value that
-  will be passed in to `c:run/2`.
+  will be passed in to `c:run/3`.
 
   `c:config/1` is called synchronously on startup, and if an error is
   returned, the entire load test will fail for this scenario.
@@ -63,10 +63,10 @@ defmodule LiveLoad.Scenario do
   @callback config(opts :: keyword()) :: {:ok, config()} | {:error, term()}
 
   @doc """
-  Invoked once per user. `c:run/2` is the actual load test that will be run,
+  Invoked once per user. `c:run/3` is the actual load test that will be run,
   measured, and instrumented by LiveLoad.
   """
-  @callback run(user_id :: user_id(), config :: config()) :: user_result()
+  @callback run(context :: LiveLoad.Scenario.Context.t(), user_id :: user_id(), config :: config()) :: user_result()
 
   defmacro __using__(opts) do
     quote location: :keep, bind_quoted: [opts: opts] do
@@ -141,7 +141,7 @@ defmodule LiveLoad.Scenario do
       @impl :amoc_scenario
       @doc false
       def start(user_id, opts) do
-        LiveLoad.Scenario.Runner.run(__MODULE__, user_id, opts)
+        LiveLoad.Scenario.Runner.run(__MODULE__, LiveLoad.Scenario.Context.new(), user_id, opts)
       end
 
       @impl LiveLoad.Scenario

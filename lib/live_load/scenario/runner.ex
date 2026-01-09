@@ -10,16 +10,22 @@ defmodule LiveLoad.Scenario.Runner do
     @type t() :: %__MODULE__{
             ref: reference(),
             scenario: Scenario.t(),
+            context: Scenario.Context.t(),
             user_id: Scenario.user_id(),
             opts: Scenario.config(),
             task_pid: pid() | nil,
             result: Scenario.user_result()
           }
-    defstruct [:ref, :scenario, :user_id, :opts, :task_pid, :result]
+    defstruct [:ref, :scenario, :context, :user_id, :opts, :task_pid, :result]
   end
 
-  @spec run(scenario :: module(), user_id :: Scenario.user_id(), config :: Scenario.config()) :: Scenario.user_result()
-  def run(scenario, user_id, opts) do
+  @spec run(
+          scenario :: module(),
+          context :: Scenario.Context.t(),
+          user_id :: Scenario.user_id(),
+          config :: %{scenario_config: Scenario.config(), __config__: map()}
+        ) :: Scenario.user_result()
+  def run(scenario, context, user_id, opts) do
     ref = make_ref()
 
     # A trick learned from the AMoC docs:
@@ -33,7 +39,7 @@ defmodule LiveLoad.Scenario.Runner do
         __MODULE__,
         [],
         :initializing,
-        %Data{ref: ref, user_id: user_id, opts: opts, scenario: scenario},
+        %Data{ref: ref, user_id: user_id, opts: opts, scenario: scenario, context: context},
         [
           {:next_event, :internal, :initializing}
         ]
@@ -57,7 +63,7 @@ defmodule LiveLoad.Scenario.Runner do
   end
 
   def initializing(:internal, :initializing, %Data{} = data) do
-    %Task{} = task = partitioned_async_nolink(data.scenario, data.user_id, data.opts.scenario_config)
+    %Task{} = task = partitioned_async_nolink(data.scenario, data.context, data.user_id, data.opts.scenario_config)
     :amoc_coordinator.add({data.scenario, :heartbeat}, data.user_id)
 
     {:next_state, :waiting_for_completion, %{data | task_pid: task.pid},
@@ -95,12 +101,12 @@ defmodule LiveLoad.Scenario.Runner do
     {:stop, :normal}
   end
 
-  defp partitioned_async_nolink(scenario, user_id, config) do
+  defp partitioned_async_nolink(scenario, context, user_id, config) do
     Task.Supervisor.async_nolink(
       {:via, PartitionSupervisor, {LiveLoad.Scenario.Runner.TaskSupervisor, user_id}},
       scenario,
       :run,
-      [user_id, config]
+      [context, user_id, config]
     )
   end
 end
