@@ -50,6 +50,22 @@ defmodule LiveLoad.Browser.Connection.Playwright do
     end
   end
 
+  @impl true
+  @doc false
+  def wait_for_selector(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.wait_for_selector(frame.guid,
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: 10_000
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
   defp initialize_context_frame(%Context{} = context) do
     playwright_context = context.private.playwright_connection_context
 

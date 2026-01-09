@@ -38,6 +38,15 @@ defmodule LiveLoad.Browser.Context do
   end
 
   @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.wait_for_selector/2` callback
+  found on the implementation.
+  """
+  def wait_for_selector(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.wait_for_selector(context, selector)
+  end
+
+  @doc """
   Set a value on the private field on the context struct.
   This is useful for Connection implementations to add private data
   that they need access to while running.
