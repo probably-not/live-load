@@ -68,7 +68,7 @@ defmodule LiveLoad do
     {runner_opts, scenario_config_opts} =
       Enum.reduce(
         [{:timeout, :scenario_timeout}, {:heartbeat, :heartbeat_timeout_seconds}],
-        {[runner_pid: self()], opts},
+        {[runner_pid: self(), browser_connection_adapter: LiveLoad.Browser.Connection.Playwright], opts},
         fn {key, replacement}, {runner_opts, scenario_config_opts} ->
           {opt, rest} = Keyword.pop(scenario_config_opts, key, :error)
 
