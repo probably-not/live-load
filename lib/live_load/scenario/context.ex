@@ -27,13 +27,14 @@ defmodule LiveLoad.Scenario.Context do
   alias __MODULE__
 
   @type t() :: %__MODULE__{
+          browser_context: LiveLoad.Browser.Context.t(),
           assigns: %{optional(atom()) => term()}
         }
 
-  defstruct assigns: %{}
+  defstruct [:browser_context, assigns: %{}]
 
-  def new do
-    %Context{}
+  def new(%LiveLoad.Browser.Context{} = browser_context) do
+    %Context{browser_context: browser_context}
   end
 
   @doc """

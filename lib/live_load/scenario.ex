@@ -163,7 +163,23 @@ defmodule LiveLoad.Scenario do
       @impl :amoc_scenario
       @doc false
       def start(user_id, opts) do
-        LiveLoad.Scenario.Runner.run(__MODULE__, LiveLoad.Scenario.Context.new(), user_id, opts)
+        case LiveLoad.Browser.new_context(opts.__config__.browser) do
+          {:ok, %LiveLoad.Browser.Context{} = browser_context} ->
+            try do
+              LiveLoad.Scenario.Runner.run(__MODULE__, LiveLoad.Scenario.Context.new(browser_context), user_id, opts)
+            after
+              LiveLoad.Browser.Context.stop(browser_context)
+            end
+
+          {:error, _reason} = error ->
+            error
+        end
+      end
+
+      @impl :amoc_scenario
+      @doc false
+      def terminate(opts) do
+        LiveLoad.Browser.stop(opts.__config__.browser)
       end
 
       @impl LiveLoad.Scenario
