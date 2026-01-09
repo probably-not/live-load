@@ -16,7 +16,7 @@ defmodule LiveLoad.Browser.Connection do
   @type page() :: term()
   @type element() :: term()
 
-  @type option() :: LiveLoad.Browser.Connection.Playwright.option() | {atom(), term()}
+  @type option() :: LiveLoad.Browser.Connection.Playwright.connection_option() | {atom(), term()}
   @type opts() :: [option()]
 
   #############################
