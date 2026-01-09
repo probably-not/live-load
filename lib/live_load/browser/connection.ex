@@ -12,10 +12,6 @@ defmodule LiveLoad.Browser.Connection do
   @typedoc "Any module implementing the `LiveLoad.Browser.Connection` behaviour."
   @type t() :: module()
 
-  @type context() :: term()
-  @type page() :: term()
-  @type element() :: term()
-
   @type option() :: LiveLoad.Browser.Connection.Playwright.connection_option() | {atom(), term()}
   @type opts() :: [option()]
 
