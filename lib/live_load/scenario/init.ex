@@ -5,9 +5,13 @@ defmodule LiveLoad.Scenario.Init do
     runner_pid = :amoc_config.get(:runner_pid)
     heartbeat_timeout = :amoc_config.get(:heartbeat_timeout_seconds)
     scenario_timeout = :amoc_config.get(:scenario_timeout)
+    browser_connection_adapter = :amoc_config.get(:browser_connection_adapter)
+    browser_connection_opts = :amoc_config.get(:browser_connection_opts)
     opts = :amoc_config.get(:scenario_config_opts)
 
-    with {:ok, scenario_config} <- scenario.config(opts) do
+    with {:ok, scenario_config} <- scenario.config(opts),
+         {:ok, %LiveLoad.Browser{} = browser} <-
+           LiveLoad.Browser.start_link(browser_connection_adapter, browser_connection_opts) do
       plan = [
         {:all,
          fn {:timeout, _count} ->
@@ -26,6 +30,7 @@ defmodule LiveLoad.Scenario.Init do
          scenario_config: scenario_config,
          __config__: %{
            runner_pid: runner_pid,
+           browser: browser,
            heartbeat_timeout: to_timeout(second: heartbeat_timeout),
            scenario_timeout: scenario_timeout
          }

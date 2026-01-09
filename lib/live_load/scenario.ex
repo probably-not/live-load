@@ -85,6 +85,25 @@ defmodule LiveLoad.Scenario do
       }
 
       @required_variable %{
+        name: :browser_connection_adapter,
+        default_value: nil,
+        description: ~c"""
+        INTERNAL VARIABLE.
+        The `LiveLoad.Browser.Connection` adapter that will be used for this load test.
+        """
+      }
+
+      @required_variable %{
+        name: :browser_connection_opts,
+        default_value: [],
+        description: ~c"""
+        INTERNAL VARIABLE.
+        The `t:LiveLoad.Browser.Connection.opts()` that will be passed
+        to the browser initialization during this load test.
+        """
+      }
+
+      @required_variable %{
         name: :heartbeat_timeout_seconds,
         default_value: 10,
         description: ~c"""
