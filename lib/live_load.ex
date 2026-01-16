@@ -3,15 +3,57 @@ defmodule LiveLoad do
   #{"./README.md" |> Path.expand() |> File.read!() |> String.split("<!-- README START -->") |> Enum.at(1) |> String.split("<!-- README END -->") |> List.first() |> String.trim()}
   """
 
-  @type option() :: {atom(), term()}
-  @type opts() :: [option()]
+  @typedoc """
+  Defines the `LiveLoad.Browser.Connection` implementation to use for this run.
 
-  # TODO: Spec results
+  Defaults to `LiveLoad.Browser.Connection.Playwright`.
+  """
+  @type browser_connection_adapter_opt() :: {:browser_connection_adapter, LiveLoad.Browser.Connection.t()}
+
+  @typedoc """
+  Defines the overall timeout for a scenario.
+
+  If this timeout is reached and the scenario has not completed, it will be killed and reported as a failure.
+
+  Defaults to 10 minutes.
+  """
+  @type scenario_timeout_opt() :: {:timeout, timeout()}
+
+  @typedoc """
+  Defines the heartbeat signal timeout for the scenario runner in seconds.
+
+  It is available for testing and tuning purposes.
+
+  **This is an internal option that should almost certainly never be used by end users.**
+
+  The scenario runner reports a heartbeat every time this interval is hit.
+  This heartbeat is used by [AMoC's Coordinator](`:amoc_coordinator`) in order to track which processes are running.
+  """
+  @type heartbeat_seconds_opt() :: {:heartbeat, pos_integer()}
+
+  @typedoc """
+  Initialization options for running a `LiveLoad.Scenario`.
+
+  These are split between options for the runner itself(`t:browser_connection_adapter_opt/0`, `t:scenario_timeout_opt/0`)
+  and any other options that should be passed in as configuration to the scenario `c:LiveLoad.Scenario.config/1` callback.
+  """
+  @type option() :: browser_connection_adapter_opt() | scenario_timeout_opt() | heartbeat_seconds_opt() | {atom(), term()}
+
+  @typedoc """
+  TODO: Spec results
+  """
   @type result() :: {LiveLoad.Scenario.t(), term()}
-  @type results() :: [result()]
 
-  @spec run(opts :: opts()) :: results() | {:error, term()}
-  def run(opts) do
+  @doc """
+  Run all of the `LiveLoad.Scenario` modules in this project.
+
+  Scenarios are automatically discovered.
+  They are run using FLAME and `:amoc`.
+
+  TODO: Give actual documentation here!
+  """
+  @spec run(opts :: [option()]) :: [result()] | {:error, term()}
+  def run(opts \\ []) do
     scenarios = discover_scenarios(opts)
     # TODO: Start up FLAME Pool (or Pools, if we have regionality involved?)
     Enum.map(scenarios, &{&1, run_scenario(&1, build_options(opts))})
