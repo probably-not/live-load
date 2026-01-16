@@ -19,7 +19,8 @@ config :git_hooks,
     pre_push: [
       tasks: [
         {:mix_task, :test},
-        {:mix_task, :"deps.unlock", ["--check-unused"]}
+        {:mix_task, :"deps.unlock", ["--check-unused"]},
+        {:mix_task, :docs, ["--warnings-as-errors"]}
       ]
     ]
   ]
