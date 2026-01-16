@@ -61,14 +61,18 @@ defmodule LiveLoad do
   end
 
   defp build_options(nil) do
-    [runner_pid: self()]
+    base_options()
   end
 
   defp build_options(opts) do
     {runner_opts, scenario_config_opts} =
       Enum.reduce(
-        [{:timeout, :scenario_timeout}, {:heartbeat, :heartbeat_timeout_seconds}],
-        {[runner_pid: self(), browser_connection_adapter: LiveLoad.Browser.Connection.Playwright], opts},
+        [
+          {:timeout, :scenario_timeout},
+          {:heartbeat, :heartbeat_timeout_seconds},
+          {:browser_connection_adapter, :browser_connection_adapter}
+        ],
+        {base_options(), opts},
         fn {key, replacement}, {runner_opts, scenario_config_opts} ->
           {opt, rest} = Keyword.pop(scenario_config_opts, key, :error)
 
@@ -81,5 +85,9 @@ defmodule LiveLoad do
       )
 
     Keyword.put(runner_opts, :scenario_config_opts, scenario_config_opts)
+  end
+
+  defp base_options do
+    [runner_pid: self(), browser_connection_adapter: LiveLoad.Browser.Connection.Playwright]
   end
 end
