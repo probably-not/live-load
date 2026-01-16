@@ -104,7 +104,8 @@ defmodule LiveLoad.MixProject do
       ],
       groups_for_extras: [],
       skip_undefined_reference_warnings_on: Path.wildcard("**/*.md"),
-      main: "devlog"
+      main: "devlog",
+      source_ref: "v#{@version}"
     ]
   end
 end
