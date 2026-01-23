@@ -11,10 +11,15 @@ defmodule LiveLoad.Scenario.Example do
   def run(%LiveLoad.Scenario.Context{} = context, user_id, _config) do
     context
     |> navigate("https://app.marketeam.ai")
-    |> wait_for_selector(".phx-connected")
-
+    |> ensure_liveview()
+    |> wait_for_liveview()
+    |> page_content()
+    |> inner_html("body", as: :body)
+    |> inner_html("a", as: fn _ -> :a end)
+    |> inner_html("div", as: fn _ -> %{div: "a", div2: "b"} end)
     # credo:disable-for-next-line
-    dbg({user_id, context})
+    |> tap(fn context -> dbg({user_id, context}) end)
+
     :ok
   end
 end
