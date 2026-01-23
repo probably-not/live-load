@@ -86,7 +86,9 @@ defmodule LiveLoad.Scenario do
           halted?: 1,
           failed?: 1,
           navigate: 2,
-          wait_for_selector: 2
+          wait_for_selector: 2,
+          liveview?: 1,
+          wait_for_liveview: 1
         ]
 
       Module.register_attribute(__MODULE__, :required_variable, persist: true, accumulate: true)
