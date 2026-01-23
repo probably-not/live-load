@@ -145,8 +145,8 @@ defmodule LiveLoad.Scenario.Context do
   @doc """
   Detects whether or not the current page is a LiveView.
   """
-  @spec liveview?(context :: t()) :: t()
-  def liveview?(%Context{} = ctx), do: wait_for_selector(ctx, "[data-phx-session]")
+  @spec ensure_liveview(context :: t()) :: t()
+  def ensure_liveview(%Context{} = ctx), do: wait_for_selector(ctx, "[data-phx-session]")
 
   @doc """
   Waits for a LiveView to be fully connected.

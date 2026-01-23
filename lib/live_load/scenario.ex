@@ -89,7 +89,7 @@ defmodule LiveLoad.Scenario do
           failed?: 1,
           navigate: 2,
           wait_for_selector: 2,
-          liveview?: 1,
+          ensure_liveview: 1,
           wait_for_liveview: 1
         ]
 
