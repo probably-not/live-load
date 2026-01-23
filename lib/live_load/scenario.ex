@@ -82,6 +82,8 @@ defmodule LiveLoad.Scenario do
       import LiveLoad.Scenario.Context,
         only: [
           assign: 3,
+          clear_assign: 2,
+          update_assign!: 3,
           halt: 1,
           halted?: 1,
           failed?: 1,
