@@ -75,6 +75,32 @@ defmodule LiveLoad.Browser.Connection.Playwright do
     end
   end
 
+  @impl true
+  def page_content(%Context{} = context) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, content} <- PlaywrightEx.Frame.content(frame.guid, timeout: command_timeout(context.browser)) do
+        {:ok, {context, content}}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  def inner_html(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, inner_html} <-
+             PlaywrightEx.Frame.inner_html(frame.guid,
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, {context, inner_html}}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
   defp initialize_context_frame(%Context{} = context) do
     playwright_context = context.private.playwright_connection_context
 

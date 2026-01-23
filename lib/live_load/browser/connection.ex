@@ -27,6 +27,9 @@ defmodule LiveLoad.Browser.Connection do
   @callback stop_context(context :: Context.t()) :: :ok | {:error, term()}
   @callback navigate(context :: Context.t(), url :: String.t() | URI.t()) :: {:ok, Context.t()} | {:error, term()}
   @callback wait_for_selector(context :: Context.t(), selector :: String.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback page_content(context :: Context.t()) :: {:ok, {Context.t(), String.t()}} | {:error, term()}
+  @callback inner_html(context :: Context.t(), selector :: String.t()) ::
+              {:ok, {Context.t(), String.t()}} | {:error, term()}
 
   ##############################
   ## Lifecycle Hook Callbacks ##

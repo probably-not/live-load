@@ -56,6 +56,24 @@ defmodule LiveLoad.Browser.Context do
   end
 
   @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.page_content/1` callback
+  found on the implementation.
+  """
+  def page_content(%Context{browser: %Browser{connection: {mod, _opts}}} = context) do
+    mod.page_content(context)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.inner_html/2` callback
+  found on the implementation.
+  """
+  def inner_html(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.inner_html(context, selector)
+  end
+
+  @doc """
   Set a value on the private field on the context struct.
   This is useful for Connection implementations to add private data
   that they need access to while running.
