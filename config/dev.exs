@@ -4,7 +4,7 @@ config :git_hooks,
   auto_install: true,
   verbose: true,
   extra_success_returns: [
-    ["doc/index.html", "doc/LiveLoad.epub"]
+    ["doc/index.html", "doc/llms.txt", "doc/LiveLoad.epub"]
   ],
   hooks: [
     post_checkout: [
