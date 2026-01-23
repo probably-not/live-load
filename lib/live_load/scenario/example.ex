@@ -8,15 +8,13 @@ defmodule LiveLoad.Scenario.Example do
   end
 
   @impl true
-  def run(_context, user_id, config) do
-    # credo:disable-for-next-line
-    dbg(user_id)
-    # credo:disable-for-next-line
-    dbg(config)
-    # credo:disable-for-next-line
-    dbg(node())
+  def run(%LiveLoad.Scenario.Context{} = context, user_id, _config) do
+    context
+    |> navigate("https://app.marketeam.ai")
+    |> wait_for_selector(".phx-connected")
 
-    Process.sleep(60_000)
+    # credo:disable-for-next-line
+    dbg({user_id, context})
     :ok
   end
 end

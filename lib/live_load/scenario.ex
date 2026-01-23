@@ -79,6 +79,16 @@ defmodule LiveLoad.Scenario do
       @behaviour :amoc_scenario
       @behaviour LiveLoad.Scenario
 
+      import LiveLoad.Scenario.Context,
+        only: [
+          assign: 3,
+          halt: 1,
+          halted?: 1,
+          failed?: 1,
+          navigate: 2,
+          wait_for_selector: 2
+        ]
+
       Module.register_attribute(__MODULE__, :required_variable, persist: true, accumulate: true)
 
       @required_variable %{
