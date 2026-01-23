@@ -72,7 +72,7 @@ defmodule LiveLoad do
     Application.stop(:amoc)
     Application.ensure_all_started(:amoc)
 
-    case :amoc.do(scenario, 10, opts) do
+    case :amoc.do(scenario, 1, opts) do
       :ok ->
         wait(scenario)
 
