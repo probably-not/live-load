@@ -118,7 +118,17 @@ defmodule LiveLoad.Scenario.Context do
   @spec wait_for_selector(context :: t(), selector :: resolvable(String.t())) :: t()
   def wait_for_selector(%Context{} = ctx, selector), do: run(ctx, :wait_for_selector, [selector])
 
-  defp run(%Context{halted?: true} = ctx, _op, _args) do
+  @doc """
+  Detects whether or not the current page is a LiveView.
+  """
+  @spec liveview?(context :: t()) :: t()
+  def liveview?(%Context{} = ctx), do: wait_for_selector(ctx, "[data-phx-session]")
+
+  @doc """
+  Waits for a LiveView to be fully connected.
+  """
+  @spec wait_for_liveview(context :: t()) :: t()
+  def wait_for_liveview(%Context{} = ctx), do: wait_for_selector(ctx, ".phx-connected")
     ctx
   end
 
