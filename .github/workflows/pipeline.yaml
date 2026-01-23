@@ -90,6 +90,8 @@ jobs:
         run: mix format --check-formatted
       - name: Lint with Credo
         run: mix credo
+      - name: Check that the docs are proper
+        run: mix docs --warnings-as-errors
       - name: Restore PLT cache
         id: plt_cache
         uses: actions/cache/restore@v5
