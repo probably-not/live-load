@@ -90,7 +90,11 @@ defmodule LiveLoad.Scenario do
           navigate: 2,
           wait_for_selector: 2,
           ensure_liveview: 1,
-          wait_for_liveview: 1
+          wait_for_liveview: 1,
+          page_content: 1,
+          page_content: 2,
+          inner_html: 2,
+          inner_html: 3
         ]
 
       Module.register_attribute(__MODULE__, :required_variable, persist: true, accumulate: true)
