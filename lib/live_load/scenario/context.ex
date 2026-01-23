@@ -129,14 +129,18 @@ defmodule LiveLoad.Scenario.Context do
   """
   @spec wait_for_liveview(context :: t()) :: t()
   def wait_for_liveview(%Context{} = ctx), do: wait_for_selector(ctx, ".phx-connected")
+
+  defp run(ctx, op, args, opts \\ [])
+
+  defp run(%Context{halted?: true} = ctx, _op, _args, _opts) do
     ctx
   end
 
-  defp run(%Context{error: %Error{}} = ctx, _op, _args) do
+  defp run(%Context{error: %Error{}} = ctx, _op, _args, _opts) do
     ctx
   end
 
-  defp run(%Context{error: nil, halted?: false} = ctx, op, args) do
+  defp run(%Context{error: nil, halted?: false} = ctx, op, args, opts) do
     current_step = ctx.step + 1
     ctx = %{ctx | step: current_step}
 
@@ -144,7 +148,11 @@ defmodule LiveLoad.Scenario.Context do
 
     try do
       case apply(LiveLoad.Browser.Context, op, [ctx.browser_context | resolved_args]) do
-        {:ok, new_browser_ctx} ->
+        {:ok, {%LiveLoad.Browser.Context{} = new_browser_ctx, value}} ->
+          ctx = assign_as(ctx, value, opts[:as])
+          %{ctx | browser_context: new_browser_ctx}
+
+        {:ok, %LiveLoad.Browser.Context{} = new_browser_ctx} ->
           %{ctx | browser_context: new_browser_ctx}
 
         {:error, reason} ->
@@ -157,6 +165,41 @@ defmodule LiveLoad.Scenario.Context do
       :exit, reason ->
         %{ctx | error: %Error{step: current_step, op: op, args: resolved_args, reason: reason}}
     end
+  end
+
+  defp assign_as(ctx, value, as)
+
+  defp assign_as(%Context{} = ctx, _value, nil) do
+    ctx
+  end
+
+  defp assign_as(%Context{} = ctx, value, as) when is_function(as, 1) do
+    case as.(value) do
+      assigns when is_map(assigns) ->
+        Enum.reduce(assigns, ctx, fn {key, value}, ctx -> assign(ctx, key, value) end)
+
+      key when is_atom(key) ->
+        assign(ctx, key, value)
+
+      other ->
+        raise RuntimeError, """
+        When using the `:as` option and passing in a 1-arity function,
+        the return value of the function must be either a map of new assigns
+        or an atom to place the value under within the assigns.
+
+        Expected:
+
+        map of new assigns or atom.
+
+        Got:
+
+        #{inspect(other)}
+        """
+    end
+  end
+
+  defp assign_as(%Context{} = ctx, value, as) when is_atom(as) do
+    assign(ctx, as, value)
   end
 
   defp resolve(%Context{} = ctx, f) when is_function(f, 1), do: f.(ctx)
