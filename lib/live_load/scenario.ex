@@ -27,6 +27,9 @@ defmodule LiveLoad.Scenario do
   > callback can remain and does not need to be overriden by your scenario module.
   """
 
+  alias __MODULE__
+  alias LiveLoad.Browser
+
   @typedoc "Any module implementing the `LiveLoad.Scenario` behaviour."
   @type t() :: module()
 
@@ -157,18 +160,18 @@ defmodule LiveLoad.Scenario do
       @impl :amoc_scenario
       @doc false
       def init do
-        LiveLoad.Scenario.Init.init(__MODULE__)
+        Scenario.Init.init(__MODULE__)
       end
 
       @impl :amoc_scenario
       @doc false
       def start(user_id, opts) do
-        case LiveLoad.Browser.new_context(opts.__config__.browser) do
-          {:ok, %LiveLoad.Browser.Context{} = browser_context} ->
+        case Browser.new_context(opts.__config__.browser) do
+          {:ok, %Browser.Context{} = browser_context} ->
             try do
-              LiveLoad.Scenario.Runner.run(__MODULE__, LiveLoad.Scenario.Context.new(browser_context), user_id, opts)
+              Scenario.Runner.run(__MODULE__, Scenario.Context.new(browser_context), user_id, opts)
             after
-              LiveLoad.Browser.Context.stop(browser_context)
+              Browser.Context.stop(browser_context)
             end
 
           {:error, _reason} = error ->
@@ -179,7 +182,7 @@ defmodule LiveLoad.Scenario do
       @impl :amoc_scenario
       @doc false
       def terminate(opts) do
-        LiveLoad.Browser.stop(opts.__config__.browser)
+        Browser.stop(opts.__config__.browser)
       end
 
       @impl LiveLoad.Scenario
