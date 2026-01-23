@@ -61,6 +61,15 @@ defmodule LiveLoad.Scenario.Context do
   """
   @type resolvable(value) :: value | (t() -> value)
 
+  @typedoc """
+  A key passed in to the `:as` option when using functions that extract values from the context.
+
+  Values that are extracted can be specified to be assigned to the context's assigns via the `:as`
+  option, which can receive an `t:atom/0`, or a 1-arity function which may return either an `t:atom/0`
+  or a `t:map/0` of `t:atom/0` keys to values which will be merged onto the context's assigns.
+  """
+  @type assigned_as() :: atom() | (term() -> atom()) | (term() -> %{atom() => term()})
+
   defstruct [:browser_context, :error, halted?: false, assigns: %{}, step: 0]
 
   @doc false
@@ -153,6 +162,32 @@ defmodule LiveLoad.Scenario.Context do
   """
   @spec wait_for_liveview(context :: t()) :: t()
   def wait_for_liveview(%Context{} = ctx), do: wait_for_selector(ctx, ".phx-connected")
+
+  @doc """
+  Extracts the current page's content and assigns it to the `:as` option on the context's assigns.
+
+  ## Options
+
+  * `:as` - an atom key to place the page content under on the context's assigns.
+  Alternatively, you can pass a 1-arity function which will be run with the returned value.
+  The function must return either an atom, which will be used as the key, or a map of new assigns
+  values that will be merged into the current assigns on the context.
+  """
+  @spec page_content(context :: t(), opts :: [{:as, assigned_as()}]) :: t()
+  def page_content(%Context{} = ctx, opts \\ []), do: run(ctx, :page_content, [], opts)
+
+  @doc """
+  Extracts the innerHTML value of an element matching the given selector and assigns it to the `:as` option on the context's assigns.
+
+  ## Options
+
+  * `:as` - an atom key to place the page content under on the context's assigns.
+  Alternatively, you can pass a 1-arity function which will be run with the returned value.
+  The function must return either an atom, which will be used as the key, or a map of new assigns
+  values that will be merged into the current assigns on the context.
+  """
+  @spec inner_html(context :: t(), selector :: String.t(), opts :: [{:as, assigned_as()}]) :: t()
+  def inner_html(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :inner_html, [selector], opts)
 
   defp run(ctx, op, args, opts \\ [])
 
