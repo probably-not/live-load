@@ -81,7 +81,7 @@ defmodule LiveLoad.MixProject do
       ## Testing and Development Dependencies
       {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
       {:styler, "~> 1.10", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.39.3", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.40.0", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
       {:remixed_remix, "~> 2.0.2", only: :dev},
