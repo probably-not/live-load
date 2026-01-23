@@ -59,10 +59,11 @@ defmodule LiveLoad.Scenario.Context do
   Can either be a value, or a 1-arity function that receives a `LiveLoad.Scenario.Context`
   and returns a value.
   """
-  @type resolvable(v) :: v | (t() -> v)
+  @type resolvable(value) :: value | (t() -> value)
 
   defstruct [:browser_context, :error, halted?: false, assigns: %{}, step: 0]
 
+  @doc false
   def new(%LiveLoad.Browser.Context{} = browser_context) do
     %Context{browser_context: browser_context}
   end
