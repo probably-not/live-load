@@ -81,6 +81,30 @@ defmodule LiveLoad.Scenario.Context do
   end
 
   @doc """
+  Clears a specific assign on the context.
+
+  After clearing this key will no longer be available and assertive access will cause an exception.
+
+  See `assign/3` for information about the `assigns` storage.
+  """
+  @spec clear_assign(context :: t(), key :: atom()) :: t
+  def clear_assign(%Context{assigns: assigns} = context, key) when is_atom(key) do
+    %{context | assigns: Map.delete(assigns, key)}
+  end
+
+  @doc """
+  Updates a value under a specified key in the context.
+
+  Raises a `KeyError` exception if the specified key does not exist on the assigns.
+
+  See `assign/3` for information about the `assigns` storage.
+  """
+  @spec update_assign!(context :: t(), key :: atom(), (term() -> term())) :: t
+  def update_assign!(%Context{assigns: assigns} = context, key, update_fn) when is_atom(key) do
+    %{context | assigns: Map.update!(assigns, key, update_fn)}
+  end
+
+  @doc """
   Halts a `LiveLoad.Scenario` by preventing any further operations to take place on the context.
 
   If the scenario has already had an error, this results in a No-Op and the context will not be marked
