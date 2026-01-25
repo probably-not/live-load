@@ -105,8 +105,16 @@ defmodule LiveLoad.Browser.Connection.Playwright do
     playwright_context = context.private.playwright_connection_context
 
     case PlaywrightEx.BrowserContext.new_page(playwright_context.guid, timeout: command_timeout(context.browser)) do
-      {:ok, %{main_frame: frame}} -> {:ok, Context.put_private(context, :playwright_connection_frame, frame)}
-      {:error, _reason} = error -> error
+      {:ok, %{guid: page_id, main_frame: frame}} ->
+        context =
+          context
+          |> Context.put_private(:playwright_connection_page_id, page_id)
+          |> Context.put_private(:playwright_connection_frame, frame)
+
+        {:ok, context}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
