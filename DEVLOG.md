@@ -8,6 +8,42 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.10
+
+Yikes! I just realized I fully forgot to write up one of these last week... I've been trying to write one of these every week when I work on LiveLoad, and I did put in a bunch of work last Friday. What did I do? Let me try to remember. Ok well first off, I did upgrade all of the packages to get all of the new goodies. Specifically in ExDoc, so whoever is reading this right now for any reason, enjoy the new LLM/Markdown features of ExDoc! But on to the interesting things: `LiveLoad.Scenario.Context`. In 0.0.1-rc.9, I created the `LiveLoad.Scenario.Context` module and started by adding `LiveLoad.Scenario.Context.assign/3` and deciding to model it on `Plug.Conn`, so that people can build a pipeline inside a scenario and not have to worry about halting and errors and the like. Well, I've built it out a lot more! Since it's mostly mirroring the `LiveLoad.Browser.Context` modules, so I actually extracted the delegation into a helper function which is delegated to by all of the public API functions. This way, I can decide what calls what, and still document each individual function properly. I probably could have done something with a macro there... but who needs macros when you can have good old fashioned functions. Maybe for efficiency I'll add a compile flag for inlining the run function, that would essentially have it behave like a macro! Once I had the context in place, I actually created a real working scenario! It looks like this:
+
+```elixir
+defmodule LiveLoad.Scenario.Example do
+  @moduledoc false
+  use LiveLoad.Scenario
+
+  @impl true
+  def config(opts) do
+    {:ok, Map.new(opts)}
+  end
+
+  @impl true
+  def run(%LiveLoad.Scenario.Context{} = context, user_id, _config) do
+    context
+    |> navigate("https://app.marketeam.ai")
+    |> ensure_liveview()
+    |> wait_for_liveview()
+    |> page_content()
+    |> inner_html("body", as: :body)
+    |> inner_html("a", as: fn _ -> :a end)
+    |> inner_html("div", as: fn _ -> %{div: "a", div2: "b"} end)
+    # credo:disable-for-next-line
+    |> tap(fn context -> dbg({user_id, context}) end)
+
+    :ok
+  end
+end
+```
+
+The `dbg/1` is in there as a check to make sure things are working. From the example, you can see I'm testing it on the app at MarkeTeam.ai (my day job). I navigate, ensure the liveview, wait for it to connect, get the content (without assigning it), and get the inner html of various selectors (while assigning in a couple of different ways to validate that part of the functionality).
+
+Shockingly, it works! So once I throw together all of the functions that I actually need on the `LiveLoad.Browser.Context` and mirror them to the `LiveLoad.Scenario.Context` (things like click, fill, clear, basically everything from Playwright), I'll have a fully working library for running scenarios. Then it'll be on to metrics collection and distributing with AMoC and FLAME.
+
 ## 0.0.1-rc.9
 
 Well well well, welcome aboard, Expert LSP! I've finally gotten around to setting up Expert on my local VSCode, connecting it up to the Lexical VSCode extention.
