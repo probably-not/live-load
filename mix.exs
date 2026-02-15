@@ -77,7 +77,8 @@ defmodule LiveLoad.MixProject do
       {:flame, "~> 0.5.3"},
       {:amoc, "~> 4.0", runtime: false},
       {:telemetry, "~> 1.0"},
-      {:playwright_ex, "~> 0.3.0"},
+      # {:playwright_ex, "~> 0.3.0"},
+      {:playwright_ex, path: Path.absname("../../ftes/playwright_ex", __DIR__)},
       ## Testing and Development Dependencies
       {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
       {:styler, "~> 1.10", only: [:dev, :test], runtime: false},
