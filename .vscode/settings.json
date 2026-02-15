@@ -1,3 +1,4 @@
 {
-  "lexical.server.releasePathOverride": "./priv/expert/start_expert.sh"
+  "lexical.server.releasePathOverride": "./priv/expert/start_expert.sh",
+  "expert.server.releasePathOverride": "./priv/expert/expert_darwin_arm64"
 }
