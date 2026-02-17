@@ -6,6 +6,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   use LiveLoad.Browser.Connection
 
   alias LiveLoad.Browser
+  alias LiveLoad.Browser.Connection.Playwright.Supervisor
   alias LiveLoad.Browser.Context
 
   @typedoc """
@@ -18,10 +19,17 @@ defmodule LiveLoad.Browser.Connection.Playwright do
 
   @impl true
   @doc false
+  defdelegate child_spec(opts), to: Supervisor
+
+  @impl true
+  @doc false
   def new_context(%Browser{} = browser) do
     playwright_browser = browser.private.playwright_connection_browser
 
-    case PlaywrightEx.Browser.new_context(playwright_browser.guid, timeout: command_timeout(browser)) do
+    case PlaywrightEx.Browser.new_context(playwright_browser.guid,
+           connection: Supervisor.playwright_connection_name(),
+           timeout: command_timeout(browser)
+         ) do
       {:ok, context} ->
         browser
         |> Context.new()
@@ -37,7 +45,10 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def stop_context(%Context{} = context) do
     if playwright_context = context.private[:playwright_connection_context] do
-      PlaywrightEx.BrowserContext.close(playwright_context.guid, timeout: command_timeout(context.browser))
+      PlaywrightEx.BrowserContext.close(playwright_context.guid,
+        connection: Supervisor.playwright_connection_name(),
+        timeout: command_timeout(context.browser)
+      )
     else
       :ok
     end
@@ -65,6 +76,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, _} <-
              PlaywrightEx.Frame.wait_for_selector(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
                selector: PlaywrightEx.Selector.build(selector),
                timeout: command_timeout(context.browser)
              ) do
@@ -78,7 +90,11 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @impl true
   def page_content(%Context{} = context) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, content} <- PlaywrightEx.Frame.content(frame.guid, timeout: command_timeout(context.browser)) do
+      with {:ok, content} <-
+             PlaywrightEx.Frame.content(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               timeout: command_timeout(context.browser)
+             ) do
         {:ok, {context, content}}
       end
     else
@@ -91,6 +107,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, inner_html} <-
              PlaywrightEx.Frame.inner_html(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
                selector: PlaywrightEx.Selector.build(selector),
                timeout: command_timeout(context.browser)
              ) do
@@ -104,7 +121,10 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   defp initialize_context_frame(%Context{} = context) do
     playwright_context = context.private.playwright_connection_context
 
-    case PlaywrightEx.BrowserContext.new_page(playwright_context.guid, timeout: command_timeout(context.browser)) do
+    case PlaywrightEx.BrowserContext.new_page(playwright_context.guid,
+           connection: Supervisor.playwright_connection_name(),
+           timeout: command_timeout(context.browser)
+         ) do
       {:ok, %{guid: page_id, main_frame: frame}} ->
         context =
           context
@@ -123,13 +143,18 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   end
 
   defp do_navigate(frame, url, timeout) when is_binary(url) do
-    PlaywrightEx.Frame.goto(frame.guid, url: url, timeout: timeout)
+    PlaywrightEx.Frame.goto(frame.guid, connection: Supervisor.playwright_connection_name(), url: url, timeout: timeout)
   end
 
   @impl true
   @doc false
   def after_start(%Browser{} = browser) do
-    {:ok, playwright_browser} = PlaywrightEx.launch_browser(:chromium, timeout: command_timeout(browser))
+    {:ok, playwright_browser} =
+      PlaywrightEx.launch_browser(:chromium,
+        connection: Supervisor.playwright_connection_name(),
+        timeout: command_timeout(browser)
+      )
+
     Browser.put_private(browser, :playwright_connection_browser, playwright_browser)
   end
 

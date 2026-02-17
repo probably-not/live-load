@@ -6,8 +6,7 @@ defmodule LiveLoad.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {PartitionSupervisor, child_spec: Task.Supervisor, name: LiveLoad.Scenario.Runner.TaskSupervisor},
-      LiveLoad.Browser.Connection.Playwright.Supervisor
+      {PartitionSupervisor, child_spec: Task.Supervisor, name: LiveLoad.Scenario.Runner.TaskSupervisor}
     ]
 
     opts = [strategy: :one_for_one, name: LiveLoad.Supervisor]

@@ -30,10 +30,19 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
   def init({playwright_cli_path, timeout}) do
     children = [
       {PlaywrightEx.Supervisor,
-       [executable: playwright_cli_path, timeout: timeout, js_logger: LiveLoad.Browser.Connection.Playwright.JsLogger]}
+       [
+         name: __MODULE__.Playwright,
+         executable: playwright_cli_path,
+         timeout: timeout,
+         js_logger: LiveLoad.Browser.Connection.Playwright.JsLogger
+       ]}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  def playwright_connection_name do
+    PlaywrightEx.Supervisor.connection_name(__MODULE__.Playwright)
   end
 
   @default_playwright_version "1.57.0"
