@@ -26,7 +26,7 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
     Supervisor.start_link(__MODULE__, {playwright_cli_path, timeout}, name: name)
   end
 
-  @impl Supervisor
+  @impl true
   def init({playwright_cli_path, timeout}) do
     children = [
       {PlaywrightEx.Supervisor,
