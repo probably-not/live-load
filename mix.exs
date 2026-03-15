@@ -92,7 +92,7 @@ defmodule LiveLoad.MixProject do
   end
 
   defp aliases do
-    []
+    [docs: ["docs", &copy_images/1]]
   end
 
   defp docs do
@@ -107,5 +107,13 @@ defmodule LiveLoad.MixProject do
       main: "devlog",
       source_ref: "v#{@version}"
     ]
+  end
+
+  defp copy_images(_) do
+    File.mkdir_p!("./doc/assets")
+
+    "./assets/*.{gif,png,jpg,jpeg}"
+    |> Path.wildcard()
+    |> Enum.each(&File.cp!(&1, Path.join(["doc", "assets", Path.basename(&1)])))
   end
 end

@@ -1,8 +1,7 @@
 ### Extras ###
 local-experiments/
 priv/plts
-priv/playwright/bin/
-assets/
+priv/playwright/*/bin/
 priv/expert/
 
 # The directory Mix will write compiled artifacts to.

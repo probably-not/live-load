@@ -10,7 +10,7 @@ I'll cut a release, and update the Devlog. The Changelog is going to be fully re
 
 ## 0.0.1-rc.11
 
-![Aaaaand we're back](https://tenor.com/bkW0Z1lrOtj.gif)
+![Aaaaand we're back](./assets/abed.gif)
 
 Aaaaand we're back. It's been about 5 weeks ish since my last touch on this project. Well, sort of. I made some plans and spoke with people, and learned a bunch more than I knew before about AMoC. But I didn't actually put in much work other than just adding the `browserContext.addInitScript` and `page.addInitScript` functionality to `PlaywrightEx` ([see the PR here](https://github.com/ftes/playwright_ex/pull/23)). I spent the last 5 weeks on a semi-vacation with my family, and although I did put in work in my day job, I mostly focused on closing that stuff and then spending time with my family, instead of working on `LiveLoad`... to be honest, I should have been working on this though. ElixirConf EU is coming up in about 6 weeks and I still need to write an entire metrics pipeline and then run benchmarks!! So I'm going to get on this now - hard mode activated.
 
