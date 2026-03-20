@@ -83,12 +83,6 @@ defmodule LiveLoad do
 
       {:error, reason} ->
         {:error, reason}
-
-      # This is a catch for the current version of AMoC.
-      # It does not extract the error value properly.
-      # When the new release happens, we can remove this and just rely on the above match.
-      {{:error, reason}, _} ->
-        {:error, reason}
     end
   after
     Application.stop(:amoc)
