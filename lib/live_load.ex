@@ -4,6 +4,23 @@ defmodule LiveLoad do
   """
 
   @typedoc """
+  Defines whether this run should be run in an ad-hoc distributed cluster or on the current node.
+
+  When set to `true`, `LiveLoad` will use `FLAME` to build an ad-hoc pool of nodes based on the given `FLAME.Pool` configuration
+  and evenly distribute the users across these nodes during the run.
+
+  Defaults to `false`.
+  """
+  @type distributed_run_opt() :: {:distributed?, boolean()}
+
+  @typedoc """
+  Defines the number of users processes to create for this run.
+
+  Defaults to a single user.
+  """
+  @type users_count_opt() :: {:users, pos_integer()}
+
+  @typedoc """
   Defines the `LiveLoad.Browser.Connection` implementation to use for this run.
 
   Defaults to `LiveLoad.Browser.Connection.Playwright`.
@@ -37,7 +54,13 @@ defmodule LiveLoad do
   These are split between options for the runner itself(`t:browser_connection_adapter_opt/0`, `t:scenario_timeout_opt/0`)
   and any other options that should be passed in as configuration to the scenario `c:LiveLoad.Scenario.config/1` callback.
   """
-  @type option() :: browser_connection_adapter_opt() | scenario_timeout_opt() | heartbeat_seconds_opt() | {atom(), term()}
+  @type option() ::
+          distributed_run_opt()
+          | users_count_opt()
+          | browser_connection_adapter_opt()
+          | scenario_timeout_opt()
+          | heartbeat_seconds_opt()
+          | {atom(), term()}
 
   @typedoc """
   TODO: Spec results
@@ -55,24 +78,19 @@ defmodule LiveLoad do
   @spec run(opts :: [option()]) :: [result()] | {:error, term()}
   def run(opts \\ []) do
     scenarios = discover_scenarios(opts)
-    # TODO: Start up FLAME Pool (or Pools, if we have regionality involved?)
-    Enum.map(scenarios, &{&1, run_scenario(&1, build_options(opts))})
+    {run_config, runner_opts} = build_options(opts)
+    Enum.map(scenarios, &{&1, run_scenario(&1, run_config, runner_opts)})
   end
 
   defp discover_scenarios(_opts) do
     [LiveLoad.Scenario.Example]
   end
 
-  # TODO: How are we running scenarios?
-  # - Raise FLAME nodes with Trackable that stays alive until we are done running the test
-  # - Collect all nodes from FLAME pools.
-  # - On the controller node, run `:amoc_cluster.connect_nodes(flame_node_list)`
-  # - On the controller node, run `:amoc_dist.do(scenario_mod, user_count, settings)`
-  defp run_scenario(scenario, opts) do
+  defp run_scenario(scenario, run_config, opts) do
     Application.stop(:amoc)
     Application.ensure_all_started(:amoc)
 
-    case :amoc.do(scenario, 1, opts) do
+    case do_scenario(scenario, run_config[:users], run_config[:distributed?], opts) do
       :ok ->
         wait(scenario)
 
@@ -88,6 +106,21 @@ defmodule LiveLoad do
     Application.stop(:amoc)
   end
 
+  defp do_scenario(scenario, users, distributed?, opts)
+
+  defp do_scenario(scenario, users, false, opts) do
+    :amoc.do(scenario, users, opts)
+  end
+
+  defp do_scenario(scenario, users, true, opts) do
+    # TODO: How are we running scenarios?
+    # - Raise FLAME nodes with Trackable that stays alive until we are done running the test
+    # - Collect all nodes from FLAME pools.
+    # - On the controller node, run `:amoc_cluster.connect_nodes(flame_node_list)`
+    # - On the controller node, run `:amoc_dist.do(scenario_mod, user_count, settings)`
+    :amoc_dist.do(scenario, users, opts)
+  end
+
   defp wait(scenario) do
     # TODO: Wrap this up and wait for all of the nodes in the test to complete
     receive do
@@ -97,7 +130,7 @@ defmodule LiveLoad do
   end
 
   defp build_options(nil) do
-    base_options()
+    {base_run_config(), base_runner_options()}
   end
 
   defp build_options(opts) do
@@ -108,7 +141,7 @@ defmodule LiveLoad do
           {:heartbeat, :heartbeat_timeout_seconds},
           {:browser_connection_adapter, :browser_connection_adapter}
         ],
-        {base_options(), opts},
+        {base_runner_options(), opts},
         fn {key, replacement}, {runner_opts, scenario_config_opts} ->
           {opt, rest} = Keyword.pop(scenario_config_opts, key, :error)
 
@@ -120,10 +153,20 @@ defmodule LiveLoad do
         end
       )
 
-    Keyword.put(runner_opts, :scenario_config_opts, scenario_config_opts)
+    run_config =
+      Enum.reduce(base_run_config(), fn {key, default_value}, config ->
+        value = Keyword.get(opts, key, default_value)
+        Keyword.put(config, key, value)
+      end)
+
+    {run_config, Keyword.put(runner_opts, :scenario_config_opts, scenario_config_opts)}
   end
 
-  defp base_options do
+  defp base_run_config do
+    [users: 1, distributed?: false]
+  end
+
+  defp base_runner_options do
     [runner_pid: self(), browser_connection_adapter: LiveLoad.Browser.Connection.Playwright]
   end
 end
