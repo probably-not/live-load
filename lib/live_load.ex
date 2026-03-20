@@ -69,7 +69,7 @@ defmodule LiveLoad do
   def run(opts \\ []) do
     scenarios = discover_scenarios(opts)
     {run_config, runner_opts} = build_options(opts)
-    Enum.map(scenarios, &{&1, run_scenario(&1, run_config, runner_opts)})
+    Map.new(scenarios, &{&1, run_scenario(&1, run_config, runner_opts)})
   end
 
   defp discover_scenarios(_opts) do
