@@ -8,6 +8,15 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.12
+
+Yes, we're so back! Ok, let's just dive right into it. Quite a few things have been pushed here today:
+- Upgrading [`:amoc`](`:amoc`) to the latest version! They released their latest version, which now let me remove a ton of the TODOs and hacks around things like incorrect types. With this, I also went through and checked the old dialyzer ignore comments - and I saw that `PlaywrightEx` also solved some of their type issues. Huge props!
+- Telemetry pipeline: This was what I needed to replace my misused usage of the [`:amoc_coordinator`](`:amoc_coordinator`). Each node has a telemetry listener, and the master node has a telemetry collector. It's all currently just "infra", no actual implementation of telemetry, but it's properly notifying when the user processes complete running on a node. The coordinator usage was removed... I'll bring it back later on in a proper way, allowing people to write scenarios that are correctly coordinating between multiple users.
+- Scenario Discovery! I finally got around to implementing a super basic discovery mechanism for scenarios in a project. I set up the same type of thing as Ecto and Phoenix, using an `:otp_app` option. I also added some "inference" - making guesses on what the OTP app is without the user needing to specify, and allowed overrides at the config and option level, along with specifying exact specific scenarios to run if you don't want to run them all.
+
+Good work this round, and I'm going to keep the momentum going next round with all of the necessary stuff around actual metrics. Gotta actually tell the developers what the data shows - how much overhead things add, what the performance is, etc. After that, it's on to the FLAME integration and distribution itself, which hopefully should be extremely fast and easy since most of the overhead is just handling spinning up the pool. Although of course... who knows? This is really fun!
+
 ## 0.0.1-rc.11
 
 ![Aaaaand we're back](./assets/abed.gif)
