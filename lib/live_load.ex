@@ -53,9 +53,9 @@ defmodule LiveLoad do
           | {atom(), term()}
 
   @typedoc """
-  TODO: Spec results
+  TODO: Spec actual scenario result type - what gets returned, what details can be analyzed, etc.
   """
-  @type result() :: {LiveLoad.Scenario.t(), term()}
+  @type node_result() :: %{atom() => number()} | {:error, term()}
 
   @doc """
   Run all of the `LiveLoad.Scenario` modules in this project.
@@ -65,7 +65,7 @@ defmodule LiveLoad do
 
   TODO: Give actual documentation here!
   """
-  @spec run(opts :: [option()]) :: [result()] | {:error, term()}
+  @spec run(opts :: [option()]) :: %{LiveLoad.Scenario.t() => %{node() => node_result()}}
   def run(opts \\ []) do
     scenarios = discover_scenarios(opts)
     {run_config, runner_opts} = build_options(opts)
