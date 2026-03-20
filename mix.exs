@@ -75,7 +75,7 @@ defmodule LiveLoad.MixProject do
     [
       # Core Dependencies
       {:flame, "~> 0.5.3"},
-      {:amoc, "~> 4.0", runtime: false},
+      {:amoc, "~> 4.1", runtime: false},
       {:telemetry, "~> 1.0"},
       {:playwright_ex, "~> 0.5.0"},
       ## Testing and Development Dependencies
