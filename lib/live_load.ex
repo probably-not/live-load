@@ -3,6 +3,8 @@ defmodule LiveLoad do
   #{"./README.md" |> Path.expand() |> File.read!() |> String.split("<!-- README START -->") |> Enum.at(1) |> String.split("<!-- README END -->") |> List.first() |> String.trim()}
   """
 
+  alias LiveLoad.Telemetry.Collector
+
   @typedoc """
   Configures the run to be distributed.
 
@@ -37,18 +39,6 @@ defmodule LiveLoad do
   @type scenario_timeout_opt() :: {:timeout, timeout()}
 
   @typedoc """
-  Defines the heartbeat signal timeout for the scenario runner in seconds.
-
-  It is available for testing and tuning purposes.
-
-  **This is an internal option that should almost certainly never be used by end users.**
-
-  The scenario runner reports a heartbeat every time this interval is hit.
-  This heartbeat is used by [AMoC's Coordinator](`:amoc_coordinator`) in order to track which processes are running.
-  """
-  @type heartbeat_seconds_opt() :: {:heartbeat, pos_integer()}
-
-  @typedoc """
   Initialization options for running a `LiveLoad.Scenario`.
 
   These are split between options for the overall run configuration (`t:distributed_run_opt/0`, `t:users_count_opt/0`),
@@ -60,7 +50,6 @@ defmodule LiveLoad do
           | users_count_opt()
           | browser_connection_adapter_opt()
           | scenario_timeout_opt()
-          | heartbeat_seconds_opt()
           | {atom(), term()}
 
   @typedoc """
@@ -92,16 +81,8 @@ defmodule LiveLoad do
     Application.ensure_all_started(:amoc)
 
     case do_scenario(scenario, run_config[:users], run_config[:distributed?], opts) do
-      :ok ->
-        wait(scenario)
-
-      # `:amoc_dist.do` returns a tuple of `{:ok, any()}`,
-      # so we handle it in the same way as a normal `:ok` here.
-      {:ok, _} ->
-        wait(scenario)
-
-      {:error, reason} ->
-        {:error, reason}
+      {:ok, results} -> results
+      {:error, _reason} = error -> error
     end
   after
     Application.stop(:amoc)
@@ -110,7 +91,12 @@ defmodule LiveLoad do
   defp do_scenario(scenario, users, distributed?, opts)
 
   defp do_scenario(scenario, users, false, opts) do
-    :amoc.do(scenario, users, opts)
+    with {:ok, collector_pid} <- Collector.start_link([node()]),
+         :ok <- :amoc.do(scenario, users, Keyword.put(opts, :collector_pid, collector_pid)) do
+      Collector.wait_for_completion(collector_pid)
+    end
+  after
+    :amoc.stop()
   end
 
   defp do_scenario(scenario, users, true, opts) do
@@ -122,14 +108,6 @@ defmodule LiveLoad do
     :amoc_dist.do(scenario, users, opts)
   end
 
-  defp wait(scenario) do
-    # TODO: Wrap this up and wait for all of the nodes in the test to complete
-    receive do
-      {:scenario_timeout, ^scenario, _completed_node} ->
-        :ok
-    end
-  end
-
   defp build_options(nil) do
     {base_run_config(), base_runner_options()}
   end
@@ -139,7 +117,6 @@ defmodule LiveLoad do
       Enum.reduce(
         [
           {:timeout, :scenario_timeout},
-          {:heartbeat, :heartbeat_timeout_seconds},
           {:browser_connection_adapter, :browser_connection_adapter}
         ],
         {base_runner_options(), opts},
@@ -168,6 +145,6 @@ defmodule LiveLoad do
   end
 
   defp base_runner_options do
-    [runner_pid: self(), browser_connection_adapter: LiveLoad.Browser.Connection.Playwright]
+    [browser_connection_adapter: LiveLoad.Browser.Connection.Playwright]
   end
 end

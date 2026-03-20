@@ -67,22 +67,17 @@ defmodule LiveLoad.Scenario.Runner do
 
   def initializing(:internal, :initializing, %Data{} = data) do
     %Task{} = task = partitioned_async_nolink(data.scenario, data.context, data.user_id, data.config.scenario_config)
-    :amoc_coordinator.add({data.scenario, :heartbeat}, data.user_id)
 
-    {:next_state, :waiting_for_completion, %{data | task_pid: task.pid},
-     [
-       {{:timeout, :heartbeat}, data.config.__config__.heartbeat_timeout, :heartbeat},
-       {:state_timeout, data.config.__config__.scenario_timeout, :scenario_timeout}
-     ]}
+    {
+      :next_state,
+      :waiting_for_completion,
+      %{data | task_pid: task.pid},
+      [{:state_timeout, data.config.__config__.scenario_timeout, :scenario_timeout}]
+    }
   end
 
   def waiting_for_completion({:call, _from}, :wait, %Data{} = _data) do
     {:keep_state_and_data, :postpone}
-  end
-
-  def waiting_for_completion({:timeout, :heartbeat}, :heartbeat, %Data{} = data) do
-    :amoc_coordinator.add({data.scenario, :heartbeat}, data.user_id)
-    {:keep_state_and_data, [{{:timeout, :heartbeat}, data.config.__config__.heartbeat_timeout, :heartbeat}]}
   end
 
   def waiting_for_completion(:info, {ref, result}, %Data{} = data) do

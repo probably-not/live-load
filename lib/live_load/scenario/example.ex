@@ -8,7 +8,7 @@ defmodule LiveLoad.Scenario.Example do
   end
 
   @impl true
-  def run(%LiveLoad.Scenario.Context{} = context, user_id, _config) do
+  def run(%LiveLoad.Scenario.Context{} = context, _user_id, _config) do
     context
     |> navigate("https://app.marketeam.ai")
     |> ensure_liveview()
@@ -17,8 +17,6 @@ defmodule LiveLoad.Scenario.Example do
     |> inner_html("body", as: :body)
     |> inner_html("a", as: fn _ -> :a end)
     |> inner_html("div", as: fn _ -> %{div: "a", div2: "b"} end)
-    # credo:disable-for-next-line
-    |> tap(fn context -> dbg({user_id, context}) end)
 
     :ok
   end

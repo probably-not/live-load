@@ -41,7 +41,7 @@ defmodule LiveLoad.Scenario do
   @type config() :: map() | keyword() | struct() | term()
 
   @typedoc false
-  @type internal_config() :: %{runner_pid: pid(), heartbeat_timeout: timeout(), scenario_timeout: timeout()}
+  @type internal_config() :: %{local_listener_pid: pid(), browser: Browser.t(), scenario_timeout: timeout()}
 
   @typedoc "The user ID passed to the `c:run/3` callback. It can be either an integer or a binary."
   @type user_id() :: integer() | binary()
@@ -100,9 +100,9 @@ defmodule LiveLoad.Scenario do
       Module.register_attribute(__MODULE__, :required_variable, persist: true, accumulate: true)
 
       @required_variable %{
-        name: :runner_pid,
+        name: :collector_pid,
         default_value: nil,
-        description: ~c"INTERNAL VARIABLE. The PID of the process running the load test"
+        description: ~c"INTERNAL VARIABLE. The PID of the telemetry collector process on the runner node"
       }
 
       @required_variable %{
@@ -121,17 +121,6 @@ defmodule LiveLoad.Scenario do
         INTERNAL VARIABLE.
         The `t:LiveLoad.Browser.Connection.opts()` that will be passed
         to the browser initialization during this load test.
-        """
-      }
-
-      @required_variable %{
-        name: :heartbeat_timeout_seconds,
-        default_value: 10,
-        description: ~c"""
-        INTERNAL VARIABLE.
-        How long to wait (in seconds) between heartbeats to determine if the scenario has completed.
-        A scenario must send a heartbeat at least once per timeout to ensure that it does not die prematurely.
-        The timeout defaults to 10 seconds.
         """
       }
 
@@ -201,6 +190,7 @@ defmodule LiveLoad.Scenario do
       @doc false
       def terminate(opts) do
         Browser.stop(opts.__config__.browser)
+        LiveLoad.Telemetry.Listener.stop(opts.__config__.local_listener_pid)
       end
 
       @impl LiveLoad.Scenario
