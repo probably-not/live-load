@@ -3,7 +3,41 @@ defmodule LiveLoad do
   #{"./README.md" |> Path.expand() |> File.read!() |> String.split("<!-- README START -->") |> Enum.at(1) |> String.split("<!-- README END -->") |> List.first() |> String.trim()}
   """
 
+  alias LiveLoad.Scenario
+  alias LiveLoad.Scenario.Discovery
   alias LiveLoad.Telemetry.Collector
+
+  @typedoc """
+  Defines the OTP application to load test.
+
+  This option is used in order to automatically discover `LiveLoad.Scenario` modules implemented in the given application.
+  Similarly to Ecto Migrations, `LiveLoad` will scan the given OTP application, find all `LiveLoad.Scenario` modules, and then
+  run these scenarios for a load test.
+
+  This option is required unless a `t:scenario_opt/0` or a `t:scenarios_opt/0` is given,
+  in which case only the given scenario modules will be run.
+
+  This option takes the lowest priority.
+  """
+  @type otp_app_opt() :: {:otp_app, atom()}
+
+  @typedoc """
+  Run a single scenario module.
+
+  This option is mutually exclusive with `t:scenarios_opt/0` and `t:otp_app_opt/0`, each of which configure which scenarios should be run.
+
+  This option takes the highest priority.
+  """
+  @type scenario_opt() :: {:scenario, Scenario.t()}
+
+  @typedoc """
+  Run a list of scenario modules.
+
+  This option is mutually exclusive with `t:scenario_opt/0` and `t:otp_app_opt/0`, each of which configure which scenarios should be run.
+
+  This option takes the second highest priority.
+  """
+  @type scenarios_opt() :: {:scenarios, [Scenario.t()]}
 
   @typedoc """
   Configures the run to be distributed.
@@ -46,7 +80,10 @@ defmodule LiveLoad do
   and any other options that should be passed in as configuration to the scenario `c:LiveLoad.Scenario.config/1` callback.
   """
   @type option() ::
-          distributed_run_opt()
+          scenario_opt()
+          | scenarios_opt()
+          | otp_app_opt()
+          | distributed_run_opt()
           | users_count_opt()
           | browser_connection_adapter_opt()
           | scenario_timeout_opt()
@@ -65,15 +102,15 @@ defmodule LiveLoad do
 
   TODO: Give actual documentation here!
   """
-  @spec run(opts :: [option()]) :: %{LiveLoad.Scenario.t() => %{node() => node_result()}}
+  @spec run(opts :: [option()]) :: %{Scenario.t() => %{node() => node_result()}}
   def run(opts \\ []) do
-    scenarios = discover_scenarios(opts)
+    {single_scenario, opts} = Keyword.pop(opts, :scenario)
+    {list_of_scenarios, opts} = Keyword.pop(opts, :scenarios)
+    {otp_app, opts} = Keyword.pop(opts, :otp_app)
+    scenarios = Discovery.resolve(single_scenario, list_of_scenarios, otp_app)
+
     {run_config, runner_opts} = build_options(opts)
     Map.new(scenarios, &{&1, run_scenario(&1, run_config, runner_opts)})
-  end
-
-  defp discover_scenarios(_opts) do
-    [LiveLoad.Scenario.Example]
   end
 
   defp run_scenario(scenario, run_config, opts) do
