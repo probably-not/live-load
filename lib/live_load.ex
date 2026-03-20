@@ -145,10 +145,6 @@ defmodule LiveLoad do
     :amoc_dist.do(scenario, users, opts)
   end
 
-  defp build_options(nil) do
-    {base_run_config(), base_runner_options()}
-  end
-
   defp build_options(opts) do
     {runner_opts, scenario_config_opts} =
       Enum.reduce(
