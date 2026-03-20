@@ -4,7 +4,7 @@ defmodule LiveLoad do
   """
 
   @typedoc """
-  Defines whether this run should be run in an ad-hoc distributed cluster or on the current node.
+  Configures the run to be distributed.
 
   When set to `true`, `LiveLoad` will use `FLAME` to build an ad-hoc pool of nodes based on the given `FLAME.Pool` configuration
   and evenly distribute the users across these nodes during the run.
@@ -14,7 +14,7 @@ defmodule LiveLoad do
   @type distributed_run_opt() :: {:distributed?, boolean()}
 
   @typedoc """
-  Defines the number of users processes to create for this run.
+  Configures the number of user processes to use for the run.
 
   Defaults to a single user.
   """
@@ -51,7 +51,8 @@ defmodule LiveLoad do
   @typedoc """
   Initialization options for running a `LiveLoad.Scenario`.
 
-  These are split between options for the runner itself(`t:browser_connection_adapter_opt/0`, `t:scenario_timeout_opt/0`)
+  These are split between options for the overall run configuration (`t:distributed_run_opt/0`, `t:users_count_opt/0`),
+  options for the runner itself (`t:browser_connection_adapter_opt/0`, `t:scenario_timeout_opt/0`)
   and any other options that should be passed in as configuration to the scenario `c:LiveLoad.Scenario.config/1` callback.
   """
   @type option() ::
