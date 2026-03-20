@@ -155,7 +155,7 @@ defmodule LiveLoad do
       )
 
     run_config =
-      Enum.reduce(base_run_config(), fn {key, default_value}, config ->
+      Enum.reduce(base_run_config(), [], fn {key, default_value}, config ->
         value = Keyword.get(opts, key, default_value)
         Keyword.put(config, key, value)
       end)
