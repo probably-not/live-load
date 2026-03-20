@@ -14,6 +14,10 @@ defmodule LiveLoad.Telemetry.Collector do
     GenServer.start_link(__MODULE__, expected_nodes)
   end
 
+  def stop(server) do
+    GenServer.stop(server)
+  end
+
   def wait_for_completion(server, timeout \\ :infinity) do
     results = GenServer.call(server, :wait_for_completion, timeout)
     {:ok, results}

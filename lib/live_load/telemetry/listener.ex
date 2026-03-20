@@ -19,6 +19,10 @@ defmodule LiveLoad.Telemetry.Listener do
     end
   end
 
+  def stop(server) do
+    GenServer.stop(server)
+  end
+
   def handle_telemetry(event, measurements, metadata, %{listener: server}) do
     GenServer.cast(server, {:telemetry, event, measurements, metadata})
   end
