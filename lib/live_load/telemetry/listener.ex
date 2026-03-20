@@ -20,7 +20,18 @@ defmodule LiveLoad.Telemetry.Listener do
   end
 
   def stop(server) do
-    GenServer.stop(server)
+    if pid = GenServer.whereis(server) do
+      ref = Process.monitor(pid)
+      GenServer.cast(pid, :stop)
+
+      receive do
+        {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
+      end
+    else
+      :ok
+    end
+  after
+    uninstall(server)
   end
 
   def handle_telemetry(event, measurements, metadata, %{listener: server}) do
@@ -34,11 +45,21 @@ defmodule LiveLoad.Telemetry.Listener do
       [:amoc, :scenario, :start, :exception] => &__MODULE__.handle_telemetry/4
     }
 
-    for {key, fun} <- handlers do
-      :telemetry.attach({__MODULE__, key}, key, fun, %{listener: server})
-    end
+    Enum.each(handlers, fn {event, handler} ->
+      :telemetry.attach({__MODULE__, server, event}, event, handler, %{listener: server})
+    end)
+  end
 
-    :ok
+  defp uninstall(server) do
+    events = [
+      [:amoc, :scenario, :start, :start],
+      [:amoc, :scenario, :start, :stop],
+      [:amoc, :scenario, :start, :exception]
+    ]
+
+    Enum.each(events, fn event ->
+      :telemetry.detach({__MODULE__, server, event})
+    end)
   end
 
   defmodule State do
@@ -68,6 +89,11 @@ defmodule LiveLoad.Telemetry.Listener do
   @impl true
   def init(collector_pid) do
     {:ok, State.new(collector_pid)}
+  end
+
+  @impl true
+  def handle_cast(:stop, %State{} = state) do
+    {:stop, :normal, state}
   end
 
   @impl true

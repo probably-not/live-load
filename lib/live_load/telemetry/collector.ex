@@ -14,10 +14,6 @@ defmodule LiveLoad.Telemetry.Collector do
     GenServer.start_link(__MODULE__, expected_nodes)
   end
 
-  def stop(server) do
-    GenServer.stop(server)
-  end
-
   def wait_for_completion(server, timeout \\ :infinity) do
     results = GenServer.call(server, :wait_for_completion, timeout)
     {:ok, results}
@@ -30,10 +26,25 @@ defmodule LiveLoad.Telemetry.Collector do
       ])
 
       {:error, reason}
+  after
+    stop(server)
   end
 
   def node_complete(server, stats) do
     GenServer.cast(server, {:node_complete, node(), stats})
+  end
+
+  defp stop(server) do
+    if pid = GenServer.whereis(server) do
+      ref = Process.monitor(pid)
+      GenServer.cast(pid, :stop)
+
+      receive do
+        {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
+      end
+    else
+      :ok
+    end
   end
 
   defmodule State do
@@ -63,6 +74,11 @@ defmodule LiveLoad.Telemetry.Collector do
     else
       {:noreply, %{state | waiters: [from | state.waiters]}}
     end
+  end
+
+  @impl true
+  def handle_cast(:stop, %State{} = state) do
+    {:stop, :normal, state}
   end
 
   @impl true
