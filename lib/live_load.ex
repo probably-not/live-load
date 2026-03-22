@@ -90,9 +90,9 @@ defmodule LiveLoad do
           | {atom(), term()}
 
   @typedoc """
-  TODO: Spec actual scenario result type - what gets returned, what details can be analyzed, etc.
+  The result that can return from a scenario run on a specific node. Can either be a `LiveLoad.Telemetry.Result` or an error tuple.
   """
-  @type node_result() :: %{atom() => number()} | {:error, term()}
+  @type node_result() :: LiveLoad.Telemetry.Result.t() | {:error, term()}
 
   @doc """
   Run all of the `LiveLoad.Scenario` modules in this project.
