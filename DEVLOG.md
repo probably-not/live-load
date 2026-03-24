@@ -8,6 +8,20 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+# 0.0.1-rc.13
+
+We've got basic metrics! Well... one metric... but it's a start!
+
+Thanks to [Nelson's](https://github.com/NelsonVides) fantastic [ddskerl](https://github.com/NelsonVides/ddskerl) library, I got a very basic distributed/mergeable [DDSketch](https://arxiv.org/pdf/1908.10693) based metrics system. Since we are running in a distributed cluster, I went with DDSketch for the whole mergeability aspect. During the initialization (at the same point where we run the `c:LiveLoad.Scenario.config/1` callback) we set up our `LiveLoad.Browser` instance for the node, and additionally set up our `LiveLoad.Telemetry.Listener` (I should probably put both of these under a "Scenario.Supervisor" so that it just starts up everything...). This setup of the listener happened in [v0.0.1-rc.12](#0.0.1-rc.12), but now we've added in actual sketch handling. For now, it's just a simple collection of the scenario duration, but next up is setting up all of the metrics that we want to collect (loading durations for events, connect/disconnect durations, websocket diff sizes, etc).
+
+That'll hopefully be the next release - pushing out a full metrics collection system from the frontend view. I was also thinking about seeing if I could figure out a clean way to collect metrics from the backend... LiveLoad is basically "blackbox" style testing, it doesn't know anything about the server side of things and doesn't collect metrics from there, it only collects metrics from the point of view of the user. But if I could also figure out a way to collect metrics from the server, I could have a single place where I see all of the metrics. Taking it even further, I would potentially be able to correlate things like spikes in latency with tracing of which functions actually spike (flame graphs galore). But... that's a future Coby problem. For now, I'll focus on the load testing from the outside aspect of things.
+
+So, to summarize, the next stuff up:
+- Full metrics collection of [everything](https://tenor.com/search/gary-oldman-everything-gifs) (a semi appropriate meme... I know he says "everyone" but come on I gotta be a little dramatic and fun)
+- Finish implementing all of the browser stuff. I have the connection, the context, the connection between the context and the operations, but I actually need to implement all of the operations (click, fill, focus, etc)
+- Distribution implementation (obviously). I have a bunch of placeholders since I'm building this locally, but I'll need to set up FLAME with peer nodes and get the distribution set up at some point (like, soon)
+- UI? Reports? Something? I gotta display the sketches somehow..
+
 ## 0.0.1-rc.12
 
 Yes, we're so back! Ok, let's just dive right into it. Quite a few things have been pushed here today:
