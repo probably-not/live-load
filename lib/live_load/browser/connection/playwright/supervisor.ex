@@ -35,10 +35,36 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
          executable: playwright_cli_path,
          timeout: timeout,
          js_logger: LiveLoad.Browser.Connection.Playwright.JsLogger
-       ]}
+       ]},
+      Supervisor.child_spec(
+        {LiveLoad.Browser.Connection.Playwright.Metrics, playwright_connection_name()},
+        id: :metrics
+      )
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  def metrics_pid!(supervisor) do
+    case find_child(supervisor, :metrics) do
+      metrics when is_pid(metrics) ->
+        metrics
+
+      nil ->
+        raise RuntimeError, """
+        The metrics`LiveLoad.Browser.Connection.Playwright.Metrics` could not be found under the given supervisor!
+
+        This should never happen, as the `LiveLoad.Browser.Connection.Playwright.Supervisor.metrics_pid!/1` function
+        should only ever be called on a `LiveLoad.Browser.Connection.Playwright.Supervisor` that is successfully running
+        which must contain a `LiveLoad.Browser.Connection.Playwright.Metrics` process running underneath it.
+
+        If you've reached this exception and you are certain that the PID that was passed in to the function is a properly
+        created `LiveLoad.Browser.Connection.Playwright.Supervisor`, that means something is critically wrong in `LiveLoad`
+        itself and this should be reported to the maintainers.
+
+        Please file issues at: https://github.com/probably-not/live-load/issues.
+        """
+    end
   end
 
   def playwright_connection_name do
@@ -48,5 +74,18 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
   @default_playwright_version "1.57.0"
   defp playwright_version_from_env do
     Application.get_env(:live_load, :playwright_version, @default_playwright_version)
+  end
+
+  defp find_child(supervisor, child_id) do
+    supervisor
+    |> Supervisor.which_children()
+    |> Enum.find(fn
+      {^child_id, pid, _type, _modules} when is_pid(pid) -> true
+      _ -> false
+    end)
+    |> then(fn
+      {^child_id, pid, _type, _modules} when is_pid(pid) -> pid
+      _other -> nil
+    end)
   end
 end

@@ -6,6 +6,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   use LiveLoad.Browser.Connection
 
   alias LiveLoad.Browser
+  alias LiveLoad.Browser.Connection.Playwright.Metrics
   alias LiveLoad.Browser.Connection.Playwright.Supervisor
   alias LiveLoad.Browser.Context
 
@@ -126,6 +127,13 @@ defmodule LiveLoad.Browser.Connection.Playwright do
            timeout: command_timeout(context.browser)
          ) do
       {:ok, %{guid: page_id, main_frame: frame}} ->
+        metrics =
+          context.browser.supervisor_pid
+          |> Browser.Supervisor.connection_pid!()
+          |> Supervisor.metrics_pid!()
+
+        :ok = Metrics.watch_page(metrics, page_id)
+
         context =
           context
           |> Context.put_private(:playwright_connection_page_id, page_id)
