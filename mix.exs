@@ -79,6 +79,9 @@ defmodule LiveLoad.MixProject do
       {:telemetry, "~> 1.0"},
       {:playwright_ex, "~> 0.5.0"},
       {:ddskerl, "~> 0.4.3"},
+      ## Optional Dependencies
+      {:jason, "~> 1.4", optional: true},
+      {:poison, "~> 6.0", optional: true},
       ## Testing and Development Dependencies
       {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
       {:styler, "~> 1.10", only: [:dev, :test], runtime: false},

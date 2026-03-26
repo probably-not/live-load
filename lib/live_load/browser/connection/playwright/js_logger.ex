@@ -5,11 +5,7 @@ defmodule LiveLoad.Browser.Connection.Playwright.JsLogger do
   require Logger
 
   @impl true
-  def log(_level, "__LIVELOAD||" <> encoded, msg) do
-    case JSON.decode(encoded) do
-      {:ok, telemetry} ->
-        location = location(msg)
-        Logger.info(if(location, do: "#{inspect(telemetry)} (#{location})", else: inspect(telemetry)))
+    case LiveLoad.JSON.decode(encoded) do
 
       {:error, reason} ->
         Logger.error([
