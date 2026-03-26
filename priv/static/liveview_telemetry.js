@@ -66,6 +66,10 @@
     "phx-click-loading",
     "phx-submit-loading",
     "phx-change-loading",
+    "phx-focus-loading",
+    "phx-blur-loading",
+    "phx-keydown-loading",
+    "phx-keyup-loading",
   ];
   var classSpans = new WeakMap(); // element -> {cls -> {id, start}}
   var connectedEl = null; // the element that carries .phx-connected
