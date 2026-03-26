@@ -29,7 +29,7 @@ defmodule LiveLoad.MixProject do
         maintainers: ["Coby Benveniste"],
         licenses: ["MIT"],
         links: %{"GitHub" => @source_url, "Home Page" => @homepage_url},
-        files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG*", "DEVLOG*"]
+        files: ["lib", "priv", "mix.exs", "README*", "LICENSE*", "CHANGELOG*", "DEVLOG*"]
       ],
       aliases: aliases(),
       docs: docs(),
@@ -98,15 +98,48 @@ defmodule LiveLoad.MixProject do
 
   defp docs do
     [
-      extras: [
-        "DEVLOG.md": [title: "Devlog"],
-        "CHANGELOG.md": [title: "Changelog"],
-        "README.md": [title: "README"]
-      ],
-      groups_for_extras: [],
-      skip_undefined_reference_warnings_on: Path.wildcard("**/*.md"),
       main: "devlog",
-      source_ref: "v#{@version}"
+      api_reference: false,
+      # TODO: A logo?
+      # logo: something?
+      source_ref: "v#{@version}",
+      source_url: @source_url,
+      extras: extras(),
+      extra_section: "GUIDES",
+      groups_for_extras: [],
+      groups_for_modules: groups_for_modules(),
+      skip_undefined_reference_warnings_on: Path.wildcard("**/*.md")
+    ]
+  end
+
+  defp extras do
+    [
+      "guides/writing_your_first_scenario.md",
+      "guides/phoenix_baselines.md",
+      "DEVLOG.md": [title: "Devlog"],
+      "CHANGELOG.md": [title: "Changelog"]
+    ]
+  end
+
+  defp groups_for_modules do
+    [
+      LiveLoad: [
+        LiveLoad,
+        LiveLoad.Telemetry.Result
+      ],
+      Scenario: [
+        LiveLoad.Scenario,
+        LiveLoad.Scenario.Context,
+        LiveLoad.Scenario.Error
+      ],
+      Browser: [
+        LiveLoad.Browser,
+        LiveLoad.Browser.Context
+      ],
+      "Browser.Connection": [
+        LiveLoad.Browser.Connection,
+        LiveLoad.Browser.Connection.Playwright
+      ]
     ]
   end
 
