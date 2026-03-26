@@ -147,7 +147,10 @@
   // Defer until body exists
   (function start() {
     if (document.body) {
-      emit({ kind: "browser_telemetry_init" });
+      emit({
+        kind: "browser_telemetry_init",
+        href: document.location.href,
+      });
 
       observer.observe(document.body, {
         attributes: true,
