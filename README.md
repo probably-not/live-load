@@ -10,7 +10,7 @@
 
 A load testing framework for simulating real, distributed, live load on your application.
 
-## DISCLAIMER:
+## DISCLAIMER
 
 The LiveLoad repo is currently private as I am building out the functionality and validating that it works as expected.
 
