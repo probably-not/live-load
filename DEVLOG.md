@@ -8,7 +8,36 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
-# 0.0.1-rc.13
+## 0.0.1-rc.14
+
+God damn I'm good. I mean, I'm an engineer... I obviously have a huge ego. But I just feel great after a week of sprinting a bunch on all the metrics stuff. So screw it! Ego wins! I'm amazing!
+
+Where to begin? Well, this week was all about metrics, or, more specifically, metrics emission (and a PoC of metrics collection to be expanded on next). Load tests are nothing without metrics, see, without metrics, how do you know what your app is actually behaving like under load? [In my 0.0.1-rc.12 push from a few days ago](#0-0-1-rc-12), I set up a small PoC for the metrics collection. I added the `LiveLoad.Telemetry.Listener` and the `LiveLoad.Telemetry.Collector`, which are the two necessary parts of the collection itself. The listener sits on the load testing node and collects the telemetry from that node, managing the DDSketches ([which I added in the 0.0.1-rc.13 push](#0-0-1-rc-13)) for that node, and when it finally detects the completion of all of the user processes on that node, it packages a final result and forwards it to the collector, which sits on the master node. In those pushes, I pushed everything as a PoC, using the built in metrics that are fired by [`:amoc`](`:amoc`). But now, I've gone into the next step: browser side metrics collection.
+
+What's that Coby? Well, I'm glad you asked dear reader! See, [while `:amoc` can give us basic metrics around the user processes in the load test](https://hexdocs.pm/amoc/telemetry.html), it can't actually delve into the metrics behind Playwright, or the metrics behind what your LiveView app is actually doing. But you know who can? `LiveLoad`!
+
+So, let's talk about the how:
+
+First thing's first: `PlaywrightEx` is a wonderful library. [Fredrik](https://github.com/ftes) has done some amazing work there with regards to setting up the Playwright Connection, the communication protocol, and most importantly, the protocol subscription mechanism. See, Playwright pushes a lot of events on its protocol - most specifically, it pushes events around WebSockets and HTTP Requests/Responses. With `PlaywrightEx.subscribe/2` and `PlaywrightEx.Page.update_subscription/2`, I can subscribe to all of these events on a page, and on the individual created objects. So, when my subscription to a page receives a "WebSocket Created" event, I can immediately subscribe to that websocket's guid and receive the raw frames sent and received on that websocket! How's that for a huge metric? Does anyone track how big their LiveView diffs are? Well you can now!
+
+Now, for the even deeper browser telemetry integration: HTTP Requests and the WebSocket frame sizes is one thing... but what if I told you I can track THE ACTUAL TIME IT TAKES FOR LIVEVIEW TO UPDATE THE DOM. See, LiveView uses a lot of DOM patching, especially for events handling. [There is a public set of classes listed in the Syncing Changes and Optimistic UIs Guide](https://hexdocs.pm/phoenix_live_view/syncing-changes.html#optimistic-uis-via-loading-classes) which are set and removed by LiveView whenever different events happen, which allows the LiveView developers to target these classes via CSS or JavaScript and use them to optimistically update the UI. These classes give a lot of insight to `LiveLoad` on the load testing side: we can figure out what load the server can handle based on how quickly these classes are added and removed, and not only that, we can measure how much load the LiveView frontend JavaScript code can handle in terms of the amount of complexity on the browser! So, we can do things like stress test not only from a massive amount of users side, but also from a massive amount of JS/CSS/events/hooks/etc side per user.
+
+Now, I still haven't connected any of these browser metrics to the `LiveLoad.Telemetry.Listener` - I need to decide how I want to structure all of the DDSketches for everything. That will be done probably tomorrow - a good thing to get to for an end of week goal.
+
+So, in summary (just like last release), here's what's next up:
+- Connect all of the new telemetry to the `LiveLoad` telemetry pipeline so we can actually process it. This is one of the big milestones (the other being distribution).
+- Finish implementing all of the browser stuff. Just like I mentioned in the last release, I've got the basic structure, I just need to do the "busy work" of going through and implementing it
+- Distribution (the next big milestone that's critical)
+- Like I mentioned in the last release - some sort of UI/Report for the sketches. I gotta actually show and analyze it
+- And, finally... drumroll please... ACTUALLY RUNNING LOAD TESTS ON SOME SAMPLE APPS. I added a couple of empty guides for LiveLoad (with TODOs of course, I'm not a monster), and I think a good thing to do would be to have some baselines for Phoenix in order to actually showcase different situations and try to stretch it to the limit. I should come up with some scenarios that are good to test and find the limits of... probably stuff around live components, streams, JS hooks, things like that.
+
+Whew. Okay! That was a lot! Now, a couple of housekeeping things occured between the last release and this one:
+- I made some fixes to some stupid mistakes in my Markdown (that was [here](https://github.com/probably-not/live-load/commit/080d81f34c3c9146599274e8d078736c89e038aa))
+- I cleaned up the [`mix.exs`](./mix.exs) file a bit to make the docs a bit better looking with sections and the like (that was [here](https://github.com/probably-not/live-load/commit/f7afb2c4b2c011afc8569a253c490dd055bf1f6b) and [here](https://github.com/probably-not/live-load/commit/c06d533955e3e87b8f61e8fcafc9d413e4fd5737)). That also fixed a previous mistake that I had made, I forgot that I needed to include the [`priv`](./priv/) directory in my files since I was putting the bundled Playwright into it.
+
+The ball is rolling up!
+
+## 0.0.1-rc.13
 
 We've got basic metrics! Well... one metric... but it's a start!
 
