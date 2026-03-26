@@ -27,19 +27,35 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def new_context(%Browser{} = browser) do
     playwright_browser = browser.private.playwright_connection_browser
 
-    case PlaywrightEx.Browser.new_context(playwright_browser.guid,
-           connection: Supervisor.playwright_connection_name(),
-           timeout: command_timeout(browser)
-         ) do
-      {:ok, context} ->
-        browser
-        |> Context.new()
-        |> Context.put_private(:playwright_connection_context, context)
-        |> then(&{:ok, &1})
-
-      {:error, _reason} = error ->
-        error
+    with {:ok, context} <-
+           PlaywrightEx.Browser.new_context(playwright_browser.guid,
+             connection: Supervisor.playwright_connection_name(),
+             timeout: command_timeout(browser)
+           ),
+         {:ok, _} <-
+           PlaywrightEx.BrowserContext.add_init_script(context.guid,
+             source: browser_telemetry_script!(),
+             connection: Supervisor.playwright_connection_name(),
+             timeout: command_timeout(browser)
+           ) do
+      browser
+      |> Context.new()
+      |> Context.put_private(:playwright_connection_context, context)
+      |> then(&{:ok, &1})
     end
+  end
+
+  # TODO: Probably shouldn't read this from disk every time...
+  # I need a simple cache. `:persistent_term` maybe?
+  defp browser_telemetry_script! do
+    telemetry_script_path =
+      Application.get_env(
+        :live_load,
+        :playwright_browser_telemetry_script_path,
+        Path.join(Application.app_dir(:live_load, "priv/static"), "liveview_telemetry.js")
+      )
+
+    File.read!(telemetry_script_path)
   end
 
   @impl true

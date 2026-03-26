@@ -11,7 +11,7 @@
   var spanId = 0;
 
   function emit(data) {
-    console.log(JSON.stringify(Object.assign({ __liveload: true }, data)));
+    console.log("__LIVELOAD||" + JSON.stringify(data));
   }
 
   // 1. LiveView lifecycle — keyed by kind, one in flight per kind
@@ -147,6 +147,8 @@
   // Defer until body exists
   (function start() {
     if (document.body) {
+      emit({ kind: "browser_telemetry_init" });
+
       observer.observe(document.body, {
         attributes: true,
         attributeFilter: ["class"],
