@@ -57,27 +57,35 @@ defmodule LiveLoad.Telemetry.Listener do
   end
 
   defp install(server) do
-    handlers = %{
-      [:amoc, :scenario, :start, :start] => &__MODULE__.handle_telemetry/4,
-      [:amoc, :scenario, :start, :stop] => &__MODULE__.handle_telemetry/4,
-      [:amoc, :scenario, :start, :exception] => &__MODULE__.handle_telemetry/4
-    }
-
-    Enum.each(handlers, fn {event, handler} ->
-      :telemetry.attach({__MODULE__, server, event}, event, handler, %{listener: server})
+    Enum.each(events(), fn event ->
+      :telemetry.attach({__MODULE__, server, event}, event, &__MODULE__.handle_telemetry/4, %{listener: server})
     end)
   end
 
   defp uninstall(server) do
-    events = [
-      [:amoc, :scenario, :start, :start],
-      [:amoc, :scenario, :start, :stop],
-      [:amoc, :scenario, :start, :exception]
-    ]
-
-    Enum.each(events, fn event ->
+    Enum.each(events(), fn event ->
       :telemetry.detach({__MODULE__, server, event})
     end)
+  end
+
+  defp events do
+    [
+      [:amoc, :scenario, :start, :start],
+      [:amoc, :scenario, :start, :stop],
+      [:amoc, :scenario, :start, :exception],
+      [:live_load, :liveview, :connected],
+      [:live_load, :liveview, :disconnected],
+      [:live_load, :liveview, :reconnected],
+      [:live_load, :liveview, :page_loading, :stop],
+      [:live_load, :liveview, :page_loading, :exception],
+      [:live_load, :liveview, :loading_class, :stop],
+      [:live_load, :liveview, :navigate],
+      [:live_load, :http, :request, :stop],
+      [:live_load, :websocket, :opened],
+      [:live_load, :websocket, :closed],
+      [:live_load, :websocket, :frame_sent],
+      [:live_load, :websocket, :frame_received]
+    ]
   end
 
   defmodule State do
@@ -126,11 +134,16 @@ defmodule LiveLoad.Telemetry.Listener do
     {:stop, :normal, state}
   end
 
+  ###################################
+  ## AMoC Scenario Telemetry
+  ###################################
+
   @impl true
   def handle_cast({:telemetry, [:amoc, :scenario, :start, :start], _measurements, %{user_id: user_id}}, %State{} = state) do
     {:noreply, %{state | started: MapSet.put(state.started, user_id)}}
   end
 
+  @impl true
   def handle_cast(
         {:telemetry, [:amoc, :scenario, :start, :stop], %{duration: duration}, %{user_id: user_id}},
         %State{} = state
@@ -152,6 +165,7 @@ defmodule LiveLoad.Telemetry.Listener do
     {:noreply, tap(state, &maybe_send_completion/1)}
   end
 
+  @impl true
   def handle_cast(
         {:telemetry, [:amoc, :scenario, :start, :exception], %{duration: duration}, %{user_id: user_id}},
         %State{} = state
@@ -171,6 +185,91 @@ defmodule LiveLoad.Telemetry.Listener do
     }
 
     {:noreply, tap(state, &maybe_send_completion/1)}
+  end
+
+  ###################################
+  ## LiveView Connection Telemetry
+  ###################################
+
+  @impl true
+  def handle_cast({:telemetry, [:live_load, :liveview, :connected], %{duration: _duration}, %{}}, %State{} = state) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:telemetry, [:live_load, :liveview, :disconnected], _measurements, %{}}, %State{} = state) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:telemetry, [:live_load, :liveview, :reconnected], %{duration: _duration}, %{}}, %State{} = state) do
+    {:noreply, state}
+  end
+
+  ###################################
+  ## LiveView Navigation Telemetry
+  ###################################
+
+  @impl true
+  def handle_cast(
+        {:telemetry, [:live_load, :liveview, :page_loading, :stop], %{duration: _duration}, %{}},
+        %State{} = state
+      ) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast(
+        {:telemetry, [:live_load, :liveview, :page_loading, :exception], %{duration: _duration}, %{}},
+        %State{} = state
+      ) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:telemetry, [:live_load, :liveview, :navigate], %{duration: _duration}, %{}}, %State{} = state) do
+    {:noreply, state}
+  end
+
+  ###################################
+  ## LiveView Interaction Telemetry
+  ###################################
+
+  @impl true
+  def handle_cast(
+        {:telemetry, [:live_load, :liveview, :loading_class, :stop], %{duration: _duration}, %{}},
+        %State{} = state
+      ) do
+    {:noreply, state}
+  end
+
+  ###################################
+  ## HTTP Telemetry
+  ###################################
+
+  @impl true
+  def handle_cast({:telemetry, [:live_load, :http, :request, :stop], _measurements, %{}}, %State{} = state) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:telemetry, [:live_load, :websocket, :opened], _measurements, %{}}, %State{} = state) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:telemetry, [:live_load, :websocket, :closed], _measurements, %{}}, %State{} = state) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:telemetry, [:live_load, :websocket, :frame_sent], _measurements, %{}}, %State{} = state) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_cast({:telemetry, [:live_load, :websocket, :frame_received], _measurements, %{}}, %State{} = state) do
+    {:noreply, state}
   end
 
   @impl true
