@@ -15,18 +15,42 @@ defmodule LiveLoad.Telemetry.Result do
   """
   @type sketch_name() :: :scenario_duration_us
 
+  @typedoc """
+  One of the counter names for any counter that is tracked while running the load test.
+  """
+  @type counter_name() ::
+          :liveview_disconnections
+          | :liveview_reconnections
+          | :liveview_canceled_loads
+          | :liveview_navigations
+          | :websocket_connections_opened
+          | :websocket_connections_closed
+
   @type t() :: %__MODULE__{
           total: pos_integer(),
           succeeded: non_neg_integer(),
           failed: non_neg_integer(),
-          sketches: %{sketch_name() => :ddskerl.ddsketch()}
+          sketches: %{sketch_name() => :ddskerl.ddsketch()},
+          counters: %{counter_name() => non_neg_integer()}
         }
 
-  @enforce_keys [:total, :succeeded, :failed, :sketches]
-  defstruct [:total, :succeeded, :failed, :sketches]
+  @enforce_keys [:total, :succeeded, :failed, :sketches, :counters]
+  defstruct [:total, :succeeded, :failed, :sketches, :counters]
 
   @doc false
   def sketch_names do
     [:scenario_duration_us]
+  end
+
+  @doc false
+  def counter_names do
+    [
+      :liveview_disconnections,
+      :liveview_reconnections,
+      :liveview_canceled_loads,
+      :liveview_navigations,
+      :websocket_connections_opened,
+      :websocket_connections_closed
+    ]
   end
 end

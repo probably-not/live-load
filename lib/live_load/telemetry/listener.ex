@@ -89,7 +89,8 @@ defmodule LiveLoad.Telemetry.Listener do
             stopped: MapSet.t(:amoc_scenario.user_id()),
             succeeded: non_neg_integer(),
             failed: non_neg_integer(),
-            sketches: %{atom() => :ddskerl_std.ddsketch()}
+            sketches: %{atom() => :ddskerl_std.ddsketch()},
+            counters: %{atom() => non_neg_integer()}
           }
 
     defstruct [
@@ -98,7 +99,8 @@ defmodule LiveLoad.Telemetry.Listener do
       stopped: MapSet.new(),
       succeeded: 0,
       failed: 0,
-      sketches: %{}
+      sketches: %{},
+      counters: %{}
     ]
 
     def new(collector_pid) do
@@ -108,14 +110,15 @@ defmodule LiveLoad.Telemetry.Listener do
 
   @impl true
   def init({collector_pid, error_rate}) do
-    {:ok, State.new(collector_pid), {:continue, {:initialize_sketches, error_rate}}}
+    {:ok, State.new(collector_pid), {:continue, {:initialize_metrics, error_rate}}}
   end
 
   @impl true
-  def handle_continue({:initialize_sketches, error_rate}, %State{} = state) do
-    sketches = Result.sketch_names()
+  def handle_continue({:initialize_metrics, error_rate}, %State{} = state) do
     sketch_opts = %{error: error_rate}
-    {:noreply, %{state | sketches: Map.new(sketches, &{&1, :ddskerl_std.new(sketch_opts)})}}
+    sketches = Map.new(Result.sketch_names(), &{&1, :ddskerl_std.new(sketch_opts)})
+    counters = Map.new(Result.counter_names(), &{&1, 0})
+    {:noreply, %{state | sketches: sketches, counters: counters}}
   end
 
   @impl true
@@ -191,7 +194,8 @@ defmodule LiveLoad.Telemetry.Listener do
         total: MapSet.size(state.stopped),
         succeeded: state.succeeded,
         failed: state.failed,
-        sketches: state.sketches
+        sketches: state.sketches,
+        counters: state.counters
       }
 
       :ok = LiveLoad.Telemetry.Collector.node_complete(state.collector_pid, stats)
