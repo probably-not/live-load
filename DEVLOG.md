@@ -8,6 +8,29 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.15
+
+I did a big update of a bunch of stuff yesterday, so today is just sort of, the wrapping up of this whole week of metrics! I spent the day connecting everything from the last week up to the internal LiveLoad telemetry pipeline, and lo and behold, I've got metrics for scenarios! It's pretty cool, I can see a ton of data, and while I've only been testing it with a simple Markdown exporter and the demo scenario and 10 users (because everything is local on my own laptop) but it's giving histograms, percentiles, counts, and so many fun things!
+
+For anyone who wants to play around a little bit, pull down the project, and run this:
+
+```elixir
+LiveLoad.run(users: 10) |> tap(&LiveLoad.Reporter.Markdown.write!/1)
+```
+
+You'll see a markdown file appear with a bunch of output that shows the metrics collected! It's pinging my dayjob's app homepage, so there is not really anything there, but it looks good.
+
+I also started adding in some Agentic coding sessions in this release and the last one as well. I put up disclaimers wherever I do... I think people should be really upfront about when they are using AI, so I'm following through by giving my methodology wherever I do. In this case, it's in the browser telemetry JavaScript file, and the Markdown reporter (I just didn't want to try and figure out the markdown stuff on my own). I'll probably also use Claude (my prefered LLM) for figuring out a real UI for the reporting. I don't use Claude Code or any agents in the codebase (I'm a purist, what can I say) but I've used Claude on the web to do plenty of UI stuff. I'm color blind, so I don't really like doing UI... but Claude seems good enough at that, so for people wanting to see pretty graphs after a load test, I'll see whether I can get Claude to generate some cool graphs and a fun reporting mechanism.
+
+Thinking about it now, I may want to add an AI Policy somewhere to the repo... I know other open source projects have added policies about using AI. My view is that any code contributed needs to be validated by a human and the human has to know what they're actually talking about. So maybe I'll adopt an AI Policy and place it in the repo so that when I open source it, people will follow it. I don't know... I'm not open sourcing yet, so I've got time to figure that part out.
+
+So, let's summarize what's next:
+- Finish implementing all of the browser stuff. The busy work that I've been mentioning this whole time. I gotta do it.
+- Distribution. I'm gonna need to set up FLAME peer nodes so I can actually finish this stuff.
+- The UI/Reporting. I was discussing this with one of my colleagues - I'm not sure if I should go with just a basic Plug and a vanilla frontend that I get Claude to generate, or if I should go all the way and make this in LiveView already. I could set up an Igniter script to let people install the reporting UI on their own LiveView projects. The benefit of a basic Plug is that it's standalone - I could place it in any app, whether it's Phoenix, Phoenix+LiveView, or anything else in the BEAM ecosystem via interop even. So LiveLoad, while being primarily oriented around LiveView metrics, could theoretically be used to load test any app, which would be a huge thing!
+- Actual examples of a LiveView app and benchmarks
+- And last but not least, finish up the documentation. The guides, the todos for docs, all that fun stuff.
+
 ## 0.0.1-rc.14
 
 God damn I'm good. I mean, I'm an engineer... I obviously have a huge ego. But I just feel great after a week of sprinting a bunch on all the metrics stuff. So screw it! Ego wins! I'm amazing!
