@@ -89,8 +89,8 @@ defmodule LiveLoad.Telemetry.Listener do
             stopped: MapSet.t(:amoc_scenario.user_id()),
             succeeded: non_neg_integer(),
             failed: non_neg_integer(),
-            sketches: %{atom() => :ddskerl_std.ddsketch()},
-            counters: %{atom() => non_neg_integer()}
+            sketches: %{Result.sketch_name() => :ddskerl_std.ddsketch()},
+            counters: %{Result.counter_name() => non_neg_integer()}
           }
 
     defstruct [
