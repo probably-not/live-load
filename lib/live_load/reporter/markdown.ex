@@ -170,6 +170,5 @@ defmodule LiveLoad.Reporter.Markdown do
   end
 
   defp format_number(:undefined), do: "-"
-  defp format_number(n) when is_integer(n), do: Integer.to_string(n)
   defp format_number(n) when is_float(n), do: n |> Float.round(1) |> to_string()
 end
