@@ -131,17 +131,19 @@
               kind: "lv_connected",
               span_id: initialSpan.id,
               duration_ms: performance.now() - initialSpan.start,
+              href: document.location.href,
             });
           }
         } else if (!isConnected && connectedState === "connected") {
           connectedState = "disconnected";
           connectedLostAt = performance.now();
-          emit({ kind: "lv_disconnected" });
+          emit({ kind: "lv_disconnected", href: document.location.href });
         } else if (isConnected && connectedState === "disconnected") {
           connectedState = "connected";
           emit({
             kind: "lv_reconnected",
             duration_ms: performance.now() - connectedLostAt,
+            href: document.location.href,
           });
         }
       }

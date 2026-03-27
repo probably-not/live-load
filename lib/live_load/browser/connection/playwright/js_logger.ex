@@ -78,15 +78,15 @@ defmodule LiveLoad.Browser.Connection.Playwright.JsLogger do
     :telemetry.execute(
       [:live_load, :liveview, :connected],
       %{duration: browser_duration_to_native(data["duration_ms"]), monotonic_time: System.monotonic_time()},
-      %{span_id: data["span_id"], page_guid: page_guid}
+      %{span_id: data["span_id"], href: data["href"], page_guid: page_guid}
     )
   end
 
-  defp emit_telemetry("lv_disconnected", _data, page_guid) do
+  defp emit_telemetry("lv_disconnected", data, page_guid) do
     :telemetry.execute(
       [:live_load, :liveview, :disconnected],
       %{monotonic_time: System.monotonic_time()},
-      %{page_guid: page_guid}
+      %{href: data["href"], page_guid: page_guid}
     )
   end
 
@@ -94,7 +94,7 @@ defmodule LiveLoad.Browser.Connection.Playwright.JsLogger do
     :telemetry.execute(
       [:live_load, :liveview, :reconnected],
       %{duration: browser_duration_to_native(data["duration_ms"]), monotonic_time: System.monotonic_time()},
-      %{page_guid: page_guid}
+      %{href: data["href"], page_guid: page_guid}
     )
   end
 
