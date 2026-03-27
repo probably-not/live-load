@@ -7,6 +7,7 @@ defmodule LiveLoad.Telemetry.Result do
   - `:succeeded`: The number of user processes that succeeded running through the scenario
   - `:failed`: The number of user processes that failed to complete their scenario
   - `:sketches`: A map of `t:sketch_name/0` to [`:ddskerl.ddsketch/0`](https://hexdocs.pm/ddskerl/ddskerl.html#t:ddsketch/0) data structures.
+  - `:counters`: A map of `t:counter_name/0` to `t:non_neg_integer/0`.
   These sketches can be used by reporters to calculate metrics on the run itself.
   """
 
