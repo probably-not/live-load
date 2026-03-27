@@ -155,12 +155,11 @@ defmodule LiveLoad.Telemetry.Listener do
       | stopped: MapSet.put(state.stopped, user_id),
         succeeded: state.succeeded + 1,
         sketches:
-          Map.update!(
+          maybe_insert_to_sketch(
             state.sketches,
             :scenario_duration_us,
-            fn sketch ->
-              :ddskerl_std.insert(sketch, System.convert_time_unit(duration, :native, :microsecond))
-            end
+            System.convert_time_unit(duration, :native, :microsecond),
+            state.error_rate
           )
     }
 
@@ -177,12 +176,11 @@ defmodule LiveLoad.Telemetry.Listener do
       | stopped: MapSet.put(state.stopped, user_id),
         failed: state.failed + 1,
         sketches:
-          Map.update!(
+          maybe_insert_to_sketch(
             state.sketches,
             :scenario_duration_us,
-            fn sketch ->
-              :ddskerl_std.insert(sketch, System.convert_time_unit(duration, :native, :microsecond))
-            end
+            System.convert_time_unit(duration, :native, :microsecond),
+            state.error_rate
           )
     }
 
@@ -194,18 +192,48 @@ defmodule LiveLoad.Telemetry.Listener do
   ###################################
 
   @impl true
-  def handle_cast({:telemetry, [:live_load, :liveview, :connected], %{duration: _duration}, %{}}, %State{} = state) do
-    {:noreply, state}
+  def handle_cast(
+        {:telemetry, [:live_load, :liveview, :connected], %{duration: duration}, %{href: href}},
+        %State{} = state
+      ) do
+    duration_us = System.convert_time_unit(duration, :native, :microsecond)
+
+    sketches =
+      state.sketches
+      |> maybe_insert_to_sketch(:liveview_connection_duration_us, duration_us, state.error_rate)
+      |> maybe_insert_to_sketch({:liveview_connection_duration_us, href}, duration_us, state.error_rate)
+
+    {:noreply, %{state | sketches: sketches}}
   end
 
   @impl true
-  def handle_cast({:telemetry, [:live_load, :liveview, :disconnected], _measurements, %{}}, %State{} = state) do
-    {:noreply, state}
+  def handle_cast({:telemetry, [:live_load, :liveview, :disconnected], _measurements, %{href: href}}, %State{} = state) do
+    counters =
+      state.counters
+      |> increment_counter(:liveview_disconnections)
+      |> increment_counter({:liveview_disconnections, href})
+
+    {:noreply, %{state | counters: counters}}
   end
 
   @impl true
-  def handle_cast({:telemetry, [:live_load, :liveview, :reconnected], %{duration: _duration}, %{}}, %State{} = state) do
-    {:noreply, state}
+  def handle_cast(
+        {:telemetry, [:live_load, :liveview, :reconnected], %{duration: duration}, %{href: href}},
+        %State{} = state
+      ) do
+    duration_us = System.convert_time_unit(duration, :native, :microsecond)
+
+    sketches =
+      state.sketches
+      |> maybe_insert_to_sketch(:liveview_reconnection_duration_us, duration_us, state.error_rate)
+      |> maybe_insert_to_sketch({:liveview_reconnection_duration_us, href}, duration_us, state.error_rate)
+
+    counters =
+      state.counters
+      |> increment_counter(:liveview_reconnections)
+      |> increment_counter({:liveview_reconnections, href})
+
+    {:noreply, %{state | sketches: sketches, counters: counters}}
   end
 
   ###################################
@@ -214,23 +242,47 @@ defmodule LiveLoad.Telemetry.Listener do
 
   @impl true
   def handle_cast(
-        {:telemetry, [:live_load, :liveview, :page_loading, :stop], %{duration: _duration}, %{}},
+        {:telemetry, [:live_load, :liveview, :page_loading, :stop], %{duration: duration}, %{kind: kind}},
         %State{} = state
       ) do
-    {:noreply, state}
+    duration_us = System.convert_time_unit(duration, :native, :microsecond)
+
+    sketches =
+      state.sketches
+      |> maybe_insert_to_sketch(:liveview_page_loading_duration_us, duration_us, state.error_rate)
+      |> maybe_insert_to_sketch({:liveview_page_loading_duration_us, kind}, duration_us, state.error_rate)
+
+    {:noreply, %{state | sketches: sketches}}
   end
 
   @impl true
   def handle_cast(
-        {:telemetry, [:live_load, :liveview, :page_loading, :exception], %{duration: _duration}, %{}},
+        {:telemetry, [:live_load, :liveview, :page_loading, :exception], %{duration: duration}, %{kind: kind}},
         %State{} = state
       ) do
-    {:noreply, state}
+    duration_us = System.convert_time_unit(duration, :native, :microsecond)
+
+    sketches =
+      state.sketches
+      |> maybe_insert_to_sketch(:liveview_page_loading_duration_us, duration_us, state.error_rate)
+      |> maybe_insert_to_sketch({:liveview_page_loading_duration_us, kind}, duration_us, state.error_rate)
+
+    counters =
+      state.counters
+      |> increment_counter(:liveview_canceled_loads)
+      |> increment_counter({:liveview_canceled_loads, kind})
+
+    {:noreply, %{state | sketches: sketches, counters: counters}}
   end
 
   @impl true
-  def handle_cast({:telemetry, [:live_load, :liveview, :navigate], %{duration: _duration}, %{}}, %State{} = state) do
-    {:noreply, state}
+  def handle_cast({:telemetry, [:live_load, :liveview, :navigate], _measurements, %{type: type}}, %State{} = state) do
+    counters =
+      state.counters
+      |> increment_counter(:liveview_navigations)
+      |> increment_counter({:liveview_navigations, type})
+
+    {:noreply, %{state | counters: counters}}
   end
 
   ###################################
@@ -239,10 +291,17 @@ defmodule LiveLoad.Telemetry.Listener do
 
   @impl true
   def handle_cast(
-        {:telemetry, [:live_load, :liveview, :loading_class, :stop], %{duration: _duration}, %{}},
+        {:telemetry, [:live_load, :liveview, :loading_class, :stop], %{duration: duration}, %{class: class}},
         %State{} = state
       ) do
-    {:noreply, state}
+    duration_us = System.convert_time_unit(duration, :native, :microsecond)
+
+    sketches =
+      state.sketches
+      |> maybe_insert_to_sketch(:liveview_loading_class_duration_us, duration_us, state.error_rate)
+      |> maybe_insert_to_sketch({:liveview_loading_class_duration_us, class}, duration_us, state.error_rate)
+
+    {:noreply, %{state | sketches: sketches}}
   end
 
   ###################################
@@ -250,28 +309,77 @@ defmodule LiveLoad.Telemetry.Listener do
   ###################################
 
   @impl true
-  def handle_cast({:telemetry, [:live_load, :http, :request, :stop], _measurements, %{}}, %State{} = state) do
-    {:noreply, state}
+  def handle_cast(
+        {:telemetry, [:live_load, :http, :request, :stop], measurements, %{resource_type: resource_type}},
+        %State{} = state
+      ) do
+    sketches =
+      Enum.reduce(
+        [
+          http_request_duration_us: :duration,
+          http_request_ttfb_us: :ttfb,
+          http_request_dns_us: :dns,
+          http_request_connect_us: :connect,
+          http_request_tls_us: :tls
+        ],
+        state.sketches,
+        fn {name, measurement}, sketches ->
+          value = Map.get(measurements, measurement, -1)
+          value_us = System.convert_time_unit(value, :native, :microsecond)
+
+          sketches
+          |> maybe_insert_to_sketch(name, value_us, state.error_rate)
+          |> maybe_insert_to_sketch({name, resource_type}, value_us, state.error_rate)
+        end
+      )
+
+    {:noreply, %{state | sketches: sketches}}
   end
 
   @impl true
-  def handle_cast({:telemetry, [:live_load, :websocket, :opened], _measurements, %{}}, %State{} = state) do
-    {:noreply, state}
+  def handle_cast({:telemetry, [:live_load, :websocket, :opened], _measurements, %{url: url}}, %State{} = state) do
+    counters =
+      state.counters
+      |> increment_counter(:websocket_connections_opened)
+      |> increment_counter({:websocket_connections_opened, url})
+
+    {:noreply, %{state | counters: counters}}
   end
 
   @impl true
-  def handle_cast({:telemetry, [:live_load, :websocket, :closed], _measurements, %{}}, %State{} = state) do
-    {:noreply, state}
+  def handle_cast({:telemetry, [:live_load, :websocket, :closed], _measurements, %{url: url}}, %State{} = state) do
+    counters =
+      state.counters
+      |> increment_counter(:websocket_connections_closed)
+      |> increment_counter({:websocket_connections_closed, url})
+
+    {:noreply, %{state | counters: counters}}
   end
 
   @impl true
-  def handle_cast({:telemetry, [:live_load, :websocket, :frame_sent], _measurements, %{}}, %State{} = state) do
-    {:noreply, state}
+  def handle_cast(
+        {:telemetry, [:live_load, :websocket, :frame_sent], %{payload_size: size}, %{url: url}},
+        %State{} = state
+      ) do
+    sketches =
+      state.sketches
+      |> maybe_insert_to_sketch(:websocket_frame_sent_bytes, size, state.error_rate)
+      |> maybe_insert_to_sketch({:websocket_frame_sent_bytes, url}, size, state.error_rate)
+
+    {:noreply, %{state | sketches: sketches}}
   end
 
   @impl true
-  def handle_cast({:telemetry, [:live_load, :websocket, :frame_received], _measurements, %{}}, %State{} = state) do
-    {:noreply, state}
+  def handle_cast(
+        {:telemetry, [:live_load, :websocket, :frame_received], %{payload_size: size}, %{url: url}},
+        %State{} = state
+      ) do
+    sketches =
+      state.sketches
+      |> maybe_insert_to_sketch(:websocket_frame_received_bytes, size, state.error_rate)
+      |> maybe_insert_to_sketch({:websocket_frame_received_bytes, url}, size, state.error_rate)
+
+    {:noreply, %{state | sketches: sketches}}
   end
 
   @impl true
@@ -287,6 +395,22 @@ defmodule LiveLoad.Telemetry.Listener do
     ])
 
     {:noreply, state}
+  end
+
+  defp maybe_insert_to_sketch(sketches, name, value, error_rate) when is_number(value) and value >= 0 do
+    sketches
+    |> Map.put_new_lazy(name, fn ->
+      :ddskerl_std.new(%{error: error_rate})
+    end)
+    |> Map.update!(name, &:ddskerl_std.insert(&1, value))
+  end
+
+  defp maybe_insert_to_sketch(sketches, _name, _value, _error_rate) do
+    sketches
+  end
+
+  defp increment_counter(counters, name) do
+    Map.update(counters, name, 1, &(&1 + 1))
   end
 
   defp maybe_send_completion(%State{} = state) do
