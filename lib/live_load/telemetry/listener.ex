@@ -341,7 +341,7 @@ defmodule LiveLoad.Telemetry.Listener do
     counters =
       state.counters
       |> increment_counter(:websocket_connections_opened)
-      |> increment_counter({:websocket_connections_opened, url})
+      |> increment_counter({:websocket_connections_opened, clean_url(url)})
 
     {:noreply, %{state | counters: counters}}
   end
@@ -351,7 +351,7 @@ defmodule LiveLoad.Telemetry.Listener do
     counters =
       state.counters
       |> increment_counter(:websocket_connections_closed)
-      |> increment_counter({:websocket_connections_closed, url})
+      |> increment_counter({:websocket_connections_closed, clean_url(url)})
 
     {:noreply, %{state | counters: counters}}
   end
@@ -364,7 +364,7 @@ defmodule LiveLoad.Telemetry.Listener do
     sketches =
       state.sketches
       |> maybe_insert_to_sketch(:websocket_frame_sent_bytes, size, state.error_rate)
-      |> maybe_insert_to_sketch({:websocket_frame_sent_bytes, url}, size, state.error_rate)
+      |> maybe_insert_to_sketch({:websocket_frame_sent_bytes, clean_url(url)}, size, state.error_rate)
 
     {:noreply, %{state | sketches: sketches}}
   end
@@ -377,7 +377,7 @@ defmodule LiveLoad.Telemetry.Listener do
     sketches =
       state.sketches
       |> maybe_insert_to_sketch(:websocket_frame_received_bytes, size, state.error_rate)
-      |> maybe_insert_to_sketch({:websocket_frame_received_bytes, url}, size, state.error_rate)
+      |> maybe_insert_to_sketch({:websocket_frame_received_bytes, clean_url(url)}, size, state.error_rate)
 
     {:noreply, %{state | sketches: sketches}}
   end
@@ -411,6 +411,24 @@ defmodule LiveLoad.Telemetry.Listener do
 
   defp increment_counter(counters, name) do
     Map.update(counters, name, 1, &(&1 + 1))
+  end
+
+  defp clean_url(url) do
+    case URI.new(url) do
+      {:ok, %URI{} = uri} ->
+        URI.to_string(%{uri | query: nil, fragment: nil})
+
+      {:error, reason} ->
+        Logger.warning([
+          "[LiveLoad.Telemetry.Listener] Unable to parse URL, falling back to raw URL:",
+          " ",
+          inspect(url),
+          "; ",
+          Exception.format_exit(reason)
+        ])
+
+        url
+    end
   end
 
   defp maybe_send_completion(%State{} = state) do
