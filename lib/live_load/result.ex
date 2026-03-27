@@ -52,6 +52,7 @@ defmodule LiveLoad.Result do
   """
   @type counter_name() ::
           :liveview_navigations
+          | {:liveview_navigations, type :: String.t()}
           | :liveview_disconnections
           | {:liveview_disconnections, href :: String.t()}
           | :liveview_reconnections
