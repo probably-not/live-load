@@ -1,6 +1,6 @@
-defmodule LiveLoad.Telemetry.Result do
+defmodule LiveLoad.Result do
   @moduledoc """
-  `LiveLoad.Telemetry.Result` defines the struct type for the results of a scenario's load test.
+  `LiveLoad.Result` defines the struct type for the results of a scenario's load test.
 
   It contains 4 fields:
   - `:total`: The total number of user processes

@@ -128,7 +128,7 @@ defmodule LiveLoad.MixProject do
     [
       LiveLoad: [
         LiveLoad,
-        LiveLoad.Telemetry.Result,
+        LiveLoad.Result,
         LiveLoad.JSON
       ],
       Scenario: [

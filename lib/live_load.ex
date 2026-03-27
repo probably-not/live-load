@@ -90,9 +90,9 @@ defmodule LiveLoad do
           | {atom(), term()}
 
   @typedoc """
-  The result that can return from a scenario run on a specific node. Can either be a `LiveLoad.Telemetry.Result` or an error tuple.
+  The result that can return from a scenario run on a specific node. Can either be a `LiveLoad.Result` or an error tuple.
   """
-  @type node_result() :: LiveLoad.Telemetry.Result.t() | {:error, term()}
+  @type node_result() :: LiveLoad.Result.t() | {:error, term()}
 
   @doc """
   Run all of the `LiveLoad.Scenario` modules in this project.
