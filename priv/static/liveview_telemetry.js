@@ -9,6 +9,7 @@
 
 (function () {
   var spanId = 0;
+  var initTime = performance.now();
 
   function emit(data) {
     console.log("__LIVELOAD||" + JSON.stringify(data));
@@ -125,15 +126,11 @@
         if (isConnected && connectedState === null) {
           connectedEl = el;
           connectedState = "connected";
-          var initialSpan = loadingSpans["initial"];
-          if (initialSpan) {
-            emit({
-              kind: "lv_connected",
-              span_id: initialSpan.id,
-              duration_ms: performance.now() - initialSpan.start,
-              href: document.location.href,
-            });
-          }
+          emit({
+            kind: "lv_connected",
+            duration_ms: performance.now() - initTime,
+            href: document.location.href,
+          });
         } else if (!isConnected && connectedState === "connected") {
           connectedState = "disconnected";
           connectedLostAt = performance.now();
