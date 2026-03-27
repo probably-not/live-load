@@ -20,10 +20,11 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
 
     @type t() :: %__MODULE__{
             connection: GenServer.name(),
-            subscribed_websockets: %{String.t() => String.t()}
+            subscribed_websockets: %{String.t() => String.t()},
+            subscribed_requests: %{String.t() => String.t()}
           }
 
-    defstruct [:connection, subscribed_websockets: %{}]
+    defstruct [:connection, subscribed_websockets: %{}, subscribed_requests: %{}]
 
     def new(connection) do
       %__MODULE__{connection: connection}
@@ -72,12 +73,19 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
       }
     )
 
-    {:noreply, state}
+    new = Map.put(state.subscribed_requests, params.guid, params.initializer.resource_type)
+    {:noreply, %{state | subscribed_requests: new}}
   end
 
   @impl true
-  def handle_info({:playwright_msg, %{method: :__create__, params: %{type: "Response"} = params}}, %State{} = state) do
+  def handle_info(
+        {:playwright_msg, %{method: :__create__, guid: guid, params: %{type: "Response"} = params}},
+        %State{} = state
+      )
+      when is_map_key(state.subscribed_requests, guid) do
     timing = params.initializer.timing
+
+    {resource_type, left} = Map.pop!(state.subscribed_requests, guid)
 
     content_length =
       Enum.find_value(params.initializer.headers, fn
@@ -96,10 +104,10 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
         ttfb: timing_to_native(timing.response_start - timing.request_start),
         content_length: content_length
       },
-      %{url: params.initializer.url, status: params.initializer.status, span_id: params.initializer.request.guid}
+      %{url: params.initializer.url, resource_type: resource_type, status: params.initializer.status, span_id: guid}
     )
 
-    {:noreply, state}
+    {:noreply, %{state | subscribed_requests: left}}
   end
 
   ###################################
