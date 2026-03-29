@@ -117,7 +117,11 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
   @impl true
   def handle_info({:playwright_msg, %{method: :__create__, params: %{type: "WebSocket"} = params}}, %State{} = state) do
     :ok = PlaywrightEx.subscribe(params.guid, connection: state.connection)
-    :telemetry.execute([:live_load, :websocket, :opened], %{count: 1}, %{url: params.initializer.url})
+
+    :telemetry.execute([:live_load, :websocket, :opened], %{count: 1, monotonic_time: System.monotonic_time()}, %{
+      url: params.initializer.url
+    })
+
     new = Map.put(state.subscribed_websockets, params.guid, params.initializer.url)
     {:noreply, %{state | subscribed_websockets: new}}
   end
@@ -126,7 +130,11 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
   def handle_info({:playwright_msg, %{method: :close, guid: guid}}, %State{} = state)
       when is_map_key(state.subscribed_websockets, guid) do
     {url, left} = Map.pop!(state.subscribed_websockets, guid)
-    :telemetry.execute([:live_load, :websocket, :closed], %{count: 1}, %{url: url})
+
+    :telemetry.execute([:live_load, :websocket, :closed], %{count: 1, monotonic_time: System.monotonic_time()}, %{
+      url: url
+    })
+
     {:noreply, %{state | subscribed_websockets: left}}
   end
 
@@ -138,7 +146,7 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
       when is_map_key(state.subscribed_websockets, guid) do
     :telemetry.execute(
       [:live_load, :websocket, :frame_sent],
-      %{payload_size: byte_size(data)},
+      %{payload_size: byte_size(data), monotonic_time: System.monotonic_time()},
       %{url: Map.fetch!(state.subscribed_websockets, guid), opcode: opcode}
     )
 
@@ -153,7 +161,7 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
       when is_map_key(state.subscribed_websockets, guid) do
     :telemetry.execute(
       [:live_load, :websocket, :frame_received],
-      %{payload_size: byte_size(data)},
+      %{payload_size: byte_size(data), monotonic_time: System.monotonic_time()},
       %{url: Map.fetch!(state.subscribed_websockets, guid), opcode: opcode}
     )
 
@@ -166,7 +174,10 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
     # From some basic experimentation (me in IEx) it looks like the only things that are getting caught
     # here are the "leftovers", along with "Worker" and "Frame" messages. I think that's stuff that I can
     # leave off... but for debugging purposes, firing this event can help find other things in the future.
-    :telemetry.execute([:live_load, :unknown_playwright_message], %{count: 1}, %{message: message})
+    :telemetry.execute([:live_load, :unknown_playwright_message], %{count: 1, monotonic_time: System.monotonic_time()}, %{
+      message: message
+    })
+
     {:noreply, state}
   end
 
