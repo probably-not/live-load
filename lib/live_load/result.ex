@@ -64,16 +64,35 @@ defmodule LiveLoad.Result do
           | :websocket_connections_closed
           | {:websocket_connections_closed, url :: String.t()}
 
+  @typedoc """
+  A zero-indexed bucket number for tracking time-series telemetry.
+  This will allow `LiveLoad` to not only track overall metrics but show them on a time-series over the course of the load test.
+  """
+  @type bucket_index :: non_neg_integer()
+
+  @typedoc """
+  A single time bucket containing sketches and counters that fell within that bucket's time window.
+  These will be aggregated over the course of a load test in order to determine the time dimension for
+  when issues may or may not occur during the load test.
+  """
+  @type bucket :: %{
+          sketches: %{sketch_name() => :ddskerl.ddsketch()},
+          counters: %{counter_name() => non_neg_integer()}
+        }
+
   @type t() :: %__MODULE__{
           total: pos_integer(),
           succeeded: non_neg_integer(),
           failed: non_neg_integer(),
           sketches: %{sketch_name() => :ddskerl.ddsketch()},
-          counters: %{counter_name() => non_neg_integer()}
+          counters: %{counter_name() => non_neg_integer()},
+          bucket_width_ms: pos_integer(),
+          start_system_time: integer(),
+          time_series: %{bucket_index() => bucket()}
         }
 
-  @enforce_keys [:total, :succeeded, :failed, :sketches, :counters]
-  defstruct [:total, :succeeded, :failed, :sketches, :counters]
+  @enforce_keys [:total, :succeeded, :failed, :sketches, :counters, :bucket_width_ms, :start_system_time, :time_series]
+  defstruct [:total, :succeeded, :failed, :sketches, :counters, :bucket_width_ms, :start_system_time, :time_series]
 
   @doc false
   def sketch_names do
