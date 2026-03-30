@@ -158,18 +158,31 @@ defmodule LiveLoad.Telemetry.Listener do
          %{user_id: user_id}},
         %State{monotonic_start: nil} = state
       ) do
-    {:noreply,
-     %{
-       state
-       | started: MapSet.put(state.started, user_id),
-         monotonic_start: monotonic_time,
-         start_system_time: system_time
-     }}
+    state = %{
+      state
+      | started: MapSet.put(state.started, user_id),
+        monotonic_start: monotonic_time,
+        start_system_time: system_time
+    }
+
+    bucket = bucket(state, monotonic_time)
+    counters = increment_counter(state.counters, :scenario_users_started)
+    counter_buckets = increment_counter_bucket(state.counter_buckets, bucket, :scenario_users_started)
+
+    {:noreply, %{state | counters: counters, counter_buckets: counter_buckets}}
   end
 
   @impl true
-  def handle_cast({:telemetry, [:amoc, :scenario, :start, :start], _measurements, %{user_id: user_id}}, %State{} = state) do
-    {:noreply, %{state | started: MapSet.put(state.started, user_id)}}
+  def handle_cast(
+        {:telemetry, [:amoc, :scenario, :start, :start], %{monotonic_time: monotonic_time}, %{user_id: user_id}},
+        %State{} = state
+      ) do
+    bucket = bucket(state, monotonic_time)
+    counters = increment_counter(state.counters, :scenario_users_started)
+    counter_buckets = increment_counter_bucket(state.counter_buckets, bucket, :scenario_users_started)
+
+    {:noreply,
+     %{state | started: MapSet.put(state.started, user_id), counters: counters, counter_buckets: counter_buckets}}
   end
 
   @impl true
@@ -185,12 +198,17 @@ defmodule LiveLoad.Telemetry.Listener do
     sketch_buckets =
       maybe_insert_to_sketch_bucket(state.sketch_buckets, bucket, :scenario_duration_us, duration_us, state.error_rate)
 
+    counters = increment_counter(state.counters, :scenario_users_completed)
+    counter_buckets = increment_counter_bucket(state.counter_buckets, bucket, :scenario_users_completed)
+
     state = %{
       state
       | stopped: MapSet.put(state.stopped, user_id),
         succeeded: state.succeeded + 1,
         sketches: sketches,
-        sketch_buckets: sketch_buckets
+        sketch_buckets: sketch_buckets,
+        counters: counters,
+        counter_buckets: counter_buckets
     }
 
     {:noreply, tap(state, &maybe_send_completion/1)}
@@ -209,12 +227,17 @@ defmodule LiveLoad.Telemetry.Listener do
     sketch_buckets =
       maybe_insert_to_sketch_bucket(state.sketch_buckets, bucket, :scenario_duration_us, duration_us, state.error_rate)
 
+    counters = increment_counter(state.counters, :scenario_users_completed)
+    counter_buckets = increment_counter_bucket(state.counter_buckets, bucket, :scenario_users_completed)
+
     state = %{
       state
       | stopped: MapSet.put(state.stopped, user_id),
         failed: state.failed + 1,
         sketches: sketches,
-        sketch_buckets: sketch_buckets
+        sketch_buckets: sketch_buckets,
+        counters: counters,
+        counter_buckets: counter_buckets
     }
 
     {:noreply, tap(state, &maybe_send_completion/1)}

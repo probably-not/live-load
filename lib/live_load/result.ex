@@ -51,7 +51,9 @@ defmodule LiveLoad.Result do
   - `{name :: atom(), dimension :: String.t()}`: A counter broken down by a dimension to allow drilldowns
   """
   @type counter_name() ::
-          :liveview_navigations
+          :scenario_users_started
+          | :scenario_users_completed
+          | :liveview_navigations
           | {:liveview_navigations, type :: String.t()}
           | :liveview_disconnections
           | {:liveview_disconnections, href :: String.t()}
@@ -115,6 +117,8 @@ defmodule LiveLoad.Result do
   @doc false
   def counter_names do
     [
+      :scenario_users_started,
+      :scenario_users_completed,
       :liveview_navigations,
       :liveview_disconnections,
       :liveview_reconnections,
