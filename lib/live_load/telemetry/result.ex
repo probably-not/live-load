@@ -1,15 +1,16 @@
-defmodule LiveLoad.Result do
-  @moduledoc """
-  `LiveLoad.Result` defines the struct type for the results of a scenario's load test.
-
-  It contains 4 fields:
-  - `:total`: The total number of user processes
-  - `:succeeded`: The number of user processes that succeeded running through the scenario
-  - `:failed`: The number of user processes that failed to complete their scenario
-  - `:sketches`: A map of `t:sketch_name/0` to [`:ddskerl.ddsketch/0`](https://hexdocs.pm/ddskerl/ddskerl.html#t:ddsketch/0) data structures.
-  - `:counters`: A map of `t:counter_name/0` to `t:non_neg_integer/0`.
-  These sketches can be used by reporters to calculate metrics on the run itself.
-  """
+defmodule LiveLoad.Telemetry.Result do
+  @moduledoc false
+  # `LiveLoad.Telemetry.Result` defines the struct type for the per-node telemetry results of a scenario's load test.
+  # It contains 8 fields:
+  # - `:total`: The total number of user processes
+  # - `:succeeded`: The number of user processes that succeeded running through the scenario
+  # - `:failed`: The number of user processes that failed to complete their scenario
+  # - `:sketches`: A map of `t:sketch_name/0` to [`:ddskerl.ddsketch/0`](https://hexdocs.pm/ddskerl/ddskerl.html#t:ddsketch/0) data structures.
+  # - `:counters`: A map of `t:counter_name/0` to `t:non_neg_integer/0`.
+  # - `:bucket_width_ms`: The defined width of a bucket during the load test. A bucket is a point in time within the time series which allows us to know how the test behaved over time.
+  # - `:start_system_time`: The initial system time that the node first initialized its time series buckets. Since node monotonic times are not synced across nodes, we use the system start time as an anchor.
+  # - `:time_series`: A map of `t:bucket_index/0` to `t:bucket/0`. This contains the individual buckets and their index within the actual test.
+  # These sketches, counters, and time series maps can all be used by reporters to calculate metrics on the run itself.
 
   @typedoc """
   One of the sketch names for sketches that are tracked while running the load test.

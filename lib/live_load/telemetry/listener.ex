@@ -7,7 +7,7 @@ defmodule LiveLoad.Telemetry.Listener do
 
   use GenServer
 
-  alias LiveLoad.Result
+  alias LiveLoad.Telemetry.Result
 
   require Logger
 
