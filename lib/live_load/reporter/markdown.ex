@@ -12,7 +12,9 @@ defmodule LiveLoad.Reporter.Markdown do
   # by Claude Opus 4.6 for me - I gave it the structure of `LiveLoad.Result` and told it
   # to create a debugging Markdown script that gives me a report I can use.
 
-  @quantiles [p50: 0.5, p90: 0.9, p95: 0.95, p99: 0.99]
+  alias LiveLoad.Result
+
+  @quantiles [p50: 50, p90: 90, p95: 95, p99: 99]
 
   def write!(results, path \\ "liveload_report.md") do
     markdown =
@@ -25,150 +27,117 @@ defmodule LiveLoad.Reporter.Markdown do
     File.write!(path, markdown)
   end
 
-  defp scenario_section({scenario, node_results}) do
+  defp scenario_section({_scenario, {:error, reason}}) do
+    "## Error\n\n**ERROR**: `#{inspect(reason)}`\n"
+  end
+
+  defp scenario_section({_scenario, %Result{} = result}) do
     [
-      "## #{inspect(scenario)}\n\n",
-      Enum.map_join(node_results, "\n", &node_section/1)
+      "## #{result.name}\n\n",
+      "### Global\n\n",
+      scenario_result_section(result.global),
+      "\n",
+      Enum.map_join(result.nodes, "\n", &node_section/1)
     ]
   end
 
-  defp node_section({node, {:error, reason}}) do
-    "### #{node}\n\n**ERROR**: `#{inspect(reason)}`\n"
-  end
-
-  defp node_section({node, %LiveLoad.Result{} = result}) do
+  defp node_section(%Result.NodeResult{node: node, result: scenario_result}) do
     [
       "### #{node}\n\n",
-      users_summary(result),
-      "\n",
-      sketches_section(result.sketches),
-      counters_section(result.counters)
+      scenario_result_section(scenario_result)
     ]
   end
 
-  defp users_summary(%{total: total, succeeded: succeeded, failed: failed}) do
+  defp scenario_result_section(%Result.ScenarioResult{} = sr) do
+    [
+      users_summary(sr.users),
+      "\n",
+      histograms_section(sr.histograms),
+      counters_section(sr.counters)
+    ]
+  end
+
+  defp users_summary(%Result.Users{total: total, succeeded: succeeded, failed: failed}) do
     "**Users**: #{total} total, #{succeeded} succeeded, #{failed} failed\n"
   end
 
-  defp sketches_section(sketches) when map_size(sketches) == 0, do: ""
+  defp histograms_section(histograms) when map_size(histograms) == 0, do: ""
 
-  defp sketches_section(sketches) do
-    {aggregate, dimensional} =
-      Enum.split_with(sketches, fn {key, _} -> is_atom(key) end)
-
-    [
-      aggregate_sketches_table(aggregate),
-      dimensional_sketches_sections(dimensional)
-    ]
-  end
-
-  defp aggregate_sketches_table([]), do: ""
-
-  defp aggregate_sketches_table(sketches) do
+  defp histograms_section(histograms) do
     header = "| Metric | Count | Min | p50 | p90 | p95 | p99 | Max | Mean |\n"
     separator = "|--------|------:|----:|----:|----:|----:|----:|----:|-----:|\n"
 
     rows =
-      sketches
+      histograms
       |> Enum.sort_by(fn {name, _} -> name end)
-      |> Enum.map_join(fn {name, sketch} ->
-        sketch_row(Atom.to_string(name), sketch)
+      |> Enum.map_join(fn {name, %Result.DimensionedHistogram{} = dh} ->
+        [
+          quantiles_row(name, dh.aggregate),
+          dimensional_rows(dh.by)
+        ]
       end)
 
-    ["\n#### Sketches\n\n", header, separator, rows]
+    ["\n#### Histograms\n\n", header, separator, rows]
   end
 
-  defp dimensional_sketches_sections([]), do: ""
+  defp dimensional_rows(by) when map_size(by) == 0, do: ""
 
-  defp dimensional_sketches_sections(dimensional) do
-    dimensional
-    |> Enum.group_by(fn {{name, _dimension}, _sketch} -> name end)
-    |> Enum.sort_by(fn {name, _} -> name end)
-    |> Enum.map_join(fn {name, entries} ->
-      header = "| #{Atom.to_string(name)} | Count | Min | p50 | p90 | p95 | p99 | Max | Mean |\n"
-      separator = "|--------|------:|----:|----:|----:|----:|----:|----:|-----:|\n"
-
-      rows =
-        entries
-        |> Enum.sort_by(fn {{_, dim}, _} -> dim end)
-        |> Enum.map_join(fn {{_, dimension}, sketch} ->
-          sketch_row(dimension, sketch)
-        end)
-
-      ["\n##### By dimension: `#{name}`\n\n", header, separator, rows]
+  defp dimensional_rows(by) do
+    by
+    |> Enum.sort_by(fn {dim, _} -> dim end)
+    |> Enum.map_join(fn {dimension, pq} ->
+      quantiles_row("  #{dimension}", pq)
     end)
   end
 
-  defp sketch_row(label, sketch) do
-    count = :ddskerl_std.total(sketch)
+  defp quantiles_row(label, %Result.PrecomputedQuantiles{count: 0}) do
+    "| #{label} | 0 | - | - | - | - | - | - | - |\n"
+  end
 
-    if count == 0 do
-      "| #{label} | 0 | - | - | - | - | - | - | - |\n"
-    else
-      sum = :ddskerl_std.sum(sketch)
-      mean = Float.round(sum / count, 1)
+  defp quantiles_row(label, %Result.PrecomputedQuantiles{} = pq) do
+    mean = Float.round(pq.sum / pq.count, 1)
 
-      quantile_values =
-        Enum.map(@quantiles, fn {_label, q} ->
-          format_number(:ddskerl_std.quantile(sketch, q))
-        end)
+    quantile_values =
+      Enum.map_join(@quantiles, " | ", fn {_label, idx} ->
+        format_number(Enum.at(pq.values, idx))
+      end)
 
-      min = format_number(:ddskerl_std.quantile(sketch, 0.0))
-      max = format_number(:ddskerl_std.quantile(sketch, 1.0))
+    min = format_number(Enum.at(pq.values, 0))
+    max = format_number(Enum.at(pq.values, 100))
 
-      "| #{label} | #{count} | #{min} | #{Enum.join(quantile_values, " | ")} | #{max} | #{format_number(mean)} |\n"
-    end
+    "| #{label} | #{pq.count} | #{min} | #{quantile_values} | #{max} | #{format_number(mean)} |\n"
   end
 
   defp counters_section(counters) when map_size(counters) == 0, do: ""
 
   defp counters_section(counters) do
-    {aggregate, dimensional} =
-      Enum.split_with(counters, fn {key, _} -> is_atom(key) end)
-
-    [
-      aggregate_counters_table(aggregate),
-      dimensional_counters_sections(dimensional)
-    ]
-  end
-
-  defp aggregate_counters_table([]), do: ""
-
-  defp aggregate_counters_table(counters) do
     header = "| Counter | Value |\n"
     separator = "|---------|------:|\n"
 
     rows =
       counters
       |> Enum.sort_by(fn {name, _} -> name end)
-      |> Enum.map_join(fn {name, value} ->
-        "| #{name} | #{value} |\n"
+      |> Enum.map_join(fn {name, %Result.DimensionedCounter{} = dc} ->
+        [
+          "| #{name} | #{dc.aggregate} |\n",
+          dimensional_counter_rows(dc.by)
+        ]
       end)
 
     ["\n#### Counters\n\n", header, separator, rows]
   end
 
-  defp dimensional_counters_sections([]), do: ""
+  defp dimensional_counter_rows(by) when map_size(by) == 0, do: ""
 
-  defp dimensional_counters_sections(dimensional) do
-    dimensional
-    |> Enum.group_by(fn {{name, _}, _} -> name end)
-    |> Enum.sort_by(fn {name, _} -> name end)
-    |> Enum.map_join(fn {name, entries} ->
-      header = "| #{Atom.to_string(name)} | Value |\n"
-      separator = "|---------|------:|\n"
-
-      rows =
-        entries
-        |> Enum.sort_by(fn {{_, dim}, _} -> dim end)
-        |> Enum.map_join(fn {{_, dimension}, value} ->
-          "| #{dimension} | #{value} |\n"
-        end)
-
-      ["\n##### By dimension: `#{name}`\n\n", header, separator, rows]
+  defp dimensional_counter_rows(by) do
+    by
+    |> Enum.sort_by(fn {dim, _} -> dim end)
+    |> Enum.map_join(fn {dimension, value} ->
+      "|   #{dimension} | #{value} |\n"
     end)
   end
 
-  defp format_number(:undefined), do: "-"
   defp format_number(n) when is_float(n), do: n |> Float.round(1) |> to_string()
+  defp format_number(n) when is_integer(n), do: to_string(n)
+  defp format_number(_), do: "-"
 end
