@@ -89,11 +89,6 @@ defmodule LiveLoad do
           | scenario_timeout_opt()
           | {atom(), term()}
 
-  @typedoc """
-  The result that can return from a scenario run on a specific node. Can either be a `LiveLoad.Result` or an error tuple.
-  """
-  @type node_result() :: LiveLoad.Result.t() | {:error, term()}
-
   @doc """
   Run all of the `LiveLoad.Scenario` modules in this project.
 
@@ -102,7 +97,7 @@ defmodule LiveLoad do
 
   TODO: Give actual documentation here!
   """
-  @spec run(opts :: [option()]) :: %{Scenario.t() => %{node() => node_result()}}
+  @spec run(opts :: [option()]) :: %{Scenario.t() => LiveLoad.Result.t() | {:error, term()}}
   def run(opts \\ []) do
     {single_scenario, opts} = Keyword.pop(opts, :scenario)
     {list_of_scenarios, opts} = Keyword.pop(opts, :scenarios)
@@ -118,7 +113,7 @@ defmodule LiveLoad do
     Application.ensure_all_started(:amoc)
 
     case do_scenario(scenario, run_config[:users], run_config[:distributed?], opts) do
-      {:ok, results} -> results
+      {:ok, results} -> LiveLoad.Result.new(scenario, results)
       {:error, _reason} = error -> error
     end
   after
