@@ -16,12 +16,15 @@ defmodule LiveLoad.JSON do
   cond do
     Code.ensure_loaded?(Elixir.JSON) ->
       defdelegate decode(args), to: Elixir.JSON
+      defdelegate encode!(args), to: Elixir.JSON
 
     Code.ensure_loaded?(Jason) ->
       defdelegate decode(args), to: Jason
+      defdelegate encode!(args), to: Jason
 
     Code.ensure_loaded?(Poison) ->
       defdelegate decode(args), to: Poison
+      defdelegate encode!(args), to: Poison
 
     true ->
       raise CompileError, """
