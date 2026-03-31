@@ -34,4 +34,34 @@ defmodule LiveLoad.JSON do
       such as Jason or Poison.
       """
   end
+
+  defmacro derive_encoder(opts \\ []) do
+    cond do
+      Code.ensure_loaded?(Elixir.JSON) ->
+        quote do
+          @derive {JSON.Encoder, unquote(opts)}
+        end
+
+      Code.ensure_loaded?(Jason) ->
+        quote do
+          @derive {Jason.Encoder, unquote(opts)}
+        end
+
+      Code.ensure_loaded?(Poison) ->
+        quote do
+          @derive {Poison.Encoder, unquote(opts)}
+        end
+
+      true ->
+        raise CompileError, """
+        LiveLoad requires JSON encoding in order to serialize certain data structures for consumption by other libraries.
+
+        If you are running an Elixir version above (and including) 1.18, this will automatically use the `Elixir.JSON`
+        built-in module for decoding.
+
+        If you are running an Elixir version below (and including) 1.17, you must install one of the optional JSON libraries
+        such as Jason or Poison.
+        """
+    end
+  end
 end
