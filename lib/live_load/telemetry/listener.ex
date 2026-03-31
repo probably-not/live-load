@@ -634,6 +634,11 @@ defmodule LiveLoad.Telemetry.Listener do
   end
 
   defp maybe_send_completion(%State{} = state) do
+    # TODO: There's a minor race condition in the listener, since I'm not actually confirming that the metrics from Playwright have drained.
+    # I can probably fix this by adding some sort of drain mechanism that triggers at the end of the `LiveLoad.Scenario.start` callback.
+    # I need to think about how to build the drain though - how do I ensure that the context metrics have completed after it stops?
+    # Maybe I need to monitor a context close event from Playwright? I'll need to think about this.
+
     if MapSet.size(state.started) > 0 and MapSet.equal?(state.started, state.stopped) do
       all_buckets =
         MapSet.union(
