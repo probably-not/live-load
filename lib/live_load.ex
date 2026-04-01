@@ -142,6 +142,10 @@ defmodule LiveLoad do
   end
 
   defp build_options(opts) do
+    base_run_config = base_run_config()
+    {run_config_overrides, opts} = Keyword.split_with(opts, fn {k, _v} -> Keyword.has_key?(base_run_config, k) end)
+    run_config = Keyword.merge(base_run_config, run_config_overrides)
+
     {runner_opts, scenario_config_opts} =
       Enum.reduce(
         [
@@ -159,12 +163,6 @@ defmodule LiveLoad do
           end
         end
       )
-
-    run_config =
-      Enum.reduce(base_run_config(), [], fn {key, default_value}, config ->
-        value = Keyword.get(opts, key, default_value)
-        Keyword.put(config, key, value)
-      end)
 
     {run_config, Keyword.put(runner_opts, :scenario_config_opts, scenario_config_opts)}
   end
