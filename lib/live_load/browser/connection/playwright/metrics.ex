@@ -15,6 +15,10 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
     GenServer.call(server, {:watch_page, guid, timeout})
   end
 
+  def drain(server) do
+    GenServer.call(server, :drain)
+  end
+
   defmodule State do
     @moduledoc false
 
@@ -50,6 +54,11 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
         )
     end)
 
+    {:reply, :ok, state}
+  end
+
+  @impl true
+  def handle_call(:drain, _from, %State{} = state) do
     {:reply, :ok, state}
   end
 

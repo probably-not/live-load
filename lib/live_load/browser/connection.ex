@@ -20,6 +20,17 @@ defmodule LiveLoad.Browser.Connection do
   #############################
   @callback child_spec(opts :: opts()) :: Supervisor.child_spec()
 
+  @doc """
+  Any connection can broadcast telemetry events that correspond to load test metrics which `LiveLoad` tracks during a scenario.
+  Since connections are generally modeled around Ports, the telemetry sent by those ports may be asynchronous in nature,
+  meaning that stopping a context does not necessarily mean that all metrics have completed sending and been consumed.
+  To avoid race conditions and dropping metrics, this callback can be implemented by a connection's metrics collection mechanism
+  to ensure that all metrics have been sent and drained.
+
+  A reference implementation can be found in the `LiveLoad.Browser.Connection.Playwright` implementation of the connection behaviour.
+  """
+  @callback drain_metrics(browser :: Browser.t()) :: :ok
+
   #############################
   ##### Browser Callbacks #####
   #############################
@@ -54,6 +65,10 @@ defmodule LiveLoad.Browser.Connection do
       @doc false
       def child_spec(_opts), do: %{id: __MODULE__, start: {Function, :identity, [:ignore]}, restart: :temporary}
       defoverridable child_spec: 1
+
+      @doc false
+      def drain_metrics(browser), do: :ok
+      defoverridable drain_metrics: 1
 
       @doc false
       def before_start(browser), do: browser

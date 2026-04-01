@@ -40,6 +40,15 @@ defmodule LiveLoad.Browser do
 
   @doc """
   Delegates to the connection implementation on the browser and runs
+  the `c:LiveLoad.Browser.Connection.drain_metrics/1` callback found on the implementation.
+  """
+  @spec drain_metrics(browser :: Browser.t()) :: :ok
+  def drain_metrics(%Browser{connection: {mod, _opts}} = browser) do
+    mod.drain_metrics(browser)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the browser and runs
   the `c:LiveLoad.Browser.Connection.new_context/1` callback found on the implementation.
   """
   @spec new_context(browser :: Browser.t()) :: {:ok, Browser.Context.t()} | {:error, term()}

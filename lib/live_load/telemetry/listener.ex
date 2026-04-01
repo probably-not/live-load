@@ -11,9 +11,9 @@ defmodule LiveLoad.Telemetry.Listener do
 
   require Logger
 
-  def start_link({collector_pid, error_rate, bucket_width_ms})
+  def start_link({collector_pid, %LiveLoad.Browser{} = browser, error_rate, bucket_width_ms})
       when is_pid(collector_pid) and is_float(error_rate) and error_rate >= 0.0 do
-    case GenServer.start_link(__MODULE__, {collector_pid, error_rate, bucket_width_ms}) do
+    case GenServer.start_link(__MODULE__, {collector_pid, browser, error_rate, bucket_width_ms}) do
       {:ok, pid} when is_pid(pid) -> {:ok, tap(pid, &install/1)}
       # For right now, the listener doesn't have a name, so I'm not adding a catch
       # for `{:error, {:already_started, pid}}`. Since this runs on each child node
@@ -25,18 +25,18 @@ defmodule LiveLoad.Telemetry.Listener do
   @default_error_rate 0.02
   @default_bucket_width_ms to_timeout(second: 5)
 
-  def start_link({collector_pid, error_rate}) when is_pid(collector_pid) do
+  def start_link({collector_pid, %LiveLoad.Browser{} = browser, error_rate}) when is_pid(collector_pid) do
     Logger.warning([
       "[LiveLoad.Telemetry.Listener] received invalid error rate: ",
       inspect(error_rate),
       "; defaulting to #{@default_error_rate}"
     ])
 
-    start_link({collector_pid, @default_error_rate, @default_bucket_width_ms})
+    start_link({collector_pid, browser, @default_error_rate, @default_bucket_width_ms})
   end
 
-  def start_link(collector_pid) when is_pid(collector_pid) do
-    start_link({collector_pid, @default_error_rate, @default_bucket_width_ms})
+  def start_link({collector_pid, %LiveLoad.Browser{} = browser}) when is_pid(collector_pid) do
+    start_link({collector_pid, browser, @default_error_rate, @default_bucket_width_ms})
   end
 
   def stop(server) do
@@ -95,6 +95,7 @@ defmodule LiveLoad.Telemetry.Listener do
 
     @type t() :: %__MODULE__{
             collector_pid: pid(),
+            browser: LiveLoad.Browser.t(),
             error_rate: float(),
             bucket_width_ms: pos_integer(),
             monotonic_start: integer() | nil,
@@ -111,6 +112,7 @@ defmodule LiveLoad.Telemetry.Listener do
 
     defstruct [
       :collector_pid,
+      :browser,
       :error_rate,
       :bucket_width_ms,
       :monotonic_start,
@@ -125,14 +127,19 @@ defmodule LiveLoad.Telemetry.Listener do
       counter_buckets: %{}
     ]
 
-    def new(collector_pid, error_rate, bucket_width_ms) do
-      %__MODULE__{collector_pid: collector_pid, error_rate: error_rate, bucket_width_ms: bucket_width_ms}
+    def new(collector_pid, browser, error_rate, bucket_width_ms) do
+      %__MODULE__{
+        collector_pid: collector_pid,
+        browser: browser,
+        error_rate: error_rate,
+        bucket_width_ms: bucket_width_ms
+      }
     end
   end
 
   @impl true
-  def init({collector_pid, error_rate, bucket_width_ms}) do
-    {:ok, State.new(collector_pid, error_rate, bucket_width_ms), {:continue, :initialize_metrics}}
+  def init({collector_pid, browser, error_rate, bucket_width_ms}) do
+    {:ok, State.new(collector_pid, browser, error_rate, bucket_width_ms), {:continue, :initialize_metrics}}
   end
 
   @impl true
@@ -141,6 +148,39 @@ defmodule LiveLoad.Telemetry.Listener do
     sketches = Map.new(Result.sketch_names(), &{&1, :ddskerl_std.new(sketch_opts)})
     counters = Map.new(Result.counter_names(), &{&1, 0})
     {:noreply, %{state | sketches: sketches, counters: counters}}
+  end
+
+  @impl true
+  def handle_info(:node_complete, %State{} = state) do
+    all_buckets =
+      MapSet.union(
+        MapSet.new(Map.keys(state.sketch_buckets)),
+        MapSet.new(Map.keys(state.counter_buckets))
+      )
+
+    time_series =
+      Map.new(all_buckets, fn bucket ->
+        {bucket,
+         %{
+           sketches: Map.get(state.sketch_buckets, bucket, %{}),
+           counters: Map.get(state.counter_buckets, bucket, %{})
+         }}
+      end)
+
+    stats = %Result{
+      total: MapSet.size(state.stopped),
+      succeeded: state.succeeded,
+      failed: state.failed,
+      sketches: state.sketches,
+      counters: state.counters,
+      bucket_width_ms: state.bucket_width_ms,
+      start_system_time: state.start_system_time,
+      time_series: time_series
+    }
+
+    :ok = LiveLoad.Telemetry.Collector.node_complete(state.collector_pid, stats)
+
+    {:noreply, state}
   end
 
   @impl true
@@ -634,39 +674,9 @@ defmodule LiveLoad.Telemetry.Listener do
   end
 
   defp maybe_send_completion(%State{} = state) do
-    # TODO: There's a minor race condition in the listener, since I'm not actually confirming that the metrics from Playwright have drained.
-    # I can probably fix this by adding some sort of drain mechanism that triggers at the end of the `LiveLoad.Scenario.start` callback.
-    # I need to think about how to build the drain though - how do I ensure that the context metrics have completed after it stops?
-    # Maybe I need to monitor a context close event from Playwright? I'll need to think about this.
-
     if MapSet.size(state.started) > 0 and MapSet.equal?(state.started, state.stopped) do
-      all_buckets =
-        MapSet.union(
-          MapSet.new(Map.keys(state.sketch_buckets)),
-          MapSet.new(Map.keys(state.counter_buckets))
-        )
-
-      time_series =
-        Map.new(all_buckets, fn bucket ->
-          {bucket,
-           %{
-             sketches: Map.get(state.sketch_buckets, bucket, %{}),
-             counters: Map.get(state.counter_buckets, bucket, %{})
-           }}
-        end)
-
-      stats = %Result{
-        total: MapSet.size(state.stopped),
-        succeeded: state.succeeded,
-        failed: state.failed,
-        sketches: state.sketches,
-        counters: state.counters,
-        bucket_width_ms: state.bucket_width_ms,
-        start_system_time: state.start_system_time,
-        time_series: time_series
-      }
-
-      :ok = LiveLoad.Telemetry.Collector.node_complete(state.collector_pid, stats)
+      :ok = LiveLoad.Browser.drain_metrics(state.browser)
+      send(self(), :node_complete)
     end
   end
 end

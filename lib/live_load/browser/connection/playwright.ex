@@ -24,6 +24,21 @@ defmodule LiveLoad.Browser.Connection.Playwright do
 
   @impl true
   @doc false
+  def drain_metrics(%Browser{} = browser) do
+    playwright_browser = browser.private.playwright_connection_browser
+    _ = PlaywrightEx.Connection.initializer!(Supervisor.playwright_connection_name(), playwright_browser.guid)
+
+    :ok =
+      browser.supervisor_pid
+      |> Browser.Supervisor.connection_pid!()
+      |> Supervisor.metrics_pid!()
+      |> Metrics.drain()
+
+    :ok
+  end
+
+  @impl true
+  @doc false
   def new_context(%Browser{} = browser) do
     playwright_browser = browser.private.playwright_connection_browser
 
