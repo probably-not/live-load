@@ -8,6 +8,34 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.16
+
+![Oh, that little guy? I wouldn't worry about that little guy.](./assets/supertroopers-little-guy.gif)
+
+> Oh, this little release? I wouldn't worry about this little release.
+
+Super Troopers is one of my all time favorite movies, purely for its "quotability". One of my best friends and I even came up with a game that we call "Quotations!" - a card game that has a few different type of "quote cards", and you have to give the details that the card requests. We love quoting random movies and TV shows, and Super Troopers is absolutely at the top of the list!
+
+Anyways, enough of a prelude as to why I am adding Super Troopers GIFs. This isn't just a little release! I'm just feeling good and the quote came into my head... in reality, this release is pretty big! See, after the last release where I wrapped up the full metrics pipeline (or so I thought), I actually started trying to analyze the metrics. And at first glance, they seemed pretty easy to analyze. Classic histograms, being able to see what took a long time, that sort of thing. But then I realized... none of the metrics were really all that helpful? See, I fell into this trap of saying "oh, a histogram, good, I know how those work from Grafana" and I sort of just equated having percentiles to being able to say what happened, but in the real world of benchmarking and incidents and all that fun stuff, you gotta have TIME! I was missing an entire dimension that would allow a user to use `LiveLoad.run/1` and be able to see when things broke down.
+
+So this release is all about time. I went through all of the metrics being collected (counters and histograms) and I refactored the `LiveLoad.Telemetry.Listener` to receive telemetry and map it to a time bucket. Then, I split up my result functionality. I moved the original result struct that was in `LiveLoad.Result` into `LiveLoad.Telemetry.Result`, and created a brand new `LiveLoad.Result` struct which receives all of the results and compiles it into a single, compact, serializable final result. It's not really optimized... I had to do a bunch of loops on loops and the final structure is... pretty exploded.
+
+When I tested everything by running
+
+```elixir
+result = LiveLoad.run(users: 10)
+:erts_debug.size(result)
+File.write!("./result.example.json", JSON.encode!(result))
+```
+
+for my `LiveLoad.Scenario.Example` this ended up exploding into a 30KB structure. If I changed the bucket size to be smaller than the default 5 second, it explodes EVEN MORE. But you know what? This part doesn't really need to be optimal. I wanted to create a structure that I can through at any reporting tool without needing to know the underlying mechanics of how `LiveLoad` actually collects and measures the telemetry. This way I can just create a self-contained reporting mechanism that assumes this data structure and just outputs a nice visual report. No need for an embedded mechanism, or knowing how exactly the sketches and quantiles are measured. Everything is precomputed and serialized in the end.
+
+Of course, after I wrote that monster of a merging function, it was way too late in the day, so I became the thing I hate - a person who throws a module at an LLM and tells it to "write me comprehensive tests for this module make no mistakes" and then trusts those tests blindly. I'm going to really need to dive into those tests and probably rewrite them at some point... I have no clue if they even do anything. But it was midnight, I'd been working on my dayjob since 7:30 in the morning, and I just wanted some sort of basic security in my brain that would let me say "yes, not only did you write a massive complicated merging function, but now it's totally tested... you're awesome".
+
+Anyways - that's what this release is about. We've got all the metrics - time series, global, per node, precomputed quantiles, dimensioned histograms and counters, the works.
+
+Let's get on to distribution!
+
 ## 0.0.1-rc.15
 
 I did a big update of a bunch of stuff yesterday, so today is just sort of, the wrapping up of this whole week of metrics! I spent the day connecting everything from the last week up to the internal LiveLoad telemetry pipeline, and lo and behold, I've got metrics for scenarios! It's pretty cool, I can see a ton of data, and while I've only been testing it with a simple Markdown exporter and the demo scenario and 10 users (because everything is local on my own laptop) but it's giving histograms, percentiles, counts, and so many fun things!
