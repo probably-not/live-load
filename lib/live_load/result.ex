@@ -177,9 +177,9 @@ defmodule LiveLoad.Result do
       |> merge_cross_node_counters()
 
     user_summary = %Users{
-      total: Enum.sum_by(all_results, & &1.total),
-      succeeded: Enum.sum_by(all_results, & &1.succeeded),
-      failed: Enum.sum_by(all_results, & &1.failed)
+      total: sum_by(all_results, & &1.total),
+      succeeded: sum_by(all_results, & &1.succeeded),
+      failed: sum_by(all_results, & &1.failed)
     }
 
     # TODO: This feels wrong... technically it's right, because all the nodes should start with the same options,
@@ -378,5 +378,13 @@ defmodule LiveLoad.Result do
     :live_load
     |> Application.spec(:vsn)
     |> List.to_string()
+  end
+
+  # TODO: Remove when the minimum supported Elixir version is 1.18 which should be when 1.22 is released.
+  @compile {:inline, sum_by: 2}
+  if Version.match?(System.version(), ">= 1.18.0") do
+    defp sum_by(enumerable, mapper), do: Enum.sum_by(enumerable, mapper)
+  else
+    defp sum_by(enumerable, mapper), do: enumerable |> Enum.map(mapper) |> Enum.sum()
   end
 end
