@@ -15,8 +15,8 @@ defmodule LiveLoad.ResultTest do
   alias LiveLoad.Result.NodeResult
   alias LiveLoad.Result.PrecomputedQuantiles
   alias LiveLoad.Result.Users
+  alias LiveLoad.Scenario.Example
   alias LiveLoad.Telemetry
-  alias MyApp.Scenarios.Browse
 
   @error_rate 0.02
   @bucket_width_ms 5_000
@@ -46,14 +46,14 @@ defmodule LiveLoad.ResultTest do
 
   describe "metadata" do
     test "name is the inspected scenario module" do
-      result = Result.new(Browse, %{node1: telemetry_result(total: 1, succeeded: 1)})
+      result = Result.new(Example, %{node1: telemetry_result(total: 1, succeeded: 1)})
 
-      assert result.name == "MyApp.Scenarios.Browse"
+      assert result.name == "LiveLoad.Scenario.Example"
     end
 
     test "generated_at is a recent DateTime" do
       before = DateTime.utc_now()
-      result = Result.new(Browse, %{node1: telemetry_result(total: 1, succeeded: 1)})
+      result = Result.new(Example, %{node1: telemetry_result(total: 1, succeeded: 1)})
       after_ = DateTime.utc_now()
 
       assert DateTime.compare(result.generated_at, before) in [:eq, :gt]
@@ -61,13 +61,13 @@ defmodule LiveLoad.ResultTest do
     end
 
     test "liveload_version is a string" do
-      result = Result.new(Browse, %{node1: telemetry_result(total: 1, succeeded: 1)})
+      result = Result.new(Example, %{node1: telemetry_result(total: 1, succeeded: 1)})
 
       assert is_binary(result.liveload_version)
     end
 
     test "quantile_points is 101 floats from 0.0 to 1.0" do
-      result = Result.new(Browse, %{node1: telemetry_result(total: 1, succeeded: 1)})
+      result = Result.new(Example, %{node1: telemetry_result(total: 1, succeeded: 1)})
 
       assert length(result.quantile_points) == 101
       assert hd(result.quantile_points) == 0.0
@@ -76,7 +76,7 @@ defmodule LiveLoad.ResultTest do
 
     test "bucket_width_ms matches the telemetry results" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 1, succeeded: 1, bucket_width_ms: 10_000)
         })
 
@@ -84,7 +84,7 @@ defmodule LiveLoad.ResultTest do
     end
 
     test "returns {:error, :no_results} for empty node results" do
-      assert Result.new(Browse, %{}) == {:error, :no_results}
+      assert Result.new(Example, %{}) == {:error, :no_results}
     end
   end
 
@@ -93,7 +93,7 @@ defmodule LiveLoad.ResultTest do
   describe "users aggregation" do
     test "single node" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 100, succeeded: 95, failed: 5)
         })
 
@@ -102,7 +102,7 @@ defmodule LiveLoad.ResultTest do
 
     test "multiple nodes sum correctly" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 100, succeeded: 90, failed: 10),
           node2: telemetry_result(total: 50, succeeded: 48, failed: 2)
         })
@@ -112,7 +112,7 @@ defmodule LiveLoad.ResultTest do
 
     test "per-node users are preserved individually" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 100, succeeded: 90, failed: 10),
           node2: telemetry_result(total: 50, succeeded: 48, failed: 2)
         })
@@ -134,7 +134,7 @@ defmodule LiveLoad.ResultTest do
       s = sketch(values)
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 100,
@@ -170,7 +170,7 @@ defmodule LiveLoad.ResultTest do
       s = sketch([42_000])
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 1,
@@ -194,7 +194,7 @@ defmodule LiveLoad.ResultTest do
       dim_b = sketch([200, 300])
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 3,
@@ -224,7 +224,7 @@ defmodule LiveLoad.ResultTest do
 
     test "sketch with no dimensional data has empty by map" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 1,
@@ -239,7 +239,7 @@ defmodule LiveLoad.ResultTest do
 
     test "histogram keys are stringified atom names" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 1,
@@ -262,7 +262,7 @@ defmodule LiveLoad.ResultTest do
   describe "counter materialization" do
     test "aggregated counter with dimensional breakdown" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 10,
@@ -283,7 +283,7 @@ defmodule LiveLoad.ResultTest do
 
     test "counter keys are stringified atom names" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 1,
@@ -297,7 +297,7 @@ defmodule LiveLoad.ResultTest do
 
     test "internal counters are filtered from output" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 10,
@@ -317,7 +317,7 @@ defmodule LiveLoad.ResultTest do
 
     test "counter with no dimensional data has empty by map" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 1,
@@ -340,7 +340,7 @@ defmodule LiveLoad.ResultTest do
       node2_sketch = sketch(Enum.to_list(51..100))
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 50,
@@ -369,7 +369,7 @@ defmodule LiveLoad.ResultTest do
 
     test "dimensional sketches merge across nodes" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 10,
@@ -404,7 +404,7 @@ defmodule LiveLoad.ResultTest do
 
     test "sketch present on only one node still appears in merged result" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 10,
@@ -436,7 +436,7 @@ defmodule LiveLoad.ResultTest do
   describe "cross-node counter merge" do
     test "counters from two nodes sum correctly" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 50,
@@ -494,7 +494,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 15,
@@ -521,7 +521,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 5,
@@ -548,7 +548,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series)
         })
 
@@ -564,7 +564,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series, bucket_width_ms: 2_000)
         })
 
@@ -588,7 +588,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 2, succeeded: 2, time_series: time_series)
         })
 
@@ -612,7 +612,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series)
         })
 
@@ -627,7 +627,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series)
         })
 
@@ -656,7 +656,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 2, succeeded: 2, time_series: ts1, start_system_time: sys_time),
           node2: telemetry_result(total: 2, succeeded: 2, time_series: ts2, start_system_time: sys_time)
         })
@@ -691,7 +691,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 2, succeeded: 2, time_series: ts1, start_system_time: sys_time_node1),
           node2: telemetry_result(total: 1, succeeded: 1, time_series: ts2, start_system_time: sys_time_node2)
         })
@@ -724,7 +724,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 10,
@@ -756,7 +756,7 @@ defmodule LiveLoad.ResultTest do
   describe "node results" do
     test "each node gets its own materialized result" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 10,
@@ -788,7 +788,7 @@ defmodule LiveLoad.ResultTest do
 
     test "node names are stringified" do
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           :runner@host1 => telemetry_result(total: 1, succeeded: 1)
         })
 
@@ -807,7 +807,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1: telemetry_result(total: 1, succeeded: 1, time_series: ts1),
           node2: telemetry_result(total: 1, succeeded: 1, time_series: ts2)
         })
@@ -850,7 +850,7 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Browse, %{
+        Result.new(Example, %{
           node1:
             telemetry_result(
               total: 3,
@@ -875,7 +875,7 @@ defmodule LiveLoad.ResultTest do
       # Round-trip: decode and verify structure
       {:ok, decoded} = LiveLoad.JSON.decode(json)
 
-      assert decoded["name"] == "MyApp.Scenarios.Browse"
+      assert decoded["name"] == "LiveLoad.Scenario.Example"
       assert is_binary(decoded["generated_at"])
       assert is_binary(decoded["liveload_version"])
       assert is_list(decoded["quantile_points"])
