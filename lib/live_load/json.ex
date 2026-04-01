@@ -41,6 +41,7 @@ defmodule LiveLoad.JSON do
         """
   end
 
+  @doc false
   defmacro derive_encoder(opts \\ []) do
     cond do
       Code.ensure_loaded?(Elixir.JSON) ->

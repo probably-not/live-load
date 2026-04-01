@@ -109,7 +109,10 @@ defmodule LiveLoad.MixProject do
       source_url: @source_url,
       extras: extras(),
       extra_section: "GUIDES",
-      groups_for_extras: [],
+      groups_for_extras: [
+        Guides: Path.wildcard("guides/*.md"),
+        Changes: ["DEVLOG.md", "CHANGELOG.md"]
+      ],
       groups_for_modules: groups_for_modules(),
       skip_undefined_reference_warnings_on: Path.wildcard("**/*.md")
     ]
@@ -128,8 +131,17 @@ defmodule LiveLoad.MixProject do
     [
       LiveLoad: [
         LiveLoad,
-        LiveLoad.Result,
         LiveLoad.JSON
+      ],
+      "LiveLoad.Result": [
+        LiveLoad.Result,
+        LiveLoad.Result.Users,
+        LiveLoad.Result.ScenarioResult,
+        LiveLoad.Result.NodeResult,
+        LiveLoad.Result.Bucket,
+        LiveLoad.Result.DimensionedHistogram,
+        LiveLoad.Result.DimensionedCounter,
+        LiveLoad.Result.PrecomputedQuantiles
       ],
       Scenario: [
         LiveLoad.Scenario,
