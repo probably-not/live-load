@@ -125,7 +125,8 @@ defmodule LiveLoad do
   defp do_scenario(scenario, users, false, opts) do
     with {:ok, collector_pid} <- Collector.start_link([node()]),
          :ok <- :amoc.do(scenario, users, Keyword.put(opts, :collector_pid, collector_pid)) do
-      Collector.wait_for_completion(collector_pid)
+      timeout = collector_timeout(opts[:scenario_timeout])
+      Collector.wait_for_completion(collector_pid, timeout)
     end
   after
     :amoc.stop()
@@ -175,4 +176,10 @@ defmodule LiveLoad do
   defp base_runner_options do
     [browser_connection_adapter: LiveLoad.Browser.Connection.Playwright]
   end
+
+  # TODO: I gotta add the scenario timeout default here shared somehow...
+  defp collector_timeout(timeout)
+  defp collector_timeout(nil), do: to_timeout(minute: 15)
+  defp collector_timeout(:infinity), do: :infinity
+  defp collector_timeout(timeout), do: timeout + to_timeout(minute: 5)
 end
