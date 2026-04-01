@@ -27,15 +27,18 @@ defmodule LiveLoad.JSON do
       defdelegate encode!(args), to: Poison
 
     true ->
-      raise CompileError, """
-      LiveLoad requires JSON decoding for decoding certain messages via the browser protocol.
+      raise CompileError,
+        file: __ENV__.file,
+        line: __ENV__.line,
+        description: """
+        LiveLoad requires JSON decoding for decoding certain messages via the browser protocol.
 
-      If you are running an Elixir version above (and including) 1.18, this will automatically use the `Elixir.JSON`
-      built-in module for decoding.
+        If you are running an Elixir version above (and including) 1.18, this will automatically use the `Elixir.JSON`
+        built-in module for decoding.
 
-      If you are running an Elixir version below (and including) 1.17, you must install one of the optional JSON libraries
-      such as Jason or Poison.
-      """
+        If you are running an Elixir version below (and including) 1.17, you must install one of the optional JSON libraries
+        such as Jason or Poison.
+        """
   end
 
   defmacro derive_encoder(opts \\ []) do
@@ -56,15 +59,18 @@ defmodule LiveLoad.JSON do
         end
 
       true ->
-        raise CompileError, """
-        LiveLoad requires JSON encoding in order to serialize certain data structures for consumption by other libraries.
+        raise CompileError,
+          file: __ENV__.file,
+          line: __ENV__.line,
+          description: """
+          LiveLoad requires JSON encoding in order to serialize certain data structures for consumption by other libraries.
 
-        If you are running an Elixir version above (and including) 1.18, this will automatically use the `Elixir.JSON`
-        built-in module for decoding.
+          If you are running an Elixir version above (and including) 1.18, this will automatically use the `Elixir.JSON`
+          built-in module for decoding.
 
-        If you are running an Elixir version below (and including) 1.17, you must install one of the optional JSON libraries
-        such as Jason or Poison.
-        """
+          If you are running an Elixir version below (and including) 1.17, you must install one of the optional JSON libraries
+          such as Jason or Poison.
+          """
     end
   end
 end
