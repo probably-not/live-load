@@ -23,16 +23,17 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
         Decompressor.extract!(playwright_version)
       end)
 
-    Supervisor.start_link(__MODULE__, {playwright_cli_path, timeout}, name: name)
+    Supervisor.start_link(__MODULE__, {playwright_cli_path, browsers_path(playwright_version), timeout}, name: name)
   end
 
   @impl true
-  def init({playwright_cli_path, timeout}) do
+  def init({playwright_cli_path, browsers_path, timeout}) do
     children = [
       {PlaywrightEx.Supervisor,
        [
          name: __MODULE__.Playwright,
          executable: playwright_cli_path,
+         env: %{"PLAYWRIGHT_BROWSERS_PATH" => browsers_path},
          timeout: timeout,
          js_logger: LiveLoad.Browser.Connection.Playwright.JsLogger
        ]},
@@ -71,9 +72,13 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
     PlaywrightEx.Supervisor.connection_name(__MODULE__.Playwright)
   end
 
-  @default_playwright_version "1.57.0"
-  defp playwright_version_from_env do
+  @default_playwright_version "1.59.1"
+  def playwright_version_from_env do
     Application.get_env(:live_load, :playwright_version, @default_playwright_version)
+  end
+
+  defp browsers_path(version) do
+    Application.app_dir(:live_load, ["priv", "playwright", version, "bin", "browsers"])
   end
 
   defp find_child(supervisor, child_id) do
