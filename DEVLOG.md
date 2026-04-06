@@ -37,8 +37,6 @@ So, since this was a procrastination release, our next todos haven't changed. I'
 - Actual examples of a LiveView app and benchmarks
 - And last but not least, finish up the documentation. The guides, the todos for docs, all that fun stuff.
 
-
-
 ## 0.0.1-rc.16
 
 ![Oh, that little guy? I wouldn't worry about that little guy.](./assets/supertroopers-little-guy.gif)
