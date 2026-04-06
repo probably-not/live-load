@@ -674,6 +674,12 @@ defmodule LiveLoad.Telemetry.Listener do
   end
 
   defp maybe_send_completion(%State{} = state) do
+    # TODO: There's a race condition here whenever I use a small iteration timeout that it not enough for any scenario to run.
+    # When I'm testing locally with `iteration_timeout: 0`, this creates sporadic races where the amoc telemetry sometimes fires
+    # so fast that I get to this condition even without the total number of users (because the started and stopped match and the started is non-empty).
+    # In practice this probably wouldn't happen, but it is a real race condition...  I can probably fix it by using an expectation and an extra timeout?
+    # Something like only firing `:node_complete` when the started == the expected, and adding a timeout of a few seconds to let it catch up...
+    # I don't want to be in a situation where it doesn't fire though. I'll need to check amoc to see if there are any guarantees for the telemetry.
     if MapSet.size(state.started) > 0 and MapSet.equal?(state.started, state.stopped) do
       :ok = LiveLoad.Browser.drain_metrics(state.browser)
       send(self(), :node_complete)
