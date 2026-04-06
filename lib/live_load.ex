@@ -78,7 +78,7 @@ defmodule LiveLoad do
   @typedoc """
   Defines the duration of the entire load test for a specific scenario.
 
-  When running a load test, the scenario's `c:LiveLoad.Scenario.run/2` callback will be run in a loop multiple times
+  When running a load test, the scenario's `c:LiveLoad.Scenario.run/3` callback will be run in a loop multiple times
   until this value is reached. Once reached, the runner will transition to a terminating state and wait for the latest
   iteration of the scenario to complete, and then report its completion.
 
