@@ -41,21 +41,15 @@ defmodule LiveLoad.Scenario do
   @type config() :: map() | keyword() | struct() | term()
 
   @typedoc false
-  @type internal_config() :: %{local_listener_pid: pid(), browser: Browser.t(), scenario_timeout: timeout()}
+  @type internal_config() :: %{
+          local_listener_pid: pid(),
+          browser: Browser.t(),
+          iteration_timeout: timeout(),
+          scenario_duration: timeout()
+        }
 
   @typedoc "The user ID passed to the `c:run/3` callback. It can be either an integer or a binary."
   @type user_id() :: integer() | binary()
-
-  @typedoc """
-  The result that is returned by the `c:run/3` callback.
-
-  Result values are discarded and ignored by LiveLoad, as they have no bearing
-  on the results of the load test. However, whether or not the result was successful
-  is tracked. Successful results are qualified as `:ok` or `{:ok, ignored}`. Any other
-  value that is returned by the `c:run/3` callback will be qualified as an error and
-  marked as failed in the results of the load test.
-  """
-  @type user_result() :: :ok | {:ok, term()} | {:error, term()}
 
   @doc """
   Invoked once per node that LiveLoad is running the load test on.
@@ -72,10 +66,11 @@ defmodule LiveLoad.Scenario do
   Invoked once per user. `c:run/3` is the actual load test that will be run,
   measured, and instrumented by LiveLoad.
   """
-  @callback run(context :: LiveLoad.Scenario.Context.t(), user_id :: user_id(), config :: config()) :: user_result()
+  @callback run(context :: LiveLoad.Scenario.Context.t(), user_id :: user_id(), config :: config()) ::
+              Scenario.Context.t() | {:error, term()}
 
-  defmacro __using__(opts) do
-    quote location: :keep, bind_quoted: [opts: opts] do
+  defmacro __using__(_opts) do
+    quote location: :keep do
       @behaviour :amoc_scenario
       @behaviour LiveLoad.Scenario
 
@@ -124,34 +119,26 @@ defmodule LiveLoad.Scenario do
         """
       }
 
-      scenario_timeout =
-        cond do
-          is_nil(opts[:timeout]) ->
-            to_timeout(minute: 10)
-
-          not is_integer(opts[:timeout]) ->
-            message = """
-            timeout option #{inspect(opts[:timeout])} passed in to the LiveLoad.Scenario is not a valid timeout \
-            (in module #{inspect(__MODULE__)}).
-
-            We will override it with a default timeout of 10 minutes for now.
-            """
-
-            IO.warn(message, __ENV__)
-            to_timeout(minute: 10)
-
-          true ->
-            opts[:timeout]
-        end
-
       @required_variable %{
-        name: :scenario_timeout,
-        default_value: scenario_timeout,
+        name: :iteration_timeout,
+        default_value: to_timeout(minute: 2),
         description: ~c"""
         INTERNAL VARIABLE.
-        The maximum time for a scenario to take.
-        If a scenario takes longer than this, a timeout error will be returned.
-        The default value is #{scenario_timeout}
+        The maximum time for single iteration of a scenario to take.
+        If an iteration of a scenario takes longer than this, a timeout error will be returned.
+        The default value is 2 minutes.
+        """
+      }
+
+      @required_variable %{
+        name: :scenario_duration,
+        default_value: to_timeout(minute: 10),
+        description: ~c"""
+        INTERNAL VARIABLE.
+        The maximum time for a load test to be running a single scenario.
+        At the end of this timeout, the scenario runner will transition to a terminating state
+        and wait for the last iteration to complete, then report its completion.
+        The default value is 10 minutes
         """
       }
 

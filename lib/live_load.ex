@@ -64,19 +64,35 @@ defmodule LiveLoad do
   @type browser_connection_adapter_opt() :: {:browser_connection_adapter, LiveLoad.Browser.Connection.t()}
 
   @typedoc """
-  Defines the overall timeout for a scenario.
+  Defines the timeout for a single iteration of a scenario.
 
-  If this timeout is reached and the scenario has not completed, it will be killed and reported as a failure.
+  If this timeout is reached and the scenario has not completed, it will be killed and the user's status will reported as a failure.
+  No other iterations will take place for that user.
+
+  Defaults to 2 minutes.
+
+  _Note: while the type here is set to `t:timeout/0`, the `:infinity` value is invalid and an error will be returned if it is passed._
+  """
+  @type scenario_iteration_timeout_opt() :: {:iteration_timeout, timeout()}
+
+  @typedoc """
+  Defines the duration of the entire load test for a specific scenario.
+
+  When running a load test, the scenario's `c:LiveLoad.Scenario.run/2` callback will be run in a loop multiple times
+  until this value is reached. Once reached, the runner will transition to a terminating state and wait for the latest
+  iteration of the scenario to complete, and then report its completion.
 
   Defaults to 10 minutes.
+
+  _Note: while the type here is set to `t:timeout/0`, the `:infinity` value is invalid and an error will be returned if it is passed._
   """
-  @type scenario_timeout_opt() :: {:timeout, timeout()}
+  @type scenario_duration_opt() :: {:scenario_duration, timeout()}
 
   @typedoc """
   Initialization options for running a `LiveLoad.Scenario`.
 
   These are split between options for the overall run configuration (`t:distributed_run_opt/0`, `t:users_count_opt/0`),
-  options for the runner itself (`t:browser_connection_adapter_opt/0`, `t:scenario_timeout_opt/0`)
+  options for the runner itself (`t:browser_connection_adapter_opt/0`, `t:scenario_iteration_timeout_opt/0`, `t:scenario_duration_opt/0`)
   and any other options that should be passed in as configuration to the scenario `c:LiveLoad.Scenario.config/1` callback.
   """
   @type option() ::
@@ -86,7 +102,8 @@ defmodule LiveLoad do
           | distributed_run_opt()
           | users_count_opt()
           | browser_connection_adapter_opt()
-          | scenario_timeout_opt()
+          | scenario_iteration_timeout_opt()
+          | scenario_duration_opt()
           | {atom(), term()}
 
   @doc """
@@ -125,7 +142,7 @@ defmodule LiveLoad do
   defp do_scenario(scenario, users, false, opts) do
     with {:ok, collector_pid} <- Collector.start_link([node()]),
          :ok <- :amoc.do(scenario, users, Keyword.put(opts, :collector_pid, collector_pid)) do
-      timeout = collector_timeout(opts[:scenario_timeout])
+      timeout = collector_timeout(opts[:scenario_duration])
       Collector.wait_for_completion(collector_pid, timeout)
     end
   after
@@ -146,38 +163,36 @@ defmodule LiveLoad do
     {run_config_overrides, opts} = Keyword.split_with(opts, fn {k, _v} -> Keyword.has_key?(base_run_config, k) end)
     run_config = Keyword.merge(base_run_config, run_config_overrides)
 
-    {runner_opts, scenario_config_opts} =
-      Enum.reduce(
-        [
-          {:timeout, :scenario_timeout},
-          {:browser_connection_adapter, :browser_connection_adapter}
-        ],
-        {base_runner_options(), opts},
-        fn {key, replacement}, {runner_opts, scenario_config_opts} ->
-          {opt, rest} = Keyword.pop(scenario_config_opts, key, :error)
+    base_runner_opts = base_runner_opts()
+    {runner_opts_overrides, opts} = Keyword.split_with(opts, fn {k, _v} -> Keyword.has_key?(base_runner_opts, k) end)
+    runner_opts = Keyword.merge(base_runner_opts, runner_opts_overrides)
+    Enum.each([:iteration_timeout, :scenario_duration], &validate_timeout!(&1, Keyword.fetch!(runner_opts, &1)))
 
-          if opt == :error do
-            {runner_opts, rest}
-          else
-            {Keyword.put(runner_opts, replacement, opt), rest}
-          end
-        end
-      )
-
-    {run_config, Keyword.put(runner_opts, :scenario_config_opts, scenario_config_opts)}
+    {run_config, Keyword.put(runner_opts, :scenario_config_opts, opts)}
   end
 
   defp base_run_config do
     [users: 1, distributed?: false]
   end
 
-  defp base_runner_options do
-    [browser_connection_adapter: LiveLoad.Browser.Connection.Playwright]
+  defp base_runner_opts do
+    [
+      browser_connection_adapter: LiveLoad.Browser.Connection.Playwright,
+      iteration_timeout: to_timeout(minute: 2),
+      scenario_duration: to_timeout(minute: 10)
+    ]
+  end
+
+  defp validate_timeout!(timeout_name, :infinity) do
+    raise ArgumentError, "#{timeout_name} must be a concrete timeout and not `:infinity`."
+  end
+
+  defp validate_timeout!(_timeout_name, timeout) when is_integer(timeout) do
+    :ok
   end
 
   # TODO: I gotta add the scenario timeout default here shared somehow...
   defp collector_timeout(timeout)
   defp collector_timeout(nil), do: to_timeout(minute: 15)
-  defp collector_timeout(:infinity), do: :infinity
   defp collector_timeout(timeout), do: timeout + to_timeout(minute: 5)
 end

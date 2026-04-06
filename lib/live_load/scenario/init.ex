@@ -3,7 +3,8 @@ defmodule LiveLoad.Scenario.Init do
 
   def init(scenario) do
     collector_pid = :amoc_config.get(:collector_pid)
-    scenario_timeout = :amoc_config.get(:scenario_timeout)
+    iteration_timeout = :amoc_config.get(:iteration_timeout)
+    scenario_duration = :amoc_config.get(:scenario_duration)
     browser_connection_adapter = :amoc_config.get(:browser_connection_adapter)
     browser_connection_opts = :amoc_config.get(:browser_connection_opts)
     opts = :amoc_config.get(:scenario_config_opts)
@@ -18,7 +19,8 @@ defmodule LiveLoad.Scenario.Init do
          __config__: %{
            local_listener_pid: listener_pid,
            browser: browser,
-           scenario_timeout: scenario_timeout
+           iteration_timeout: iteration_timeout,
+           scenario_duration: scenario_duration
          }
        }}
     end
