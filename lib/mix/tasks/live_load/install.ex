@@ -11,11 +11,18 @@ defmodule Mix.Tasks.LiveLoad.Install do
 
   This must be run with the version of Playwright that is going to be used.
   The default version is #{LiveLoad.Browser.Connection.Playwright.Supervisor.playwright_version_from_env()}.
+
+
+  ## Examples
+
+      $ mix live_load.install
+      $ mix live_load.install 1.59.1
   """
   use Mix.Task
 
   @base_url URI.new!("https://playwright.azureedge.net/builds/driver")
 
+  @doc false
   def run([]) do
     default_version = LiveLoad.Browser.Connection.Playwright.Supervisor.playwright_version_from_env()
     run([default_version])
