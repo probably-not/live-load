@@ -8,6 +8,37 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.17
+
+Am I procrastinating? You bet I am! But hey, it happens to the best of us.
+
+This release is a quick (ish) procrastination release. It contains a bunch of stuff that I saw and that my ADHD brain said "hey, this will be easy, just fix this one thing before going on to others."
+
+So, here's what I've done:
+
+### Proper Playwright Installation
+
+So far, I've been "vendoring" Playwright in LiveLoad's `priv` folder. Now, I say "vendoring" in quotes, because I've basically just been keeping a TAR archive of the current Playwright installation there, with a simple Mix Task that would initialize Playwright for me based on stuff that I have hidden in my `assets` directory (gitignored and not pushed to the repo). While this worked for now, it wasn't going to fly when it comes to actually installing `LiveLoad`... for many reasons, chief among them being that Playwright is not a universal cross-platform binary, it needs to be installed per platform! So I went ahead and set up an actual installation process. Running [`mix live_load.install`](`Mix.Tasks.LiveLoad.Install`) will install the default version of Playwright (currently at time of writing it's 1.59.1) into the `priv` directory of the `LiveLoad` installation, then compress it up so that it's ready to be pushed with the release.
+
+Through this process, I also found a couple of issues that need fixing in the `PlaywrightEx` library:
+- Most important is [ftes/playwright_ex#34](https://github.com/ftes/playwright_ex/pull/34), which adds the `:env` option to `PlaywrightEx.PortTransport`. This is extremely important, since it allows us to actually vendor the browsers (i.e. not requiring the install live in the app). This actually causes a breaking change in `LiveLoad` since I added the browser cache directory in the environment options. I know that [Fredrik](https://github.com/ftes) is very active on `PlaywrightEx`, so hopefully this will go in pretty quickly and get released. But if it doesn't, in order to push `LiveLoad` publicly I'll probably make a "live_load_forked_playwright_ex" package on Hex just to make sure I don't get blocked there.
+- Once I pushed that, I added in [ftes/playwright_ex#35](https://github.com/ftes/playwright_ex/pull/35), which adds a couple of convenience functions for `LiveLoad`. Since Playwright version 1.59 (and the whole reason why this procrastination happened) there's a way to force clear all of the storage details that a browser context has without recreating the context. So I added these convenience functions within `PlaywrightEx.BrowserContext` to let me call them instead of calling `Playwright.Connection.send/3` directly. This however, is not breaking... I can just call `Playwright.Connection.send/3` directly for now. But, procrastination wins, so I still made this PR!
+
+### Enabling the User Loop
+
+Load tests are not just "one and done" (usually). And I've been modeling my `LiveLoad.Scenario` as one and done. The person who is using `LiveLoad` doesn't need to necessarily concern themselves with creating a loop or a process for their `LiveLoad.Scenario`. `LiveLoad` does this for them, all they need to do is write a declarative scenario: "navigate here -> click here -> wait for this -> submit this". `LiveLoad` takes care of everything. But until now, my `LiveLoad.Scenario.Runner` process (a `:gen_statem`, which as some of you might know is my favorite OTP behaviour) has just been running it as a one and done. Well... not anymore! I added the looping mechanism, which also led to a bunch of cleanups in how I was passing options, and naming options, and more. This also led me to actually implementing checks on the `LiveLoad.Scenario.Context`, to make sure that a failure actually counted as a failure! A huge (not really, but it was an important one) milestone!
+
+Now, because of that first point about the Playwright `:env` option, this release is not going to be usable. So, anyone who is using it (I don't know, there's downloads on Hex, so I'm warning you here) this is going to break your current workflows. Locally, I'm pointing to a local path on my own fork of `PlaywrightEx`(https://github.com/probably-not/playwright_ex) so that it can work, but like I said, for now, it's a broken push. I just wanted to push it up, so that if for some reason people are following this devlog, they'll see what I'm doing.
+
+So, since this was a procrastination release, our next todos haven't changed. I'm just going to copy it from the last entry that had them so I can remind myself as well:
+- Finish implementing all of the browser stuff. The busy work that I've been mentioning this whole time. I gotta do it.
+- Distribution. I'm gonna need to set up FLAME peer nodes so I can actually finish this stuff.
+- The UI/Reporting. I was discussing this with one of my colleagues - I'm not sure if I should go with just a basic Plug and a vanilla frontend that I get Claude to generate, or if I should go all the way and make this in LiveView already. I could set up an Igniter script to let people install the reporting UI on their own LiveView projects. The benefit of a basic Plug is that it's standalone - I could place it in any app, whether it's Phoenix, Phoenix+LiveView, or anything else in the BEAM ecosystem via interop even. So LiveLoad, while being primarily oriented around LiveView metrics, could theoretically be used to load test any app, which would be a huge thing!
+- Actual examples of a LiveView app and benchmarks
+- And last but not least, finish up the documentation. The guides, the todos for docs, all that fun stuff.
+
+
+
 ## 0.0.1-rc.16
 
 ![Oh, that little guy? I wouldn't worry about that little guy.](./assets/supertroopers-little-guy.gif)
