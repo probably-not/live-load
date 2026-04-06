@@ -83,6 +83,7 @@ defmodule LiveLoad.MixProject do
       {:jason, "~> 1.4", optional: true},
       {:poison, "~> 6.0", optional: true},
       ## Testing and Development Dependencies
+      {:flame_peer, "~> 1.0.0", only: [:dev, :test]},
       {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
       {:styler, "~> 1.10", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.40.0", only: :dev, runtime: false},
