@@ -24,6 +24,14 @@ defmodule LiveLoad.Browser.Connection.Playwright do
 
   @impl true
   @doc false
+  def browser_memory_usage_bytes, do: 250 * 1024 * 1024
+
+  @impl true
+  @doc false
+  def context_memory_usage_bytes, do: 150 * 1024 * 1024
+
+  @impl true
+  @doc false
   def drain_metrics(%Browser{} = browser) do
     playwright_browser = browser.private.playwright_connection_browser
     _ = PlaywrightEx.Connection.initializer!(Supervisor.playwright_connection_name(), playwright_browser.guid)
