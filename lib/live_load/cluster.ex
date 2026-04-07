@@ -189,7 +189,7 @@ defmodule LiveLoad.Cluster do
   end
 
   defp validate_cluster_sizing(%Cluster.Node{} = cluster_node, users, browser_connection_adapter, max_allowed_nodes) do
-    users_per_node = calculate_possible_users_per_node(cluster_node, browser_connection_adapter)
+    users_per_node = Cluster.Sizing.calculate_possible_users_per_node(cluster_node, browser_connection_adapter)
     necessary_nodes = ceil(users / users_per_node)
 
     if necessary_nodes > max_allowed_nodes do
@@ -197,12 +197,6 @@ defmodule LiveLoad.Cluster do
     else
       {:ok, necessary_nodes}
     end
-  end
-
-  defp calculate_possible_users_per_node(%Cluster.Node{} = _cluster_node, browser_connection_adapter) do
-    # TODO: Calculate stuff correctly
-    _ = browser_connection_adapter.browser_memory_usage_bytes() + browser_connection_adapter.context_memory_usage_bytes()
-    1
   end
 
   defp base_pool_opts(name, max) do
