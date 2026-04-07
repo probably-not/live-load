@@ -28,7 +28,6 @@ defmodule LiveLoad.Scenario do
   """
 
   alias __MODULE__
-  alias LiveLoad.Browser
 
   @typedoc "Any module implementing the `LiveLoad.Scenario` behaviour."
   @type t() :: module()
@@ -43,7 +42,7 @@ defmodule LiveLoad.Scenario do
   @typedoc false
   @type internal_config() :: %{
           local_listener_pid: pid(),
-          browser: Browser.t(),
+          browser: LiveLoad.Browser.t(),
           iteration_timeout: timeout(),
           scenario_duration: timeout()
         }
@@ -66,7 +65,7 @@ defmodule LiveLoad.Scenario do
   Invoked once per user. `c:run/3` is the actual load test that will be run,
   measured, and instrumented by LiveLoad.
   """
-  @callback run(context :: LiveLoad.Scenario.Context.t(), user_id :: user_id(), config :: config()) ::
+  @callback run(context :: Scenario.Context.t(), user_id :: user_id(), config :: config()) ::
               Scenario.Context.t() | {:error, term()}
 
   defmacro __using__(_opts) do
@@ -97,13 +96,13 @@ defmodule LiveLoad.Scenario do
       @required_variable %{
         name: :collector_pid,
         default_value: nil,
-        description: ~c"INTERNAL VARIABLE. The PID of the telemetry collector process on the runner node"
+        description: "INTERNAL VARIABLE. The PID of the telemetry collector process on the runner node"
       }
 
       @required_variable %{
         name: :browser_connection_adapter,
         default_value: nil,
-        description: ~c"""
+        description: """
         INTERNAL VARIABLE.
         The `LiveLoad.Browser.Connection` adapter that will be used for this load test.
         """
@@ -112,7 +111,7 @@ defmodule LiveLoad.Scenario do
       @required_variable %{
         name: :browser_connection_opts,
         default_value: [],
-        description: ~c"""
+        description: """
         INTERNAL VARIABLE.
         The `t:LiveLoad.Browser.Connection.opts()` that will be passed
         to the browser initialization during this load test.
@@ -122,7 +121,7 @@ defmodule LiveLoad.Scenario do
       @required_variable %{
         name: :iteration_timeout,
         default_value: to_timeout(minute: 2),
-        description: ~c"""
+        description: """
         INTERNAL VARIABLE.
         The maximum time for single iteration of a scenario to take.
         If an iteration of a scenario takes longer than this, a timeout error will be returned.
@@ -133,7 +132,7 @@ defmodule LiveLoad.Scenario do
       @required_variable %{
         name: :scenario_duration,
         default_value: to_timeout(minute: 10),
-        description: ~c"""
+        description: """
         INTERNAL VARIABLE.
         The maximum time for a load test to be running a single scenario.
         At the end of this timeout, the scenario runner will transition to a terminating state
@@ -145,7 +144,7 @@ defmodule LiveLoad.Scenario do
       @required_variable %{
         name: :scenario_config_opts,
         default_value: [],
-        description: ~c"""
+        description: """
         INTERNAL VARIABLE.
         The config opts keyword list that is passed to the scenario's config/1 callback.
         """
@@ -154,30 +153,19 @@ defmodule LiveLoad.Scenario do
       @impl :amoc_scenario
       @doc false
       def init do
-        Scenario.Init.init(__MODULE__)
+        Scenario.Callbacks.init(__MODULE__)
       end
 
       @impl :amoc_scenario
       @doc false
       def start(user_id, opts) do
-        case Browser.new_context(opts.__config__.browser) do
-          {:ok, %Browser.Context{} = browser_context} ->
-            try do
-              Scenario.Runner.run(__MODULE__, Scenario.Context.new(browser_context), user_id, opts)
-            after
-              Browser.Context.stop(browser_context)
-            end
-
-          {:error, _reason} = error ->
-            error
-        end
+        Scenario.Callbacks.start(__MODULE__, user_id, opts)
       end
 
       @impl :amoc_scenario
       @doc false
       def terminate(opts) do
-        Browser.stop(opts.__config__.browser)
-        LiveLoad.Telemetry.Listener.stop(opts.__config__.local_listener_pid)
+        Scenario.Callbacks.terminate(__MODULE__, opts)
       end
 
       @impl LiveLoad.Scenario
