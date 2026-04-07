@@ -66,6 +66,42 @@ defmodule LiveLoad.Cluster do
   """
   @type option() :: flame_backend_opts_opt() | max_allowed_nodes_opt() | flame_pool_opts_opt()
 
+  @typedoc """
+  An error returned from the cluster initialization when the scenario is currently running and a new pool cannot be started.
+
+  This error is a limitation of FLAME, as FLAME requires atoms as pool names due to the usage of named ETS tables.
+  """
+  @type scenario_already_running_error() :: {:error, :scenario_is_already_running}
+
+  @typedoc """
+  An error returned from the cluster initialization when the given `t:max_allowed_nodes_opt/0`
+  is smaller than the calculated necessary nodes needed to run the load test on the FLAME nodes
+  configured by the the given FLAME configurations.
+
+  The calculation of necessary nodes is a heuristic based on the expected resource usage per user process
+  determined by the `c:LiveLoad.Browser.Connection.browser_memory_usage_bytes/0` and
+  `c:LiveLoad.Browser.Connection.context_memory_usage_bytes/0` callbacks on the selected
+  `LiveLoad.Browser.Connection` implementation for this run.
+  """
+  @type not_enough_nodes_error() :: {:error, {:necessary_nodes_exceeds_max_allowed_nodes, necessary :: pos_integer()}}
+
+  @typedoc """
+  An error returned from the cluster initialization when the creation of a cluster node takes longer than the configured
+  timeout for the `FLAME.Pool`.
+  """
+  @type cluster_node_creation_timeout_error() :: {:error, :cluster_node_creation_timeout}
+
+  @typedoc """
+  An error returned from the cluster initialization when the creation of a cluster node crashes due to the `FLAME.Pool` name being invalid.
+  """
+  @type cluster_name_invalid_error() :: {:error, :cluster_name_invalid}
+
+  @type cluster_initialization_error() ::
+          scenario_already_running_error()
+          | not_enough_nodes_error()
+          | cluster_node_creation_timeout_error()
+          | {:error, term()}
+
   @type t() :: %__MODULE__{
           pool_name: atom(),
           pool_pid: pid(),
@@ -83,7 +119,7 @@ defmodule LiveLoad.Cluster do
           flame_backend :: flame_backend(),
           opts :: [option()]
         ) ::
-          {:ok, t()} | {:error, :scenario_is_already_running} | {:error, term()}
+          {:ok, t()} | cluster_initialization_error()
   def start_link(scenario, users, browser_connection_adapter, flame_backend, opts) do
     opts = Keyword.validate!(opts, flame_backend_opts: [], max_allowed_nodes: 100, flame_pool_opts: [])
 

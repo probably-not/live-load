@@ -136,6 +136,14 @@ defmodule LiveLoad do
           | cluster_opts_opt()
           | {atom(), term()}
 
+  @typedoc """
+  The result of a `LiveLoad.Scenario` run returned by `LiveLoad.Scenario.run/1`.
+
+  This may either be a `LiveLoad.Result` or an error. If the given `t:distributed_run_opt/0`
+  is set to `true`, the error may include one of the possible `t:Cluster.cluster_initialization_error/0` errors.
+  """
+  @type scenario_result() :: LiveLoad.Result.t() | Cluster.cluster_initialization_error() | {:error, term()}
+
   @doc """
   Run all of the `LiveLoad.Scenario` modules in this project.
 
@@ -144,7 +152,7 @@ defmodule LiveLoad do
 
   TODO: Give actual documentation here!
   """
-  @spec run(opts :: [option()]) :: %{Scenario.t() => LiveLoad.Result.t() | {:error, term()}}
+  @spec run(opts :: [option()]) :: %{Scenario.t() => scenario_result()}
   def run(opts \\ []) do
     {single_scenario, opts} = Keyword.pop(opts, :scenario)
     {list_of_scenarios, opts} = Keyword.pop(opts, :scenarios)
