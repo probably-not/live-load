@@ -148,9 +148,11 @@ defmodule LiveLoad do
   defp do_scenario(scenario, users, distributed?, opts)
 
   defp do_scenario(scenario, users, false, opts) do
+    scenario_duration = Keyword.fetch!(opts, :scenario_duration)
+
     with {:ok, collector_pid} <- Collector.start_link([node()]),
          :ok <- :amoc.do(scenario, users, Keyword.put(opts, :collector_pid, collector_pid)) do
-      timeout = collector_timeout(opts[:scenario_duration])
+      timeout = collector_timeout(scenario_duration)
       Collector.wait_for_completion(collector_pid, timeout)
     end
   after
@@ -200,7 +202,5 @@ defmodule LiveLoad do
     :ok
   end
 
-  defp collector_timeout(timeout)
-  defp collector_timeout(nil), do: to_timeout(minute: 15)
-  defp collector_timeout(timeout), do: timeout + to_timeout(minute: 5)
+  defp collector_timeout(timeout) when is_integer(timeout), do: timeout + to_timeout(minute: 5)
 end
