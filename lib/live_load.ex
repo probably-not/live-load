@@ -236,8 +236,8 @@ defmodule LiveLoad do
 
     with {:ok, %Cluster{} = cluster} <-
            Cluster.start_link(scenario, users, browser_connection_adapter, flame_backend, cluster_opts),
-         {:ok, collector_pid} <- Collector.start_link(cluster.pool_nodes),
-         :ok <- :amoc_cluster.connect_nodes(cluster.pool_nodes),
+         {:ok, collector_pid} <- Collector.start_link(cluster.pool_node_names),
+         :ok <- :amoc_cluster.connect_nodes(cluster.pool_node_names),
          {:ok, _users} <- :amoc_dist.do(scenario, users, opts) do
       timeout = collector_timeout(scenario_duration)
       Collector.wait_for_completion(collector_pid, timeout)

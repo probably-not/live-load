@@ -105,11 +105,12 @@ defmodule LiveLoad.Cluster do
   @type t() :: %__MODULE__{
           pool_name: atom(),
           pool_pid: pid(),
-          pool_nodes: [Cluster.Node.t()]
+          pool_nodes: [Cluster.Node.t()],
+          pool_node_names: [node()]
         }
 
-  @enforce_keys [:pool_name, :pool_pid, :pool_nodes]
-  defstruct [:pool_name, :pool_pid, :pool_nodes]
+  @enforce_keys [:pool_name, :pool_pid]
+  defstruct [:pool_name, :pool_pid, pool_nodes: [], pool_node_names: []]
 
   @doc false
   @spec start_link(
@@ -148,9 +149,9 @@ defmodule LiveLoad.Cluster do
     # I need to create a wrap all of this with an Owner process that owns the pool and the lifecycle of the pool,
     # and then have proper cleanups and proper linking between the owner process and the caller.
     with {:ok, pid} <- start_flame_pool(scenario, Keyword.put(pool_opts, :backend, {flame_backend, flame_backend_opts})),
-         cluster = %__MODULE__{pool_name: scenario, pool_pid: pid, pool_nodes: []},
+         cluster = %__MODULE__{pool_name: scenario, pool_pid: pid},
          {:ok, %__MODULE__{} = cluster} <- prime_cluster(cluster, users, browser_connection_adapter, max_allowed_nodes) do
-      {:ok, cluster}
+      {:ok, finalize(cluster)}
     end
   end
 
@@ -177,6 +178,10 @@ defmodule LiveLoad.Cluster do
         end
       end)
     end
+  end
+
+  defp finalize(%__MODULE__{} = cluster) do
+    %{cluster | pool_node_names: Enum.map(cluster.pool_nodes, & &1.node)}
   end
 
   defp wrapped_node_create(pool_name) do
