@@ -144,6 +144,9 @@ defmodule LiveLoad.Cluster do
     # a simple queue with a GenServer so that I only run one at a time and the scenario will be unique enough at that point.
 
     # TODO: If the pool has started and the priming fails, I need to stop the pool properly.
+    # TODO: Right now this is not actually linking anything, and FLAME.Pool is a supervisor so linking is weird.
+    # I need to create a wrap all of this with an Owner process that owns the pool and the lifecycle of the pool,
+    # and then have proper cleanups and proper linking between the owner process and the caller.
     with {:ok, pid} <- start_flame_pool(scenario, Keyword.put(pool_opts, :backend, {flame_backend, flame_backend_opts})),
          cluster = %__MODULE__{pool_name: scenario, pool_pid: pid, pool_nodes: []},
          {:ok, %__MODULE__{} = cluster} <- prime_cluster(cluster, users, browser_connection_adapter, max_allowed_nodes) do
