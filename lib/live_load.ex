@@ -4,6 +4,7 @@ defmodule LiveLoad do
   """
 
   alias LiveLoad.Browser
+  alias LiveLoad.Cluster
   alias LiveLoad.Scenario
   alias LiveLoad.Scenario.Discovery
   alias LiveLoad.Telemetry.Collector
@@ -97,9 +98,28 @@ defmodule LiveLoad do
   @type scenario_duration_opt() :: {:scenario_duration, timeout()}
 
   @typedoc """
+  Defines the `FLAME.Backend` module to use when running a distributed load test.
+
+  The `LiveLoad.Cluster` can be additionally configured by passing the `t:cluster_opts_opt/0` option
+  to `LiveLoad.run/1`. See `LiveLoad.Cluster` for more details.
+
+  This option is required when running a distributed load test and setting the `t:distributed_run_opt/0` option to `true`.
+  """
+  @type flame_backend_opt() :: {:flame_backend, Cluster.flame_backend()}
+
+  @typedoc """
+  Options passed in to the `LiveLoad.Cluster` initialization.
+
+  This is a list of `t:LiveLoad.Cluster.option/0` that is passed directly into the initialization.
+
+  See `LiveLoad.Cluster` for all available options.
+  """
+  @type cluster_opts_opt() :: {:cluster_opts, [Cluster.option()]}
+
+  @typedoc """
   Initialization options for running a `LiveLoad.Scenario`.
 
-  These are split between options for the overall run configuration (`t:distributed_run_opt/0`, `t:users_count_opt/0`),
+  These are split between options for the overall run configuration (`t:distributed_run_opt/0`, `t:users_count_opt/0`, `t:flame_backend_opt/0`, `t:cluster_opts_opt/0`),
   options for the runner itself (`t:browser_connection_adapter_opt/0`, `t:scenario_iteration_timeout_opt/0`, `t:scenario_duration_opt/0`)
   and any other options that should be passed in as configuration to the scenario `c:LiveLoad.Scenario.config/1` callback.
   """
@@ -112,6 +132,8 @@ defmodule LiveLoad do
           | browser_connection_adapter_opt()
           | scenario_iteration_timeout_opt()
           | scenario_duration_opt()
+          | flame_backend_opt()
+          | cluster_opts_opt()
           | {atom(), term()}
 
   @doc """
@@ -137,7 +159,7 @@ defmodule LiveLoad do
     Application.stop(:amoc)
     Application.ensure_all_started(:amoc)
 
-    case do_scenario(scenario, run_config[:users], run_config[:distributed?], opts) do
+    case do_scenario(scenario, run_config[:distributed?], run_config, opts) do
       {:ok, results} -> LiveLoad.Result.new(scenario, results)
       {:error, _reason} = error -> error
     end
@@ -145,10 +167,11 @@ defmodule LiveLoad do
     Application.stop(:amoc)
   end
 
-  defp do_scenario(scenario, users, distributed?, opts)
+  defp do_scenario(scenario, distributed?, run_config, opts)
 
-  defp do_scenario(scenario, users, false, opts) do
+  defp do_scenario(scenario, false, run_config, opts) do
     scenario_duration = Keyword.fetch!(opts, :scenario_duration)
+    users = Keyword.fetch!(run_config, :users)
 
     with {:ok, collector_pid} <- Collector.start_link([node()]),
          :ok <- :amoc.do(scenario, users, Keyword.put(opts, :collector_pid, collector_pid)) do
@@ -159,13 +182,25 @@ defmodule LiveLoad do
     :amoc.stop()
   end
 
-  defp do_scenario(scenario, users, true, opts) do
-    # TODO: How are we running scenarios?
-    # - Raise FLAME nodes with Trackable that stays alive until we are done running the test
-    # - Collect all nodes from FLAME pools.
-    # - On the controller node, run `:amoc_cluster.connect_nodes(flame_node_list)`
-    # - On the controller node, run `:amoc_dist.do(scenario_mod, user_count, settings)`
-    :amoc_dist.do(scenario, users, opts)
+  defp do_scenario(scenario, true, run_config, opts) do
+    users = Keyword.fetch!(run_config, :users)
+    browser_connection_adapter = Keyword.fetch!(opts, :browser_connection_adapter)
+    scenario_duration = Keyword.fetch!(opts, :scenario_duration)
+
+    cluster_opts = Keyword.fetch!(run_config, :cluster_opts)
+    flame_backend = Keyword.fetch!(run_config, :flame_backend)
+    validate_flame_backend!(flame_backend)
+
+    with {:ok, %Cluster{} = cluster} <-
+           Cluster.start_link(scenario, users, browser_connection_adapter, flame_backend, cluster_opts),
+         {:ok, collector_pid} <- Collector.start_link(cluster.pool_nodes),
+         :ok <- :amoc_cluster.connect_nodes(cluster.pool_nodes),
+         {:ok, _users} <- :amoc_dist.do(scenario, users, opts) do
+      timeout = collector_timeout(scenario_duration)
+      Collector.wait_for_completion(collector_pid, timeout)
+    end
+  after
+    :amoc.stop()
   end
 
   defp build_options(opts) do
@@ -182,7 +217,7 @@ defmodule LiveLoad do
   end
 
   defp base_run_config do
-    [users: 1, distributed?: false]
+    [users: 1, distributed?: false, cluster_opts: [], flame_backend: :unset]
   end
 
   defp base_runner_opts do
@@ -192,6 +227,14 @@ defmodule LiveLoad do
       iteration_timeout: to_timeout(minute: 2),
       scenario_duration: to_timeout(minute: 10)
     ]
+  end
+
+  defp validate_flame_backend!(:unset) do
+    raise ArgumentError, "`:flame_backend` must be set when running a distributed load test."
+  end
+
+  defp validate_flame_backend!(module) when is_atom(module) do
+    :ok
   end
 
   defp validate_timeout!(timeout_name, :infinity) do
