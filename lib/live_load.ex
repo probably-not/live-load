@@ -218,7 +218,7 @@ defmodule LiveLoad do
     scenario_duration = Keyword.fetch!(opts, :scenario_duration)
 
     with {:ok, collector_pid} <- Collector.start_link(nodes),
-         :ok <- :amoc_cluster.connect_nodes(nodes),
+         :ok <- connect_amoc_cluster_nodes(nodes),
          {:ok, _users} <- :amoc_dist.do(scenario, users, opts) do
       timeout = collector_timeout(scenario_duration)
       Collector.wait_for_completion(collector_pid, timeout)
@@ -237,11 +237,31 @@ defmodule LiveLoad do
     with {:ok, %Cluster{} = cluster} <-
            Cluster.start_link(scenario, users, browser_connection_adapter, flame_backend, cluster_opts),
          {:ok, collector_pid} <- Collector.start_link(cluster.pool_node_names),
-         :ok <- :amoc_cluster.connect_nodes(cluster.pool_node_names),
+         :ok <- connect_amoc_cluster_nodes(cluster.pool_node_names),
          {:ok, _users} <- :amoc_dist.do(scenario, users, opts) do
       timeout = collector_timeout(scenario_duration)
       Collector.wait_for_completion(collector_pid, timeout)
     end
+  end
+
+  defp connect_amoc_cluster_nodes(nodes) do
+    :ok = :amoc_cluster.connect_nodes(nodes)
+
+    # This is a brute-force hack since amoc doesn't currently expose a way to ensure that nodes
+    # are connected and that all nodes that are expected to be connected are working.
+    # amoc connects asynchronously so this just tries to see the status over and over.
+    # TODO: Gotta add these two failure errors to the typespecs.
+    Enum.reduce_while(1..30, {:error, {:waiting_for_cluster, :amoc_cluster.get_status()}}, fn
+      _, {:error, {_, %{to_ack: [], failed_to_connect: []}}} ->
+        {:halt, :ok}
+
+      _, {:error, {_, %{to_ack: [], failed_to_connect: [_ | _] = failed}}} ->
+        {:halt, {:error, {:failed_to_connect, failed}}}
+
+      _, {:error, {_, %{to_ack: [_ | _]}}} ->
+        Process.sleep(to_timeout(second: 1))
+        {:cont, {:error, {:waiting_for_cluster, :amoc_cluster.get_status()}}}
+    end)
   end
 
   defp build_options(opts) do
