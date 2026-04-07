@@ -126,7 +126,7 @@ defmodule LiveLoad.Cluster do
   defp start_flame_pool(name, opts) do
     DynamicSupervisor.start_child(
       {:via, PartitionSupervisor, {LiveLoad.Cluster.DynamicSupervisor, name}},
-      {FLAME.Pool.start_link(opts), opts}
+      {FLAME.Pool, opts}
     )
   end
 end
