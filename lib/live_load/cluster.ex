@@ -166,7 +166,7 @@ defmodule LiveLoad.Cluster do
            validate_cluster_sizing(initial_cluster_node, users, browser_connection_adapter, max_allowed_nodes) do
       cluster = %{cluster | pool_nodes: [initial_cluster_node]}
 
-      Enum.reduce_while(1..(necessary_nodes - 1), {:ok, cluster}, fn _, {:ok, %Cluster{} = acc} ->
+      Enum.reduce_while(1..(necessary_nodes - 1)//1, {:ok, cluster}, fn _, {:ok, %Cluster{} = acc} ->
         case wrapped_node_create(acc.pool_name) do
           %Cluster.Node{} = cluster_node -> {:cont, {:ok, %{acc | pool_nodes: [cluster_node | acc.pool_nodes]}}}
           {:error, _reason} = error -> {:halt, error}
