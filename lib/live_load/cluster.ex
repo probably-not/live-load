@@ -107,6 +107,7 @@ defmodule LiveLoad.Cluster do
     # `:amoc` is a "global" process, so I can only run one scenario at a time anyways. Maybe I can set up
     # a simple queue with a GenServer so that I only run one at a time and the scenario will be unique enough at that point.
 
+    # TODO: If the pool has started and the priming fails, I need to stop the pool properly.
     with {:ok, pid} <- start_flame_pool(scenario, Keyword.put(pool_opts, :backend, {flame_backend, flame_backend_opts})),
          cluster = %__MODULE__{pool_name: scenario, pool_pid: pid, pool_nodes: []},
          {:ok, %__MODULE__{} = cluster} <- prime_cluster(cluster, users, browser_connection_adapter, max_allowed_nodes) do
@@ -129,9 +130,9 @@ defmodule LiveLoad.Cluster do
            validate_cluster_sizing(initial_cluster_node, users, browser_connection_adapter, max_allowed_nodes) do
       cluster = %{cluster | pool_nodes: [initial_cluster_node]}
 
-      Enum.reduce_while(1..(necessary_nodes - 1), {:ok, cluster}, fn _, %Cluster{} = acc ->
+      Enum.reduce_while(1..(necessary_nodes - 1), {:ok, cluster}, fn _, {:ok, %Cluster{} = acc} ->
         case wrapped_node_create(acc.pool_name) do
-          {:ok, %Cluster.Node{} = cluster_node} -> {:cont, {:ok, %{acc | pool_nodes: [cluster_node | acc.pool_nodes]}}}
+          %Cluster.Node{} = cluster_node -> {:cont, {:ok, %{acc | pool_nodes: [cluster_node | acc.pool_nodes]}}}
           {:error, _reason} = error -> {:halt, error}
         end
       end)
@@ -161,7 +162,7 @@ defmodule LiveLoad.Cluster do
 
   defp calculate_possible_users_per_node(%Cluster.Node{} = _cluster_node, browser_connection_adapter) do
     # TODO: Calculate stuff correctly
-    _ = browser_connection_adapter.browser_memory_usage_bytes + browser_connection_adapter.context_memory_usage_bytes
+    _ = browser_connection_adapter.browser_memory_usage_bytes() + browser_connection_adapter.context_memory_usage_bytes()
     1
   end
 
