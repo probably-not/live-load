@@ -3,6 +3,7 @@ defmodule LiveLoad do
   #{"./README.md" |> Path.expand() |> File.read!() |> String.split("<!-- README START -->") |> Enum.at(1) |> String.split("<!-- README END -->") |> List.first() |> String.trim()}
   """
 
+  alias LiveLoad.Browser
   alias LiveLoad.Scenario
   alias LiveLoad.Scenario.Discovery
   alias LiveLoad.Telemetry.Collector
@@ -61,7 +62,14 @@ defmodule LiveLoad do
 
   Defaults to `LiveLoad.Browser.Connection.Playwright`.
   """
-  @type browser_connection_adapter_opt() :: {:browser_connection_adapter, LiveLoad.Browser.Connection.t()}
+  @type browser_connection_adapter_opt() :: {:browser_connection_adapter, Browser.Connection.t()}
+
+  @typedoc """
+  Options passed to the given `t:browser_connection_adapter_opt/0` on initialization of the `LiveLoad.Browser.Connection`.
+
+  Defaults to an empty list.
+  """
+  @type browser_connection_opts_opt() :: {:browser_connection_opts, Browser.Connection.opts()}
 
   @typedoc """
   Defines the timeout for a single iteration of a scenario.
@@ -178,6 +186,7 @@ defmodule LiveLoad do
   defp base_runner_opts do
     [
       browser_connection_adapter: LiveLoad.Browser.Connection.Playwright,
+      browser_connection_opts: [],
       iteration_timeout: to_timeout(minute: 2),
       scenario_duration: to_timeout(minute: 10)
     ]
@@ -191,7 +200,6 @@ defmodule LiveLoad do
     :ok
   end
 
-  # TODO: I gotta add the scenario timeout default here shared somehow...
   defp collector_timeout(timeout)
   defp collector_timeout(nil), do: to_timeout(minute: 15)
   defp collector_timeout(timeout), do: timeout + to_timeout(minute: 5)

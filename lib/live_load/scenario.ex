@@ -120,24 +120,22 @@ defmodule LiveLoad.Scenario do
 
       @required_variable %{
         name: :iteration_timeout,
-        default_value: to_timeout(minute: 2),
+        default_value: nil,
         description: """
         INTERNAL VARIABLE.
         The maximum time for single iteration of a scenario to take.
         If an iteration of a scenario takes longer than this, a timeout error will be returned.
-        The default value is 2 minutes.
         """
       }
 
       @required_variable %{
         name: :scenario_duration,
-        default_value: to_timeout(minute: 10),
+        default_value: nil,
         description: """
         INTERNAL VARIABLE.
         The maximum time for a load test to be running a single scenario.
         At the end of this timeout, the scenario runner will transition to a terminating state
         and wait for the last iteration to complete, then report its completion.
-        The default value is 10 minutes
         """
       }
 
