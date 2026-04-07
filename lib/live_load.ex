@@ -117,10 +117,22 @@ defmodule LiveLoad do
   @type cluster_opts_opt() :: {:cluster_opts, [Cluster.option()]}
 
   @typedoc """
+  Configures the node list for a distributed load test directly.
+
+  This is mostly used for internal testing and demos in order to pass in a ready made cluster of nodes
+  instead of waiting for the nodes to be allocated by the given `t:flame_backend_opt/0`.
+
+  Typical users should avoid passing this in directly, as it bypasses the cluster sizing checks that ensure
+  the cluster has proper resources available for the load test to run.
+  """
+  @type cluster_nodes_opt() :: {:cluster_nodes, [node()]}
+
+  @typedoc """
   Initialization options for running a `LiveLoad.Scenario`.
 
-  These are split between options for the overall run configuration (`t:distributed_run_opt/0`, `t:users_count_opt/0`, `t:flame_backend_opt/0`, `t:cluster_opts_opt/0`),
-  options for the runner itself (`t:browser_connection_adapter_opt/0`, `t:scenario_iteration_timeout_opt/0`, `t:scenario_duration_opt/0`)
+  These are split between options for the overall run configuration (`t:distributed_run_opt/0`, `t:users_count_opt/0`,
+  `t:flame_backend_opt/0`, `t:cluster_opts_opt/0`, `t:cluster_nodes_opt/0`), options for the runner itself
+  (`t:browser_connection_adapter_opt/0`, `t:scenario_iteration_timeout_opt/0`, `t:scenario_duration_opt/0`)
   and any other options that should be passed in as configuration to the scenario `c:LiveLoad.Scenario.config/1` callback.
   """
   @type option() ::
@@ -134,10 +146,11 @@ defmodule LiveLoad do
           | scenario_duration_opt()
           | flame_backend_opt()
           | cluster_opts_opt()
+          | cluster_nodes_opt()
           | {atom(), term()}
 
   @typedoc """
-  The result of a `LiveLoad.Scenario` run returned by `LiveLoad.Scenario.run/1`.
+  The result of a `LiveLoad.Scenario` run returned by `LiveLoad.run/1`.
 
   This may either be a `LiveLoad.Result` or an error. If the given `t:distributed_run_opt/0`
   is set to `true`, the error may include one of the possible `t:Cluster.cluster_initialization_error/0` errors.
@@ -191,6 +204,28 @@ defmodule LiveLoad do
   end
 
   defp do_scenario(scenario, true, run_config, opts) do
+    if nodes = run_config[:cluster_nodes] do
+      do_distributed_scenario_with_nodes(nodes, scenario, run_config, opts)
+    else
+      do_distributed_scenario_with_flame(scenario, run_config, opts)
+    end
+  after
+    :amoc.stop()
+  end
+
+  defp do_distributed_scenario_with_nodes(nodes, scenario, run_config, opts) do
+    users = Keyword.fetch!(run_config, :users)
+    scenario_duration = Keyword.fetch!(opts, :scenario_duration)
+
+    with {:ok, collector_pid} <- Collector.start_link(nodes),
+         :ok <- :amoc_cluster.connect_nodes(nodes),
+         {:ok, _users} <- :amoc_dist.do(scenario, users, opts) do
+      timeout = collector_timeout(scenario_duration)
+      Collector.wait_for_completion(collector_pid, timeout)
+    end
+  end
+
+  defp do_distributed_scenario_with_flame(scenario, run_config, opts) do
     users = Keyword.fetch!(run_config, :users)
     browser_connection_adapter = Keyword.fetch!(opts, :browser_connection_adapter)
     scenario_duration = Keyword.fetch!(opts, :scenario_duration)
@@ -207,8 +242,6 @@ defmodule LiveLoad do
       timeout = collector_timeout(scenario_duration)
       Collector.wait_for_completion(collector_pid, timeout)
     end
-  after
-    :amoc.stop()
   end
 
   defp build_options(opts) do
