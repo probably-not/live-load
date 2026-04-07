@@ -64,6 +64,9 @@ defmodule LiveLoad.Telemetry.Collector do
 
   @impl true
   def init(expected_nodes) do
+    # TODO: Add node monitoring.
+    # If the node goes down, we should mark the node as failed so that we can ignore the waiting on it.
+    # This also means I need to bring back the node error result in the LiveLoad.Result.
     {:ok, State.new(expected_nodes)}
   end
 
