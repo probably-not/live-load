@@ -12,6 +12,8 @@ defmodule LiveLoad.Cluster do
   necessary exceeds the configured `max_allowed_nodes`, an error will be returned and the scenario will not be run.
   """
 
+  alias __MODULE__
+
   @typedoc """
   A module implementing the `FLAME.Backend` behaviour.
   """
@@ -65,12 +67,13 @@ defmodule LiveLoad.Cluster do
   @type option() :: flame_backend_opts_opt() | max_allowed_nodes_opt() | flame_pool_opts_opt()
 
   @type t() :: %__MODULE__{
+          pool_name: atom(),
           pool_pid: pid(),
-          pool_nodes: [node()]
+          pool_nodes: [Cluster.Node.t()]
         }
 
-  @enforce_keys [:pool_pid, :pool_nodes]
-  defstruct [:pool_pid, :pool_nodes]
+  @enforce_keys [:pool_name, :pool_pid, :pool_nodes]
+  defstruct [:pool_name, :pool_pid, :pool_nodes]
 
   @doc false
   @spec start_link(
@@ -81,7 +84,7 @@ defmodule LiveLoad.Cluster do
           opts :: [option()]
         ) ::
           {:ok, t()} | {:error, :scenario_is_already_running} | {:error, term()}
-  def start_link(scenario, _users, _browser_connection_adapter, flame_backend, opts) do
+  def start_link(scenario, users, browser_connection_adapter, flame_backend, opts) do
     opts = Keyword.validate!(opts, flame_backend_opts: [], max_allowed_nodes: 100, flame_pool_opts: [])
 
     max_allowed_nodes = Keyword.fetch!(opts, :max_allowed_nodes)
@@ -103,10 +106,11 @@ defmodule LiveLoad.Cluster do
     # Probably yes for now... but I'll probably need to add some sort of locking mechanism at some point.
     # `:amoc` is a "global" process, so I can only run one scenario at a time anyways. Maybe I can set up
     # a simple queue with a GenServer so that I only run one at a time and the scenario will be unique enough at that point.
-    case start_flame_pool(scenario, Keyword.put(pool_opts, :backend, {flame_backend, flame_backend_opts})) do
-      {:ok, pid} when is_pid(pid) -> {:ok, %__MODULE__{pool_pid: pid, pool_nodes: []}}
-      {:error, {:already_started, _pid}} -> {:error, :scenario_is_already_running}
-      {:error, _reason} = error -> error
+
+    with {:ok, pid} <- start_flame_pool(scenario, Keyword.put(pool_opts, :backend, {flame_backend, flame_backend_opts})),
+         cluster = %__MODULE__{pool_name: scenario, pool_pid: pid, pool_nodes: []},
+         {:ok, %__MODULE__{} = cluster} <- prime_cluster(cluster, users, browser_connection_adapter, max_allowed_nodes) do
+      {:ok, cluster}
     end
   end
 
@@ -119,14 +123,60 @@ defmodule LiveLoad.Cluster do
     )
   end
 
+  defp prime_cluster(%__MODULE__{} = cluster, users, browser_connection_adapter, max_allowed_nodes) do
+    with %Cluster.Node{} = initial_cluster_node <- wrapped_node_create(cluster.pool_name),
+         {:ok, necessary_nodes} <-
+           validate_cluster_sizing(initial_cluster_node, users, browser_connection_adapter, max_allowed_nodes) do
+      cluster = %{cluster | pool_nodes: [initial_cluster_node]}
+
+      Enum.reduce_while(1..(necessary_nodes - 1), {:ok, cluster}, fn _, %Cluster{} = acc ->
+        case wrapped_node_create(acc.pool_name) do
+          {:ok, %Cluster.Node{} = cluster_node} -> {:cont, {:ok, %{acc | pool_nodes: [cluster_node | acc.pool_nodes]}}}
+          {:error, _reason} = error -> {:halt, error}
+        end
+      end)
+    end
+  end
+
+  defp wrapped_node_create(pool_name) do
+    FLAME.call(pool_name, &Cluster.Node.new!/0, track_resources: true)
+  rescue
+    exception -> {:error, exception}
+  catch
+    :exit, {:timeout, {FLAME.Pool, :call, _}} -> {:error, :cluster_node_creation_timeout}
+    :exit, {:noproc, {FLAME.Pool, :call, _}} -> {:error, :cluster_name_invalid}
+    :exit, reason -> {:error, reason}
+  end
+
+  defp validate_cluster_sizing(%Cluster.Node{} = cluster_node, users, browser_connection_adapter, max_allowed_nodes) do
+    users_per_node = calculate_possible_users_per_node(cluster_node, browser_connection_adapter)
+    necessary_nodes = ceil(users / users_per_node)
+
+    if necessary_nodes > max_allowed_nodes do
+      {:error, {:necessary_nodes_exceeds_max_allowed_nodes, necessary_nodes}}
+    else
+      {:ok, necessary_nodes}
+    end
+  end
+
+  defp calculate_possible_users_per_node(%Cluster.Node{} = _cluster_node, browser_connection_adapter) do
+    # TODO: Calculate stuff correctly
+    _ = browser_connection_adapter.browser_memory_usage_bytes + browser_connection_adapter.context_memory_usage_bytes
+    1
+  end
+
   defp base_pool_opts(name, max) do
     [name: name, max_concurrency: 1, track_resources: true, min: 0, max: max, single_use: false]
   end
 
   defp start_flame_pool(name, opts) do
-    DynamicSupervisor.start_child(
-      {:via, PartitionSupervisor, {LiveLoad.Cluster.DynamicSupervisor, name}},
-      {FLAME.Pool, opts}
-    )
+    case DynamicSupervisor.start_child(
+           {:via, PartitionSupervisor, {LiveLoad.Cluster.DynamicSupervisor, name}},
+           {FLAME.Pool, opts}
+         ) do
+      {:ok, pid} when is_pid(pid) -> {:ok, pid}
+      {:error, {:already_started, _pid}} -> {:error, :scenario_is_already_running}
+      {:error, _reason} = error -> error
+    end
   end
 end

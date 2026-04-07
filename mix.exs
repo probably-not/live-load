@@ -69,7 +69,7 @@ defmodule LiveLoad.MixProject do
   end
 
   defp applications(:dev), do: applications(:all) ++ [:remixed_remix, :runtime_tools]
-  defp applications(_all), do: [:logger]
+  defp applications(_all), do: [:logger, :os_mon]
 
   defp deps do
     [
