@@ -8,6 +8,76 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.18
+
+Wooooooooow! Ok, I'm just gonna get right to the updates here, because I'm feeling good, I'm in the zone, I'm finishing and finalizing and polishing this package to perfection.
+
+Let's get some of the boring stuff out of the way first. It's a bit out of order, because I did these boring things last, but I want to just say them quickly so that I can get to the cool stuff that makes me overly inflate my ego because I feel awesome.
+
+### The Boring Stuff
+
+#### Upgrading Dependencies
+
+A couple of hours ago, I ran `mix hex.outdated` and saw that I had a few outdated dependencies:
+- `Credo`
+- `Styler`
+- `ExDoc`
+- `:telemetry`
+
+So I went ahead and just upgraded them all. I updated my `.credo.exs` to get the latest checks in, recreated my docs with `mix docs` to see what changed in ExDoc, and re-ran `mix format` to make sure all of the Styler changes were incorporated. Easy stuff. Boring stuff. But, it's necessary... gotta keep things up to date!
+
+#### Fork `PlaywrightEx` Temporarily
+
+I mentioned this in the [devlog entry for 0.0.1-rc.17](#0-0-1-rc-17), but since I opened up a couple of PRs for `PlaywrightEx` that require a breaking change for `LiveLoad`, I haven't been able to actually publish a real package that can be tested by others. Now, while that's not a *huge* deal... it is a problem as I move forward with `LiveLoad`. So, in order to publish and also properly test the package in other environments and as a real dependency, I went ahead and published the fork as the [`live_load_forked_playwright_ex`](https://hex.pm/packages/live_load_forked_playwright_ex) on Hex. It's just a temporary measure, I needed a quick solution there that would give me publishing for `LiveLoad` back. Once those two PRs are merged in to the real `PlaywrightEx`, I'll retire the fork and use the main package.
+
+#### Clearing Out Various TODOs Left By Previous Work
+
+One of the things that I always do as I write code is leave little TODO breadcrumbs all over the place. It's a helpful mechanism to me, it lets me put something to the side, and just keep running with what I currently want to run with, but have the breadcrumb left there so that I get back to it eventually. Well, today was that day! I went through and started clearing out various TODOs, mostly ones that were easy to just punch through. I spruced up the typespecs and typedoc blocks, I documented some modules and functions that I left undocumented, I simplified some things like removing the whole "passing options in the `use LiveLoad.Scenario` statement" (I honestly don't know why I thought that was a good idea, it overcomplicated things), I made a simple `:persistent_term` cache for the browser telemetry script that I inject to Playwright Browser Contexts, I created a debug listener for unknown Playwright messages received by the Metrics GenServer, I created the first issue in the repo (https://github.com/probably-not/live-load/issues/2) to remove a TODO that was not really bothering anyone (it's a "good first issue" labeled issue, so if you're reading this and I've open sourced the repo already, feel free to take a look and contribute!), I allowed `LiveLoad.Result.NodeResult` values to have a status so that reporters can report on node failures, and I finally reviewed the AI generated `LiveLoad.ResultTest` and cleaned it up!
+
+Whew. That was a lot of TODOs cleared. What can I say... I felt good today! Now, on to the cool stuff!
+
+### The Cool Stuff!!!
+
+CLUSTERING BABY! Oh wait, I have a GIF for this (from another of my favorite quotable movies):
+
+![Yeah baby yeah!](./assets/austin-powers-yeah-baby.gif)
+
+Two days ago, after writing up the [devlog entry for 0.0.1-rc.17](#0-0-1-rc-17), I spent about an hour creating the `FlamePeer` package. I have a couple of other packages that helped me work through this pretty easily: [`FlameEC2`](https://github.com/probably-not/flame-ec2) and [`SafeNIF`](https://github.com/probably-not/safe-nif). Most of `FlamePeer` is a copy of both of these put together: the structure of how I built the `FLAME.Backend` was copied over (and cleaned) from `FlameEC2`, and the creation of a `:peer` node was copied over from `SafeNIF`. Having a `:peer` based backend to FLAME gave me the most important step in testing out `:amoc_dist`... an actual real distributed cluster!
+
+From there, it was just a matter of putting together all of the steps to create a cluster, forcing it to scale up to the necessary number of nodes, and triggering `:amoc_cluster.connect_nodes/1` to connect to these new nodes! Aaaaaand... voila! We've got clustering!
+
+#### How Does Clustering Actually Work?
+
+I'm glad you asked, random reader! Let me tell you.
+
+Everything happens within the `LiveLoad.Cluster.start_link/5` function. Now, this `start_link`, like a few other `start_link`s sprinkled throughout this codebase, is not a proper `start_link` function. That's another TODO for me (it's the next one up actually), I need to go through and get to packaging and finalizing the whole thing into a real supervision tree, and return resources from initialization functions and everything.
+
+The first thing that happens is pool creation. `LiveLoad.Cluster` sets up a `FLAME.Pool` with the given `FLAME.Backend` (this is why I needed `FlamePeer`, to actually have a real cluster to test against). The pool is initialized with a minimum count of 0, a maximum count of the configured maximum allowed nodes (defaults to 100), a maximum concurrency of 1, and resource tracking set to `true`. Then, I use `FLAME.call` initialize a `LiveLoad.Cluster.Node`, which implements `FLAME.Trackable` to ensure that FLAME tracks it after the `FLAME.call` returns. The `LiveLoad.Cluster.Node` contains all of the necessary details that I need to determine the necessary cluster size and whether the resources available in combination with the maximum allowed nodes can actually handle this load test! I added a couple of callbacks to the `LiveLoad.Browser.Connection` behaviour, specifically to identify the potential resource usage of each browser and browser context. Based on the potential resource usage per browser and browser context, I wrote up a simple (very conservative) heuristic for determining the number of users that can be added to each node, and then used that to start up all of the other nodes! And boom! We have a cluster. Each started node in the cluster contains the Trackable `LiveLoad.Cluster.Node`, so it stays alive as long as that process exists on the node (forever, since I'm not actually killing that process anywhere).
+
+#### That's Awesome Coby, Now What?
+
+So, once we have clustering, I had to make a few changes, specifically to the telemetry collection. Until now, I wasn't actually monitoring the expected nodes in the `LiveLoad.Telemetry.Collector`, so it ended up in a situation where if a node died (like from an OOM for example), it would wait forever because that node would never report completion. So I made sure that the nodes are all monitored by the collector, and set the stats to an error value whenever a node goes down.
+
+Wow... Amazing!
+
+### Next Up TODOs
+
+So, we're almost done with everything! Now it's a lot of busy work. Things are working and running, but I need to actually finalize the code and make it usable as a real library. Some of the list stays the same:
+- Finish implementing all of the browser stuff (of course)
+- The UI/Reporting (for pretty graphs!)
+- Actual examples of a LiveView app and benchmarks (I'll need to set up a demo application and then run benchmarks against it)
+- Clear the TODOs of the guides (so people can see examples and baselines) and polish the documentation of the `LiveLoad` module and the README.md
+
+But we have another couple of cool ones to add to the list (which is what I'm actually going to work on next):
+- Topology and Supervision Trees. Until now, I've sort of been brute-forcing a lot of stuff and using the function name `start_link` for a lot of stuff that's not a real `start_link`. Now, nothing is not linked (that's a huge no in my opinion) but I don't have any proper topology. My idea here is to create a lot of lazy initialization processes and set up a topology supervisor. Each runner node is going to need a topology started up on it (the browser, the telemetry listener, the partitioned task supervisor for the scenario runner), and the main runner node will need a topology for the actual scenario run (the telemetry collector, the cluster, and amoc's controller which I may need to encapsulate into a peer node).
+- In addition to topology, I have a couple of global locks that I need to implement. For one thing, FLAME and `:amoc` both have global state: FLAME's pool names must be atoms (since metadata is stored in named ETS tables) and `:amoc` is just all global state (that's why you can see that I do a lot of `Application.stop(:amoc)`, `Application.ensure_all_started(:amoc)` everywhere). I could handle this by using `:peer` nodes here (wow, I'm starting to really like `:peer` nodes...), but I can't spin up infinite nodes. So I'm probably going to need to implement some sort of queuing mechanism, maybe based on a target? Scenario's to the same target should run one at a time, so maybe a queue per target, and an overall queue so that if I have spun up too many `:peer` nodes I force the caller to wait until the next thing? This one is less important for a first public release, since it could be defined as a limitation of the library initially, but I'm adding it to my list of things I want to do.
+
+And then we have some less important but super cool ones that I would love to throw in:
+- `:amoc_coordinator` implementation within a `LiveLoad.Scenario` to allow multiple users to coordinate together
+- `:amoc_throttle` implementation within a `LiveLoad.Scenario` to allow user throttling, gradual increase, the works
+
+OK WOW THAT WAS SO MUCH. That's all I've got though! You'll have to wait for my next "in the zone" time for an update!
+
 ## 0.0.1-rc.17
 
 Am I procrastinating? You bet I am! But hey, it happens to the best of us.
