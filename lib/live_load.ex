@@ -150,12 +150,33 @@ defmodule LiveLoad do
           | {atom(), term()}
 
   @typedoc """
+  An error returned by a scenario when the cluster creation process fails to connect to the nodes specified in the cluster.
+
+  The error contains the list of nodes that failed to connect.
+  """
+  @type failed_to_connect_cluster_error() :: {:error, {:failed_to_connect, failed :: [term()]}}
+
+  @typedoc """
+  An error returned by a scenario when the cluster creation process fails to connect within the 30 second timeout
+  for connecting to all of the nodes in the specified cluster.
+
+  The error contains the current status of the cluster with details of what nodes are still waiting to connect,
+  what nodes failed, and what nodes succeeded.
+  """
+  @type cluster_connection_timeout_error() :: {:error, {:waiting_for_cluster, %{optional(atom()) => any()}}}
+
+  @typedoc """
   The result of a `LiveLoad.Scenario` run returned by `LiveLoad.run/1`.
 
   This may either be a `LiveLoad.Result` or an error. If the given `t:distributed_run_opt/0`
   is set to `true`, the error may include one of the possible `t:Cluster.cluster_initialization_error/0` errors.
   """
-  @type scenario_result() :: LiveLoad.Result.t() | Cluster.cluster_initialization_error() | {:error, term()}
+  @type scenario_result() ::
+          LiveLoad.Result.t()
+          | Cluster.cluster_initialization_error()
+          | failed_to_connect_cluster_error()
+          | cluster_connection_timeout_error()
+          | {:error, term()}
 
   @doc """
   Run all of the `LiveLoad.Scenario` modules in this project.
@@ -250,7 +271,6 @@ defmodule LiveLoad do
     # This is a brute-force hack since amoc doesn't currently expose a way to ensure that nodes
     # are connected and that all nodes that are expected to be connected are working.
     # amoc connects asynchronously so this just tries to see the status over and over.
-    # TODO: Gotta add these two failure errors to the typespecs.
     Enum.reduce_while(1..30, {:error, {:waiting_for_cluster, :amoc_cluster.get_status()}}, fn
       _, {:error, {_, %{to_ack: [], failed_to_connect: []}}} ->
         {:halt, :ok}
