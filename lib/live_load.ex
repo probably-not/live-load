@@ -302,7 +302,7 @@ defmodule LiveLoad do
     # Format the errors as maps for JSON serialization
     {scenario, {:error, reason}} -> %{scenario: inspect(scenario), error: inspect(reason)}
   end)
-  |> then(&File.write("./liveload_results.json", JSON.encode_to_iodata(&1)))
+  |> then(&File.write!("./liveload_results.json", JSON.encode_to_iodata!(&1)))
   ```
 
   For more information about what data is contained in the result, see the `LiveLoad.Result` module.
