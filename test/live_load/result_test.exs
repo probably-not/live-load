@@ -1,9 +1,12 @@
 # ** AI Tooling Disclaimer **
 # I had Claude Opus 4.6 just generate these tests by giving it the `LiveLoad.Result` module and the `LiveLoad.Telemetry.Result` module
 # and asking it to generate tests that validate my math and merging logic. It's really late here though, so I didn't validate any of these tests...
-# I'm sort of trusting it blindly just, you know, for fun. I'm going to leave a TODO here to validate things later down the line.
-
-# TODO: Make real tests or at least validate that Claude Opus 4.6 didn't cut corners just to get past testing like we've seen LLMs do in the past.
+# I'm sort of trusting it blindly just, you know, for fun.
+# ~~I'm going to leave a TODO here to validate things later down the line.~~
+##################################################################################
+# UPDATE (April 8th, 2026): I've reviewed the file, cleaned up some of the "useless" tests (check that the generated_at is recent? Validate the result is JSON serializable? Come on...)
+# and made sure that things look good (at least from my perspective). So I'm going to remove the TODO. Other than useless tests, Claude did a good job
+# in making sure the tests are there. I may try using it to generate more tests for this package later on.
 
 defmodule LiveLoad.ResultTest do
   use ExUnit.Case, async: true
@@ -40,52 +43,6 @@ defmodule LiveLoad.ResultTest do
     }
 
     struct!(Telemetry.Result, Map.merge(defaults, Map.new(attrs)))
-  end
-
-  # ── Metadata ───────────────────────────────────────────────────────
-
-  describe "metadata" do
-    test "name is the inspected scenario module" do
-      result = Result.new(Example, %{node1: telemetry_result(total: 1, succeeded: 1)})
-
-      assert result.name == "LiveLoad.Scenario.Example"
-    end
-
-    test "generated_at is a recent DateTime" do
-      before = DateTime.utc_now()
-      result = Result.new(Example, %{node1: telemetry_result(total: 1, succeeded: 1)})
-      after_ = DateTime.utc_now()
-
-      assert DateTime.compare(result.generated_at, before) in [:eq, :gt]
-      assert DateTime.compare(result.generated_at, after_) in [:eq, :lt]
-    end
-
-    test "liveload_version is a string" do
-      result = Result.new(Example, %{node1: telemetry_result(total: 1, succeeded: 1)})
-
-      assert is_binary(result.liveload_version)
-    end
-
-    test "quantile_points is 101 floats from 0.0 to 1.0" do
-      result = Result.new(Example, %{node1: telemetry_result(total: 1, succeeded: 1)})
-
-      assert length(result.quantile_points) == 101
-      assert hd(result.quantile_points) == 0.0
-      assert List.last(result.quantile_points) == 1.0
-    end
-
-    test "bucket_width_ms matches the telemetry results" do
-      result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 1, succeeded: 1, bucket_width_ms: 10_000)
-        })
-
-      assert result.bucket_width_ms == 10_000
-    end
-
-    test "returns {:error, :no_results} for empty node results" do
-      assert Result.new(Example, %{}) == {:error, :no_results}
-    end
   end
 
   # ── Users ──────────────────────────────────────────────────────────
@@ -234,26 +191,7 @@ defmodule LiveLoad.ResultTest do
         })
 
       histogram = result.global.histograms["scenario_duration_us"]
-      assert histogram.by == %{}
-    end
-
-    test "histogram keys are stringified atom names" do
-      result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 1,
-              succeeded: 1,
-              sketches: %{
-                http_request_duration_us: sketch([100]),
-                http_request_ttfb_us: sketch([50])
-              }
-            )
-        })
-
-      assert Map.has_key?(result.global.histograms, "http_request_duration_us")
-      assert Map.has_key?(result.global.histograms, "http_request_ttfb_us")
-      refute Map.has_key?(result.global.histograms, :http_request_duration_us)
+      assert map_size(histogram.by) == 0
     end
   end
 
@@ -279,20 +217,6 @@ defmodule LiveLoad.ResultTest do
       assert %DimensionedCounter{} = counter
       assert counter.aggregate == 25
       assert counter.by == %{"patch" => 18, "redirect" => 7}
-    end
-
-    test "counter keys are stringified atom names" do
-      result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 1,
-              succeeded: 1,
-              counters: %{liveview_navigations: 5}
-            )
-        })
-
-      assert Map.has_key?(result.global.counters, "liveview_navigations")
     end
 
     test "internal counters are filtered from output" do
@@ -326,7 +250,7 @@ defmodule LiveLoad.ResultTest do
             )
         })
 
-      assert result.global.counters["liveview_navigations"].by == %{}
+      assert map_size(result.global.counters["liveview_navigations"].by) == 0
     end
   end
 
@@ -819,85 +743,6 @@ defmodule LiveLoad.ResultTest do
 
       # Node 2: max bucket 3, so (3+1) * 5000 = 20000
       assert nodes_by_name["node2"].duration_ms == 20_000
-    end
-  end
-
-  # ── JSON Serialization ─────────────────────────────────────────────
-
-  describe "JSON serialization" do
-    test "full result is JSON-encodable" do
-      time_series = %{
-        0 => %{
-          sketches: %{
-            :http_request_duration_us => sketch([100, 200, 300]),
-            {:http_request_duration_us, "document"} => sketch([100])
-          },
-          counters: %{
-            :liveview_navigations => 5,
-            {:liveview_navigations, "patch"} => 3,
-            scenario_users_started: 3,
-            scenario_users_completed: 0
-          }
-        },
-        1 => %{
-          sketches: %{http_request_duration_us: sketch([400, 500])},
-          counters: %{
-            liveview_navigations: 2,
-            scenario_users_started: 0,
-            scenario_users_completed: 3
-          }
-        }
-      }
-
-      result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 3,
-              succeeded: 3,
-              sketches: %{
-                :http_request_duration_us => sketch([100, 200, 300, 400, 500]),
-                {:http_request_duration_us, "document"} => sketch([100])
-              },
-              counters: %{
-                :liveview_navigations => 7,
-                {:liveview_navigations, "patch"} => 3,
-                scenario_users_started: 3,
-                scenario_users_completed: 3
-              },
-              time_series: time_series
-            )
-        })
-
-      assert json = LiveLoad.JSON.encode!(result)
-      assert is_binary(json)
-
-      # Round-trip: decode and verify structure
-      {:ok, decoded} = LiveLoad.JSON.decode(json)
-
-      assert decoded["name"] == "LiveLoad.Scenario.Example"
-      assert is_binary(decoded["generated_at"])
-      assert is_binary(decoded["liveload_version"])
-      assert is_list(decoded["quantile_points"])
-      assert length(decoded["quantile_points"]) == 101
-
-      # Global result present
-      assert decoded["global"]["users"]["total"] == 3
-      assert is_list(decoded["global"]["time_series"])
-      assert length(decoded["global"]["time_series"]) == 2
-
-      # Histograms structure
-      histogram = decoded["global"]["histograms"]["http_request_duration_us"]
-      assert is_map(histogram["aggregate"])
-      assert length(histogram["aggregate"]["values"]) == 101
-      assert is_map(histogram["by"])
-
-      # Counters structure — internal counters filtered
-      refute Map.has_key?(decoded["global"]["counters"], "scenario_users_started")
-      assert decoded["global"]["counters"]["liveview_navigations"]["aggregate"] == 7
-
-      # Nodes present
-      assert length(decoded["nodes"]) == 1
     end
   end
 end
