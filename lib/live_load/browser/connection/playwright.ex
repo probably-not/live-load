@@ -68,17 +68,24 @@ defmodule LiveLoad.Browser.Connection.Playwright do
     end
   end
 
-  # TODO: Probably shouldn't read this from disk every time...
-  # I need a simple cache. `:persistent_term` maybe?
+  @config_key {__MODULE__, :browser_telemetry_script}
   defp browser_telemetry_script! do
-    telemetry_script_path =
-      Application.get_env(
-        :live_load,
-        :playwright_browser_telemetry_script_path,
-        Path.join(Application.app_dir(:live_load, "priv/static"), "liveview_telemetry.js")
-      )
+    # This isn't *really* safe, but it's a good enough solution.
+    # Worst case, someone starts two browsers at the exact same time
+    # and the persistent term is reset. Probably won't though...
+    case :persistent_term.get(@config_key, nil) do
+      nil ->
+        :live_load
+        |> Application.get_env(
+          :playwright_browser_telemetry_script_path,
+          Path.join(Application.app_dir(:live_load, "priv/static"), "liveview_telemetry.js")
+        )
+        |> File.read!()
+        |> tap(&:persistent_term.put(@config_key, &1))
 
-    File.read!(telemetry_script_path)
+      script when is_binary(script) ->
+        script
+    end
   end
 
   @impl true
