@@ -134,6 +134,10 @@ defmodule LiveLoad.MixProject do
         LiveLoad,
         LiveLoad.JSON
       ],
+      "LiveLoad.Cluster": [
+        LiveLoad.Cluster,
+        LiveLoad.Cluster.Node
+      ],
       "LiveLoad.Result": [
         LiveLoad.Result,
         LiveLoad.Result.Users,
