@@ -179,12 +179,133 @@ defmodule LiveLoad do
           | {:error, term()}
 
   @doc """
-  Run all of the `LiveLoad.Scenario` modules in this project.
+  Runs all discovered `LiveLoad.Scenario` modules and returns a map of results for each scenario run.
 
-  Scenarios are automatically discovered.
-  They are run using FLAME and `:amoc`.
+  `run/1` is the main entrypoint for LiveLoad. It accepts a list of `t:option/0` values to configure
+  the load test, discovers which scenarios to run, runs each one to completion, and returns a map
+  of `t:LiveLoad.Scenario.t/0` keys to `t:scenario_result/0` values.
 
-  TODO: Give actual documentation here!
+  Scenarios are run:
+  - **Independently**: Each `LiveLoad.Scenario` will create it's own `LiveLoad.Browser`, `LiveLoad.Cluster`,
+  and independent user processes
+  - **Sequentially**: All scenarios are assumed to be running against the same target, so to ensure that
+  the runs are clean, each `LiveLoad.Scenario` is run sequentially in the order that they are discovered.
+
+  `run/1` is synchronous and will block until all discovered scenarios have finished.
+
+  Errors encountered during a scenario are captured in the result map against the scenario that
+  produced them and do not prevent other scenarios from running.
+
+  ## Scenario Discovery
+
+  Which scenarios are run is determined by the options given. The following options are mutually
+  exclusive, and take priority in the order listed:
+
+  1. `t:scenario_opt/0` — a single `LiveLoad.Scenario` module.
+  2. `t:scenarios_opt/0` — a list of `LiveLoad.Scenario` modules.
+  3. `t:otp_app_opt/0` — an OTP application atom. LiveLoad will scan the given application for all
+     modules implementing the `LiveLoad.Scenario` behaviour and run each of them.
+
+  ## Scenario Configuration
+
+  Any additional options passed to `run/1` that are not consumed as part of the run configuration (such as
+  `t:distributed_run_opt/0`, `t:users_count_opt/0`, `t:flame_backend_opt/0`, `t:cluster_opts_opt/0`, and `t:cluster_nodes_opt/0`)
+  or runner options (such as `t:browser_connection_adapter_opt/0`, `t:scenario_iteration_timeout_opt/0`, and `t:scenario_duration_opt/0`)
+  are forwarded to each scenario's `c:LiveLoad.Scenario.config/1` callback as the `opts` argument. This allows you to pass arbitrary,
+  scenario-specific configuration to each `LiveLoad.Scenario` run during the load test.
+
+  ## Examples
+
+  Run all scenarios discovered in `:my_app` with 50 concurrent users for 5 minutes:
+
+  ```elixir
+  LiveLoad.run(
+    otp_app: :my_app,
+    users: 50,
+    scenario_duration: to_timeout(minute: 5)
+  )
+  ```
+
+  Run a specific scenario with 25 concurrent users for 2 minutes:
+
+  ```elixir
+  LiveLoad.run(
+    scenario: MyApp.LoadTest.CheckoutScenario,
+    users: 25,
+    scenario_duration: to_timeout(minute: 2)
+  )
+  ```
+
+  Run a list of specific scenarios with 100 concurrent users for 15 minutes:
+
+  ```elixir
+  LiveLoad.run(
+    scenarios: [MyApp.LoadTest.CheckoutScenario, MyApp.LoadTest.DeliveryStatusScenario],
+    users: 100,
+    scenario_duration: to_timeout(minute: 15)
+  )
+  ```
+
+  Pass custom configuration to allow configuring a scenario's options
+  via the `c:LiveLoad.Scenario.config/1` callback:
+
+  ```elixir
+  LiveLoad.run(
+    scenario: MyApp.LoadTest.CheckoutScenario,
+    users: 10,
+    base_url: "https://staging.myapp.com",
+  )
+  ```
+
+  Run a distributed load test across a `FLAME`-provisioned cluster using the `FLAME.FlyBackend`
+  using Fly machines with 8 CPUs and 16 GB of RAM, with a maximum of 100 nodes allowed:
+
+  ```elixir
+  LiveLoad.run(
+    otp_app: :my_app,
+    users: 10_000,
+    distributed?: true,
+    flame_backend: FLAME.FlyBackend,
+    cluster_opts: [
+      flame_backend_opts: [app: :live_load, cpus: 8, memory_mb: 16 * 1024],
+      max_allowed_nodes: 100
+    ]
+  )
+  ```
+
+  ## Consuming Results
+
+  `run/1` returns a map of `t:LiveLoad.Scenario.t/0` keys to `t:scenario_result/0` values. If the `LiveLoad.Scenario`
+  completed successfully, the result with be a `LiveLoad.Result` value. `LiveLoad.Result` is a JSON serializable
+  struct that contains all information necessary for a deep analysis of what occurred during the load test,
+  including histograms, timelines, and stats broken down by various dimensions. The consumer of the result can write
+  this data anywhere, and run independent analysis on it without requiring knowledge of `LiveLoad`.
+
+  An example of writing the data to a file to be analyzed later would look something like the following:
+
+  ```elixir
+  results = LiveLoad.run(
+    otp_app: :my_app,
+    users: 10_000,
+    distributed?: true,
+    flame_backend: FLAME.FlyBackend,
+    cluster_opts: [
+      flame_backend_opts: [app: :live_load, cpus: 8, memory_mb: 16 * 1024 * 1024 * 1024],
+      max_allowed_nodes: 100
+    ]
+  )
+
+  results
+  |> Enum.map(fn
+    # The scenario name is encapsulated within the result, so we don't need it on success
+    {_scenario, %LiveLoad.Result{} = result} -> result
+    # Format the errors as maps for JSON serialization
+    {scenario, {:error, reason}} -> %{scenario: inspect(scenario), error: inspect(reason)}
+  end)
+  |> then(&File.write("./liveload_results.json", JSON.encode_to_iodata(&1)))
+  ```
+
+  For more information about what data is contained in the result, see the `LiveLoad.Result` module.
   """
   @spec run(opts :: [option()]) :: %{Scenario.t() => scenario_result()}
   def run(opts \\ []) do
