@@ -77,7 +77,11 @@ defmodule LiveLoad.MixProject do
       {:flame, "~> 0.5.3"},
       {:amoc, "~> 4.1", runtime: false},
       {:telemetry, "~> 1.0"},
-      {:playwright_ex, "~> 0.5.0"},
+      # TODO: Unfork and retire when required Playwright PRs are merged
+      # https://github.com/ftes/playwright_ex/pull/34
+      # https://github.com/ftes/playwright_ex/pull/35
+      {:live_load_forked_playwright_ex, "0.5.0-fork.2"},
+      # {:playwright_ex, "~> 0.5.0"},
       {:ddskerl, "~> 0.4.3"},
       ## Optional Dependencies
       {:jason, "~> 1.4", optional: true},
