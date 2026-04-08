@@ -182,9 +182,6 @@ defmodule LiveLoad.Result do
       failed: sum_by(all_results, & &1.failed)
     }
 
-    # TODO: This feels wrong... technically it's right, because all the nodes should start with the same options,
-    # so everyone should have the same bucket width, but it feels really weird to take the first value.
-    # I'll need to think about how to pass the options and everything... gotta refactor that start_link function that sets this.
     bucket_width_ms = List.first(all_results).bucket_width_ms
 
     merged_time_series = merge_cross_node_time_series(node_results, bucket_width_ms)
