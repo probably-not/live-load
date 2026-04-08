@@ -179,10 +179,6 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics do
 
   @impl true
   def handle_info({:playwright_msg, message}, %State{} = state) do
-    # TODO: I need to add a debug listener that we can attach that writes to a file later on.
-    # From some basic experimentation (me in IEx) it looks like the only things that are getting caught
-    # here are the "leftovers", along with "Worker" and "Frame" messages. I think that's stuff that I can
-    # leave off... but for debugging purposes, firing this event can help find other things in the future.
     :telemetry.execute([:live_load, :unknown_playwright_message], %{count: 1, monotonic_time: System.monotonic_time()}, %{
       message: message
     })
