@@ -132,15 +132,29 @@ defmodule LiveLoad.Result do
   defmodule NodeResult do
     @moduledoc """
     Per-node scenario results to allow drilling down to how scenarios behaved on specific nodes.
+
+    When a node fails, the result takes the shape of `t:failed_result/0`.
+
+    When a node succeeds, the result takes the shape of `t:successful_result/0`.
     """
 
-    @type t() :: %__MODULE__{
+    @type successful_result() :: %__MODULE__{
             node: node(),
+            status: :ok,
             result: ScenarioResult.t()
           }
 
+    @type failed_result() :: %__MODULE__{
+            node: node(),
+            status: :error,
+            result: nil
+          }
+
+    @type t() :: successful_result() | failed_result()
+
     LiveLoad.JSON.derive_encoder()
-    defstruct [:node, :result]
+    @enforce_keys [:node, :status]
+    defstruct [:node, :status, :result]
   end
 
   @quantile_points Enum.map(0..100, &(&1 / 100))
@@ -161,48 +175,65 @@ defmodule LiveLoad.Result do
   @enforce_keys [:name, :generated_at, :liveload_version, :bucket_width_ms, :global, :nodes, :quantile_points]
   defstruct [:name, :generated_at, :liveload_version, :bucket_width_ms, :global, :nodes, :quantile_points]
 
+  @typedoc false
+  @type result() :: Telemetry.Result.t() | :error
+
   @doc false
-  @spec new(scenario :: Scenario.t(), node_results :: %{node() => Telemetry.Result.t()}) :: t() | {:error, :no_results}
+  @spec new(scenario :: Scenario.t(), node_results :: %{node() => result()}) :: t() | {:error, :no_results}
   def new(scenario, node_results) when map_size(node_results) > 0 do
-    all_results = Map.values(node_results)
+    successful_results =
+      node_results
+      |> Map.values()
+      |> Enum.filter(fn
+        %Telemetry.Result{} -> true
+        :error -> false
+      end)
 
     merged_sketches =
-      all_results
+      successful_results
       |> Enum.map(& &1.sketches)
       |> merge_cross_node_sketches()
 
     merged_counters =
-      all_results
+      successful_results
       |> Enum.map(& &1.counters)
       |> merge_cross_node_counters()
 
     user_summary = %Users{
-      total: sum_by(all_results, & &1.total),
-      succeeded: sum_by(all_results, & &1.succeeded),
-      failed: sum_by(all_results, & &1.failed)
+      total: sum_by(successful_results, & &1.total),
+      succeeded: sum_by(successful_results, & &1.succeeded),
+      failed: sum_by(successful_results, & &1.failed)
     }
 
-    bucket_width_ms = List.first(all_results).bucket_width_ms
+    bucket_width_ms = List.first(successful_results).bucket_width_ms
 
     merged_time_series = merge_cross_node_time_series(node_results, bucket_width_ms)
     active_users_per_bucket = active_users_per_time_series_bucket(merged_time_series)
     max_bucket = merged_time_series |> Map.keys() |> Enum.max(fn -> 0 end)
 
     nodes =
-      Enum.map(node_results, fn {node_name, %Telemetry.Result{} = result} ->
-        node_active_users_per_bucket = active_users_per_time_series_bucket(result.time_series)
-        node_max_bucket = result.time_series |> Map.keys() |> Enum.max(fn -> 0 end)
-
-        %NodeResult{
-          node: to_string(node_name),
-          result: %ScenarioResult{
-            users: %Users{total: result.total, succeeded: result.succeeded, failed: result.failed},
-            duration_ms: (node_max_bucket + 1) * bucket_width_ms,
-            histograms: precompute_histograms(result.sketches),
-            counters: calculate_counters(result.counters),
-            time_series: precompute_time_series(result.time_series, node_active_users_per_bucket, bucket_width_ms)
+      Enum.map(node_results, fn
+        {node_name, :error} ->
+          %NodeResult{
+            node: to_string(node_name),
+            status: :error
           }
-        }
+
+        {node_name, %Telemetry.Result{} = result} ->
+          node_active_users_per_bucket = active_users_per_time_series_bucket(result.time_series)
+          node_max_bucket = result.time_series |> Map.keys() |> Enum.max(fn -> 0 end)
+
+          %NodeResult{
+            node: to_string(node_name),
+            status: :ok,
+            result: %ScenarioResult{
+              users: %Users{total: result.total, succeeded: result.succeeded, failed: result.failed},
+              duration_ms: (node_max_bucket + 1) * bucket_width_ms,
+              histograms: precompute_histograms(result.sketches),
+              counters: calculate_counters(result.counters),
+              time_series: precompute_time_series(result.time_series, node_active_users_per_bucket, bucket_width_ms)
+            }
+          }
       end)
 
     %__MODULE__{
