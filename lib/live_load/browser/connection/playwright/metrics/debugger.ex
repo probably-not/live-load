@@ -50,7 +50,8 @@ defmodule LiveLoad.Browser.Connection.Playwright.Metrics.Debugger do
 
   @impl true
   def handle_cast({:telemetry, event, measurements, metadata}, file) do
-    IO.binwrite(file, [JSON.encode_to_iodata!(%{event: event, measurements: measurements, metadata: metadata}), "\n"])
+    line = %{event: event, measurements: measurements, metadata: metadata}
+    :ok = IO.binwrite(file, [LiveLoad.JSON.encode_to_iodata!(line), "\n"])
     {:noreply, file}
   end
 end
