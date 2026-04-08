@@ -1,6 +1,14 @@
 defmodule LiveLoad.Browser do
   @moduledoc """
-  TODO: Let's document the LiveLoad.Browser module!
+  `LiveLoad.Browser` is the struct representing the browser abstraction that is used in a `LiveLoad.Scenario`.
+  It wraps the given implementation of the `LiveLoad.Browser.Connection` behaviour. All operations on the browser
+  instance are delegated to the `LiveLoad.Browser.Connection` implementation.
+
+  `LiveLoad.Browser` is the top-level of the Browser hierarchy. For every node running a `LiveLoad.Scenario`, a
+  single `LiveLoad.Browser` is created, and each user receives a clean, isolated `LiveLoad.Browser.Context` created
+  via `LiveLoad.Browser.new_context/1`.
+
+  For operations users can take on the context, see the `LiveLoad.Browser.Context` module.
   """
 
   alias __MODULE__
