@@ -75,7 +75,7 @@ defmodule LiveLoad.Telemetry.Collector do
 
   @impl true
   def handle_info({:nodedown, node}, %State{} = state) do
-    state = %{state | node_stats: Map.put(state.node_stats, node, :error)}
+    state = %{state | node_stats: Map.put_new(state.node_stats, node, :error)}
     {:noreply, tap(state, &maybe_notify_waiters/1)}
   end
 
