@@ -179,7 +179,8 @@ defmodule LiveLoad.Result do
   @type result() :: Telemetry.Result.t() | :error
 
   @doc false
-  @spec new(scenario :: Scenario.t(), node_results :: %{node() => result()}) :: t() | {:error, :no_results}
+  @spec new(scenario :: Scenario.t(), node_results :: %{node() => result()}) ::
+          t() | {:error, :all_nodes_failed} | {:error, :no_results}
   def new(scenario, node_results) when map_size(node_results) > 0 do
     if Enum.any?(node_results, fn {_node, value} -> is_struct(value, Telemetry.Result) end) do
       build_result(scenario, node_results)

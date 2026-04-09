@@ -745,4 +745,46 @@ defmodule LiveLoad.ResultTest do
       assert nodes_by_name["node2"].duration_ms == 20_000
     end
   end
+
+  describe "failed nodes" do
+    test "all nodes failed returns error result" do
+      # Expected: return something reporters can handle, not crash
+      assert {:error, :all_nodes_failed} = Result.new(Example, %{node1: :error, node2: :error})
+    end
+
+    test "mixed success and failure — merged results exclude failed nodes" do
+      result =
+        Result.new(Example, %{
+          node1: telemetry_result(total: 100, succeeded: 95, failed: 5),
+          node2: :error
+        })
+
+      # Global users should only reflect node1
+      assert result.global.users.total == 100
+
+      # nodes list should include both
+      assert length(result.nodes) == 2
+
+      # The failed node should have status :error, nil result
+      failed = Enum.find(result.nodes, &(&1.status == :error))
+      assert failed.result == nil
+    end
+
+    test "failed node with successful nodes doesn't break time series merge" do
+      result =
+        Result.new(Example, %{
+          node1:
+            telemetry_result(
+              total: 10,
+              succeeded: 10,
+              time_series: %{
+                0 => %{sketches: %{}, counters: %{scenario_users_started: 10, scenario_users_completed: 10}}
+              }
+            ),
+          node2: :error
+        })
+
+      assert is_list(result.global.time_series)
+    end
+  end
 end
