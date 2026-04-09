@@ -290,7 +290,7 @@ defmodule LiveLoad do
     distributed?: true,
     flame_backend: FLAME.FlyBackend,
     cluster_opts: [
-      flame_backend_opts: [app: :live_load, cpus: 8, memory_mb: 16 * 1024 * 1024 * 1024],
+      flame_backend_opts: [app: :live_load, cpus: 8, memory_mb: 16 * 1024],
       max_allowed_nodes: 100
     ]
   )
