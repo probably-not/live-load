@@ -117,7 +117,7 @@ defmodule LiveLoad.Cluster.Node do
 
       receive do
         {^ref, :started} ->
-          Process.demonitor(monitor_ref)
+          Process.demonitor(monitor_ref, [:flush])
           {%{data | tracked_pid: pid}, [pid | acc]}
 
         {:DOWN, ^monitor_ref, _, _, reason} ->
