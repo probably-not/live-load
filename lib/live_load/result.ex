@@ -207,7 +207,11 @@ defmodule LiveLoad.Result do
 
     bucket_width_ms = List.first(successful_results).bucket_width_ms
 
-    merged_time_series = merge_cross_node_time_series(node_results, bucket_width_ms)
+    merged_time_series =
+      node_results
+      |> Enum.filter(fn {_node, value} -> is_struct(value, Telemetry.Result) end)
+      |> merge_cross_node_time_series(bucket_width_ms)
+
     active_users_per_bucket = active_users_per_time_series_bucket(merged_time_series)
     max_bucket = merged_time_series |> Map.keys() |> Enum.max(fn -> 0 end)
 
