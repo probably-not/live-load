@@ -41,7 +41,11 @@ defmodule LiveLoad.Reporter.Markdown do
     ]
   end
 
-  defp node_section(%Result.NodeResult{node: node, result: scenario_result}) do
+  defp node_section(%Result.NodeResult{status: :error, node: node}) do
+    "### #{node}\n\n**ERROR**: node failed during load test\n"
+  end
+
+  defp node_section(%Result.NodeResult{status: :ok, node: node, result: scenario_result}) do
     [
       "### #{node}\n\n",
       scenario_result_section(scenario_result)
