@@ -52,8 +52,28 @@ defmodule Mix.Tasks.LiveLoad.Install do
 
     Mix.shell().info("Downloading Playwright driver #{version} for #{platform}")
 
-    {:ok, {{_, 200, _}, _, body}} =
-      :httpc.request(:get, {String.to_charlist(zip_url), []}, [ssl: [verify: :verify_none]], body_format: :binary)
+    :ok = :public_key.cacerts_load()
+
+    ssl_opts = [
+      verify: :verify_peer,
+      cacerts: :public_key.cacerts_get(),
+      depth: 3,
+      customize_hostname_check: [
+        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+      ]
+    ]
+
+    body =
+      case :httpc.request(:get, {String.to_charlist(zip_url), []}, [ssl: ssl_opts], body_format: :binary) do
+        {:ok, {{_, 200, _}, _, body}} ->
+          body
+
+        {:ok, {{_, status, _}, _, _}} ->
+          Mix.raise("Failed to download Playwright driver #{version} for #{platform}: HTTP #{status} from #{zip_url}")
+
+        {:error, reason} ->
+          Mix.raise("Failed to download Playwright driver #{version} for #{platform}: #{inspect(reason)}")
+      end
 
     File.write!(zip_path, body)
 
@@ -76,10 +96,16 @@ defmodule Mix.Tasks.LiveLoad.Install do
 
     Mix.shell().info("Installing Chromium")
 
-    System.cmd(Path.expand(node_path), [Path.expand(cli_path), "install", "chromium"],
-      env: [{"PLAYWRIGHT_BROWSERS_PATH", Path.expand(browsers_dir)}],
-      into: IO.stream(:stdio, :line)
-    )
+    chromium_install_result =
+      System.cmd(Path.expand(node_path), [Path.expand(cli_path), "install", "chromium"],
+        env: [{"PLAYWRIGHT_BROWSERS_PATH", Path.expand(browsers_dir)}],
+        into: IO.stream(:stdio, :line)
+      )
+
+    case chromium_install_result do
+      {_, 0} -> :ok
+      {_, code} -> Mix.raise("Playwright Chromium installation failed with exit code #{code}")
+    end
 
     archive_path = Path.join(versioned_path, "playwright_bundle.tar.gz")
 
