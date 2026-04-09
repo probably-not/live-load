@@ -181,6 +181,18 @@ defmodule LiveLoad.Result do
   @doc false
   @spec new(scenario :: Scenario.t(), node_results :: %{node() => result()}) :: t() | {:error, :no_results}
   def new(scenario, node_results) when map_size(node_results) > 0 do
+    if Enum.any?(node_results, fn {_node, value} -> is_struct(value, Telemetry.Result) end) do
+      build_result(scenario, node_results)
+    else
+      {:error, :all_nodes_failed}
+    end
+  end
+
+  def new(_scenario, _node_results) do
+    {:error, :no_results}
+  end
+
+  defp build_result(scenario, node_results) do
     successful_results =
       node_results
       |> Map.values()
@@ -255,10 +267,6 @@ defmodule LiveLoad.Result do
       },
       nodes: nodes
     }
-  end
-
-  def new(_scenario, _node_results) do
-    {:error, :no_results}
   end
 
   # These counters are specific to the active users calculation, we don't need to calculate them
