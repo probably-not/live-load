@@ -86,6 +86,14 @@ defmodule LiveLoad.Cluster do
   @type not_enough_nodes_error() :: {:error, {:necessary_nodes_exceeds_max_allowed_nodes, necessary :: pos_integer()}}
 
   @typedoc """
+  An error returned from the cluster initialization when the node started by the given `FLAME.Backend` implementation
+  and the given `t:flame_pool_opts_opt/0` options is too small to actually handle creating a browser on the node.
+
+  This is determined by the `LiveLoad.Cluster.Node` started during the cluster initialization.
+  """
+  @type node_too_small_error() :: {:error, :node_too_small}
+
+  @typedoc """
   An error returned from the cluster initialization when the creation of a cluster node takes longer than the configured
   timeout for the `FLAME.Pool`.
   """
@@ -197,13 +205,18 @@ defmodule LiveLoad.Cluster do
   end
 
   defp validate_cluster_sizing(%Cluster.Node{} = cluster_node, users, browser_connection_adapter, max_allowed_nodes) do
-    users_per_node = Cluster.Sizing.calculate_possible_users_per_node(cluster_node, browser_connection_adapter)
-    necessary_nodes = ceil(users / users_per_node)
+    case Cluster.Sizing.calculate_possible_users_per_node(cluster_node, browser_connection_adapter) do
+      0 ->
+        {:error, :node_too_small}
 
-    if necessary_nodes > max_allowed_nodes do
-      {:error, {:necessary_nodes_exceeds_max_allowed_nodes, necessary_nodes}}
-    else
-      {:ok, necessary_nodes}
+      users_per_node ->
+        necessary_nodes = ceil(users / users_per_node)
+
+        if necessary_nodes > max_allowed_nodes do
+          {:error, {:necessary_nodes_exceeds_max_allowed_nodes, necessary_nodes}}
+        else
+          {:ok, necessary_nodes}
+        end
     end
   end
 
