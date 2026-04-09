@@ -352,7 +352,7 @@ defmodule LiveLoad do
       do_distributed_scenario_with_flame(scenario, run_config, opts)
     end
   after
-    :amoc.stop()
+    :amoc_dist.stop()
   end
 
   defp do_distributed_scenario_with_nodes(nodes, scenario, run_config, opts) do
