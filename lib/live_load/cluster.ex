@@ -107,6 +107,7 @@ defmodule LiveLoad.Cluster do
   @type cluster_initialization_error() ::
           scenario_already_running_error()
           | not_enough_nodes_error()
+          | node_too_small_error()
           | cluster_node_creation_timeout_error()
           | {:error, term()}
 
