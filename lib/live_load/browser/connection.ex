@@ -90,11 +90,11 @@ defmodule LiveLoad.Browser.Connection do
   @callback inner_text(context :: Context.t(), selector :: String.t()) ::
               {:ok, {Context.t(), String.t()}} | {:error, term()}
   @callback text_content(context :: Context.t(), selector :: String.t()) ::
-              {:ok, {Context.t(), String.t()}} | {:error, term()}
+              {:ok, {Context.t(), String.t() | nil}} | {:error, term()}
   @callback input_value(context :: Context.t(), selector :: String.t()) ::
               {:ok, {Context.t(), String.t()}} | {:error, term()}
   @callback get_attribute(context :: Context.t(), selector :: String.t(), name :: String.t()) ::
-              {:ok, {Context.t(), String.t()}} | {:error, term()}
+              {:ok, {Context.t(), String.t() | nil}} | {:error, term()}
   @callback visible?(context :: Context.t(), selector :: String.t()) ::
               {:ok, {Context.t(), boolean()}} | {:error, term()}
   @callback checked?(context :: Context.t(), selector :: String.t()) ::
