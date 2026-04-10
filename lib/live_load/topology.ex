@@ -9,9 +9,9 @@ defmodule LiveLoad.Topology do
   def setup(scenario) do
     case DynamicSupervisor.start_child(
            {:via, PartitionSupervisor, {LiveLoad.Topology.DynamicSupervisor, scenario}},
-           {Topology, scenario}
+           Supervisor.child_spec({Topology, scenario}, restart: :temporary)
          ) do
-      {:ok, pid} when is_pid(pid) -> {:ok, pid}
+      {:ok, pid} when is_pid(pid) -> Process.link(pid) and {:ok, pid}
       {:error, {:already_started, _pid}} -> {:error, :scenario_is_already_running}
       {:error, _reason} = error -> error
     end
@@ -19,6 +19,7 @@ defmodule LiveLoad.Topology do
 
   def teardown(scenario) do
     with {:lookup, [{pid, _}]} <- {:lookup, Registry.lookup(LiveLoad.Registry, scenario)},
+         true <- Process.unlink(pid),
          :ok <-
            DynamicSupervisor.terminate_child(
              {:via, PartitionSupervisor, {LiveLoad.Topology.DynamicSupervisor, scenario}},
