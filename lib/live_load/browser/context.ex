@@ -39,6 +39,33 @@ defmodule LiveLoad.Browser.Context do
 
   @doc """
   Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.context_storage_snapshot/1` callback
+  found on the implementation.
+  """
+  def context_storage_snapshot(%Context{browser: %Browser{connection: {mod, _opts}}} = context) do
+    mod.context_storage_snapshot(context)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.restore_context_storage/1` callback
+  found on the implementation.
+  """
+  def restore_context_storage(%Context{browser: %Browser{connection: {mod, _opts}}} = context, snapshot) do
+    mod.restore_context_storage(context, snapshot)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.reset_context_storage/1` callback
+  found on the implementation.
+  """
+  def reset_context_storage(%Context{browser: %Browser{connection: {mod, _opts}}} = context) do
+    mod.reset_context_storage(context)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
   runs the `c:LiveLoad.Browser.Connection.navigate/2` callback
   found on the implementation.
   """

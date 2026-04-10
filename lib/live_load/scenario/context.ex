@@ -171,6 +171,38 @@ defmodule LiveLoad.Scenario.Context do
   defguard failed?(context) when not is_nil(context.error)
 
   @doc """
+  Gets a snapshot of the current storage state of the browser context.
+
+  This is a serializable storage snapshot that contains the current browser context's cookies, local storage, and session storage.
+
+  This type is intentionally left as an ambiguous term, as it is meant to be usable as a storage and restoration mechanism,
+  however it is not guaranteed to be uniform across different browser connections.
+
+  ## Options
+
+  * `:as` - an atom key to place the storage snapshot under on the context's assigns.
+  Alternatively, you can pass a 1-arity function which will be run with the returned value.
+  The function must return either an atom, which will be used as the key, or a map of new assigns
+  values that will be merged into the current assigns on the context.
+  """
+  @spec context_storage_snapshot(context :: t(), opts :: [{:as, assigned_as()}]) :: t()
+  def context_storage_snapshot(%Context{} = ctx, opts \\ []), do: run(ctx, :context_storage_snapshot, [], opts)
+
+  @doc """
+  Restores the storage state of the browser context from a previously stored snapshot.
+  """
+  @spec restore_context_storage(context :: t(), snapshot :: resolvable(term())) :: t()
+  def restore_context_storage(%Context{} = ctx, snapshot), do: run(ctx, :restore_context_storage, [snapshot])
+
+  @doc """
+  Resets the storage state of the current browser context to an empty state.
+
+  This will clear all cookies, local storage and session storage of the browser context.
+  """
+  @spec reset_context_storage(context :: t()) :: t()
+  def reset_context_storage(%Context{} = ctx), do: run(ctx, :reset_context_storage, [])
+
+  @doc """
   Navigates to the given URL.
   """
   @spec navigate(context :: t(), url :: resolvable(String.t())) :: t()

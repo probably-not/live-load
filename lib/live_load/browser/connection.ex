@@ -57,6 +57,22 @@ defmodule LiveLoad.Browser.Connection do
   @callback new_context(browser :: Browser.t()) :: {:ok, Context.t()} | {:error, term()}
   @callback stop_context(context :: Context.t()) :: :ok | {:error, term()}
 
+  # Storage
+
+  @typedoc """
+  A serializable storage snapshot that contains the current browser context's cookies, local storage, and session storage.
+
+  This type is intentionally left as an ambiguous term, as it is meant to be usable as a storage and restoration mechanism,
+  however it is not guaranteed to be uniform across different browser connections.
+  """
+  @type context_storage_snapshot() :: term()
+
+  @callback context_storage_snapshot(context :: Context.t()) ::
+              {:ok, {Context.t(), context_storage_snapshot()}} | {:error, term()}
+  @callback restore_context_storage(context :: Context.t(), snapshot :: context_storage_snapshot()) ::
+              {:ok, Context.t()} | {:error, term()}
+  @callback reset_context_storage(context :: Context.t()) :: {:ok, Context.t()} | {:error, term()}
+
   # Navigation
 
   @callback navigate(context :: Context.t(), url :: String.t() | URI.t()) :: {:ok, Context.t()} | {:error, term()}

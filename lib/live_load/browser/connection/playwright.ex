@@ -68,6 +68,59 @@ defmodule LiveLoad.Browser.Connection.Playwright do
     end
   end
 
+  @impl true
+  @doc false
+  def context_storage_snapshot(%Context{} = context) do
+    playwright_context = context.private.playwright_connection_context
+
+    with {:ok, storage_state} <-
+           PlaywrightEx.BrowserContext.storage_state(playwright_context.guid,
+             indexedDB: true,
+             connection: Supervisor.playwright_connection_name(),
+             timeout: command_timeout(context.browser)
+           ) do
+      {:ok, {context, storage_state}}
+    end
+  end
+
+  @impl true
+  @doc false
+  def restore_context_storage(%Context{} = context, snapshot) when is_map(snapshot) do
+    playwright_context = context.private.playwright_connection_context
+
+    with {:ok, _} <-
+           PlaywrightEx.BrowserContext.set_storage_state(playwright_context.guid,
+             cookies: snapshot[:cookies] || snapshot["cookies"] || [],
+             origins: snapshot[:origins] || snapshot["origins"] || [],
+             connection: Supervisor.playwright_connection_name(),
+             timeout: command_timeout(context.browser)
+           ) do
+      {:ok, context}
+    end
+  end
+
+  @impl true
+  @doc false
+  def restore_context_storage(%Context{} = _context, snapshot) do
+    {:error, {:invalid_snapshot, snapshot}}
+  end
+
+  @doc false
+  @impl true
+  def reset_context_storage(%Context{} = context) do
+    playwright_context = context.private.playwright_connection_context
+
+    with {:ok, _} <-
+           PlaywrightEx.BrowserContext.set_storage_state(playwright_context.guid,
+             cookies: [],
+             origins: [],
+             connection: Supervisor.playwright_connection_name(),
+             timeout: command_timeout(context.browser)
+           ) do
+      {:ok, context}
+    end
+  end
+
   @config_key {__MODULE__, :browser_telemetry_script}
   defp browser_telemetry_script! do
     # This isn't *really* safe, but it's a good enough solution.
