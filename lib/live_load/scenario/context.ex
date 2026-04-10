@@ -276,6 +276,38 @@ defmodule LiveLoad.Scenario.Context do
   @spec wait_for_liveview(context :: t()) :: t()
   def wait_for_liveview(%Context{} = ctx), do: wait_for_selector(ctx, ".phx-connected")
 
+  @typedoc """
+  One of the loading class types that Phoenix adds to elements when events are in-flight on the `Phoenix.LiveView.Socket`.
+  """
+  @type phoenix_loading_type() :: :click | :submit | :change | :focus | :blur | :keydown | :keyup
+
+  @doc """
+  Waits for a phx-*-loading attribute to be removed from an element.
+  Useful for waiting for LiveView event handling to complete.
+  """
+  @spec wait_for_phx_loading_completion(
+          context :: t(),
+          type :: phoenix_loading_type(),
+          selector :: resolvable(String.t())
+        ) ::
+          t()
+  def wait_for_phx_loading_completion(%Context{} = ctx, type, selector)
+      when type in [:click, :submit, :change, :focus, :blur, :keydown, :keyup] do
+    selector = resolve(ctx, selector)
+    wait_for_selector(ctx, "#{selector}:not(.phx-#{type}-loading)")
+  end
+
+  @doc """
+  Submits a LiveView form by clicking its submit button.
+  Waits for the form to no longer have the `phx-submit-loading` class applied.
+  """
+  @spec submit_form(context :: t(), form_selector :: resolvable(String.t())) :: t()
+  def submit_form(%Context{} = ctx, form_selector) do
+    ctx
+    |> click("#{form_selector} [type=submit]")
+    |> wait_for_phx_loading_completion(:submit, form_selector)
+  end
+
   @doc """
   Extracts the current page's content and assigns it to the `:as` option on the context's assigns.
 

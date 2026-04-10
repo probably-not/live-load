@@ -123,6 +123,8 @@ defmodule LiveLoad.Scenario do
           drag_and_drop: 3,
           ensure_liveview: 1,
           wait_for_liveview: 1,
+          wait_for_phx_loading_completion: 3,
+          submit_form: 2,
           page_content: 1,
           page_content: 2,
           inner_html: 2,
