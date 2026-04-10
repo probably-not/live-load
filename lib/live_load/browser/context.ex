@@ -48,11 +48,119 @@ defmodule LiveLoad.Browser.Context do
 
   @doc """
   Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.reload/1` callback
+  found on the implementation.
+  """
+  def reload(%Context{browser: %Browser{connection: {mod, _opts}}} = context) do
+    mod.reload(context)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
   runs the `c:LiveLoad.Browser.Connection.wait_for_selector/2` callback
   found on the implementation.
   """
   def wait_for_selector(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
     mod.wait_for_selector(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.click/2` callback
+  found on the implementation.
+  """
+  def click(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.click(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.fill/3` callback
+  found on the implementation.
+  """
+  def fill(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector, value) do
+    mod.fill(context, selector, value)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.press/3` callback
+  found on the implementation.
+  """
+  def press(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector, key) do
+    mod.press(context, selector, key)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.check/2` callback
+  found on the implementation.
+  """
+  def check(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.check(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.uncheck/2` callback
+  found on the implementation.
+  """
+  def uncheck(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.uncheck(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.select_option/3` callback
+  found on the implementation.
+  """
+  def select_option(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector, value) do
+    mod.select_option(context, selector, value)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.select_multiple_options/3` callback
+  found on the implementation.
+  """
+  def select_multiple_options(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector, values) do
+    mod.select_multiple_options(context, selector, values)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.focus/2` callback
+  found on the implementation.
+  """
+  def focus(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.focus(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.blur/2` callback
+  found on the implementation.
+  """
+  def blur(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.blur(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.hover/2` callback
+  found on the implementation.
+  """
+  def hover(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.hover(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.drag_and_drop/3` callback
+  found on the implementation.
+  """
+  def drag_and_drop(%Context{browser: %Browser{connection: {mod, _opts}}} = context, source, target) do
+    mod.drag_and_drop(context, source, target)
   end
 
   @doc """
@@ -71,6 +179,60 @@ defmodule LiveLoad.Browser.Context do
   """
   def inner_html(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
     mod.inner_html(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.inner_text/2` callback
+  found on the implementation.
+  """
+  def inner_text(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.inner_text(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.text_content/2` callback
+  found on the implementation.
+  """
+  def text_content(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.text_content(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.input_value/2` callback
+  found on the implementation.
+  """
+  def input_value(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.input_value(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.get_attribute/3` callback
+  found on the implementation.
+  """
+  def get_attribute(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector, name) do
+    mod.get_attribute(context, selector, name)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.visible?/2` callback
+  found on the implementation.
+  """
+  def visible?(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.visible?(context, selector)
+  end
+
+  @doc """
+  Delegates to the connection implementation on the context and
+  runs the `c:LiveLoad.Browser.Connection.checked?/2` callback
+  found on the implementation.
+  """
+  def checked?(%Context{browser: %Browser{connection: {mod, _opts}}} = context, selector) do
+    mod.checked?(context, selector)
   end
 
   @doc """

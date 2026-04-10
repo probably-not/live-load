@@ -119,6 +119,22 @@ defmodule LiveLoad.Browser.Connection.Playwright do
 
   @impl true
   @doc false
+  def reload(%Context{} = context) do
+    if frame = context.private[:playwright_connection_page_id] do
+      with {:ok, _} <-
+             PlaywrightEx.Page.reload(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
   def wait_for_selector(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, _} <-
@@ -135,6 +151,187 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   end
 
   @impl true
+  @doc false
+  def click(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.click(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def fill(%Context{} = context, selector, value) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.fill(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               value: value,
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def press(%Context{} = context, selector, key) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.press(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               key: key,
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def check(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.check(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def uncheck(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.uncheck(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def select_option(%Context{} = context, selector, value) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.select_option(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               options: value,
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def select_multiple_options(%Context{} = context, selector, values) do
+    select_option(context, selector, values)
+  end
+
+  @impl true
+  @doc false
+  def focus(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.focus(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def blur(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.blur(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def hover(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.hover(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def drag_and_drop(%Context{} = context, source, target) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, _} <-
+             PlaywrightEx.Frame.drag_and_drop(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               source: PlaywrightEx.Selector.build(source),
+               target: PlaywrightEx.Selector.build(target),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, context}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
   def page_content(%Context{} = context) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, content} <-
@@ -150,6 +347,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   end
 
   @impl true
+  @doc false
   def inner_html(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, inner_html} <-
@@ -159,6 +357,109 @@ defmodule LiveLoad.Browser.Connection.Playwright do
                timeout: command_timeout(context.browser)
              ) do
         {:ok, {context, inner_html}}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def inner_text(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, inner_text} <-
+             PlaywrightEx.Frame.inner_text(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, {context, inner_text}}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def text_content(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, text_content} <-
+             PlaywrightEx.Frame.text_content(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, {context, text_content}}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def input_value(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, input_value} <-
+             PlaywrightEx.Frame.input_value(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, {context, input_value}}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def get_attribute(%Context{} = context, selector, name) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, attribute} <-
+             PlaywrightEx.Frame.get_attribute(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               name: name,
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, {context, attribute}}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def visible?(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, attribute} <-
+             PlaywrightEx.Frame.is_visible(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, {context, attribute}}
+      end
+    else
+      {:error, :no_navigation_occurred}
+    end
+  end
+
+  @impl true
+  @doc false
+  def checked?(%Context{} = context, selector) do
+    if frame = context.private[:playwright_connection_frame] do
+      with {:ok, attribute} <-
+             PlaywrightEx.Frame.is_checked(frame.guid,
+               connection: Supervisor.playwright_connection_name(),
+               selector: PlaywrightEx.Selector.build(selector),
+               timeout: command_timeout(context.browser)
+             ) do
+        {:ok, {context, attribute}}
       end
     else
       {:error, :no_navigation_occurred}

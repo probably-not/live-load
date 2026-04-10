@@ -56,11 +56,49 @@ defmodule LiveLoad.Browser.Connection do
   #############################
   @callback new_context(browser :: Browser.t()) :: {:ok, Context.t()} | {:error, term()}
   @callback stop_context(context :: Context.t()) :: :ok | {:error, term()}
+
+  # Navigation
+
   @callback navigate(context :: Context.t(), url :: String.t() | URI.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback reload(context :: Context.t()) :: {:ok, Context.t()} | {:error, term()}
+
+  # User/Browser Operations
+
   @callback wait_for_selector(context :: Context.t(), selector :: String.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback click(context :: Context.t(), selector :: String.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback fill(context :: Context.t(), selector :: String.t(), value :: String.t()) ::
+              {:ok, Context.t()} | {:error, term()}
+  @callback press(context :: Context.t(), selector :: String.t(), key :: String.t()) ::
+              {:ok, Context.t()} | {:error, term()}
+  @callback check(context :: Context.t(), selector :: String.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback uncheck(context :: Context.t(), selector :: String.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback select_option(context :: Context.t(), selector :: String.t(), value :: String.t()) ::
+              {:ok, Context.t()} | {:error, term()}
+  @callback select_multiple_options(context :: Context.t(), selector :: String.t(), values :: [String.t()]) ::
+              {:ok, Context.t()} | {:error, term()}
+  @callback focus(context :: Context.t(), selector :: String.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback blur(context :: Context.t(), selector :: String.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback hover(context :: Context.t(), selector :: String.t()) :: {:ok, Context.t()} | {:error, term()}
+  @callback drag_and_drop(context :: Context.t(), source :: String.t(), target :: String.t()) ::
+              {:ok, Context.t()} | {:error, term()}
+
+  # Reading Values
+
   @callback page_content(context :: Context.t()) :: {:ok, {Context.t(), String.t()}} | {:error, term()}
   @callback inner_html(context :: Context.t(), selector :: String.t()) ::
               {:ok, {Context.t(), String.t()}} | {:error, term()}
+  @callback inner_text(context :: Context.t(), selector :: String.t()) ::
+              {:ok, {Context.t(), String.t()}} | {:error, term()}
+  @callback text_content(context :: Context.t(), selector :: String.t()) ::
+              {:ok, {Context.t(), String.t()}} | {:error, term()}
+  @callback input_value(context :: Context.t(), selector :: String.t()) ::
+              {:ok, {Context.t(), String.t()}} | {:error, term()}
+  @callback get_attribute(context :: Context.t(), selector :: String.t(), name :: String.t()) ::
+              {:ok, {Context.t(), String.t()}} | {:error, term()}
+  @callback visible?(context :: Context.t(), selector :: String.t()) ::
+              {:ok, {Context.t(), boolean()}} | {:error, term()}
+  @callback checked?(context :: Context.t(), selector :: String.t()) ::
+              {:ok, {Context.t(), boolean()}} | {:error, term()}
 
   ##############################
   ## Lifecycle Hook Callbacks ##

@@ -177,10 +177,92 @@ defmodule LiveLoad.Scenario.Context do
   def navigate(%Context{} = ctx, url), do: run(ctx, :navigate, [url])
 
   @doc """
+  Reloads the current page.
+  """
+  @spec reload(context :: t()) :: t()
+  def reload(%Context{} = ctx), do: run(ctx, :reload, [])
+
+  @doc """
   Waits for an element that matches the given selector to appear on the current page.
   """
   @spec wait_for_selector(context :: t(), selector :: resolvable(String.t())) :: t()
   def wait_for_selector(%Context{} = ctx, selector), do: run(ctx, :wait_for_selector, [selector])
+
+  @doc """
+  Clicks an element that matches the given selector on the current page.
+  """
+  @spec click(context :: t(), selector :: resolvable(String.t())) :: t()
+  def click(%Context{} = ctx, selector), do: run(ctx, :click, [selector])
+
+  @doc """
+  Fills an input element that matches the given selector on the current page with the given value.
+
+  Passing an empty string as the value will clear the input's value.
+  """
+  @spec fill(context :: t(), selector :: resolvable(String.t()), value :: resolvable(String.t())) :: t()
+  def fill(%Context{} = ctx, selector, value), do: run(ctx, :fill, [selector, value])
+
+  @doc """
+  Focuses an element that matches the given selector on the current page and activates the given key.
+  """
+  @spec press(context :: t(), selector :: resolvable(String.t()), key :: resolvable(String.t())) :: t()
+  def press(%Context{} = ctx, selector, key), do: run(ctx, :press, [selector, key])
+
+  @doc """
+  Clears an input element that matches the given selector on the current page.
+  """
+  @spec clear(context :: t(), selector :: resolvable(String.t())) :: t()
+  def clear(%Context{} = ctx, selector), do: fill(ctx, selector, "")
+
+  @doc """
+  Checks a checkbox or radio button element that matches the given selector on the current page.
+  """
+  @spec check(context :: t(), selector :: resolvable(String.t())) :: t()
+  def check(%Context{} = ctx, selector), do: run(ctx, :check, [selector])
+
+  @doc """
+  Unchecks a checkbox or radio button element that matches the given selector on the current page.
+  """
+  @spec uncheck(context :: t(), selector :: resolvable(String.t())) :: t()
+  def uncheck(%Context{} = ctx, selector), do: run(ctx, :uncheck, [selector])
+
+  @doc """
+  Selects an option on a select element that matches the given selector on the current page.
+  """
+  @spec select_option(context :: t(), selector :: resolvable(String.t()), value :: resolvable(String.t())) :: t()
+  def select_option(%Context{} = ctx, selector, value), do: run(ctx, :select_option, [selector, value])
+
+  @doc """
+  Selects multiple options on a select element that matches the given selector on the current page.
+  """
+  @spec select_multiple_options(context :: t(), selector :: resolvable(String.t()), values :: resolvable([String.t()])) ::
+          t()
+  def select_multiple_options(%Context{} = ctx, selector, values),
+    do: run(ctx, :select_multiple_options, [selector, values])
+
+  @doc """
+  Focuses an element that matches the given selector on the current page.
+  """
+  @spec focus(context :: t(), selector :: resolvable(String.t())) :: t()
+  def focus(%Context{} = ctx, selector), do: run(ctx, :focus, [selector])
+
+  @doc """
+  Blurs an element that matches the given selector on the current page.
+  """
+  @spec blur(context :: t(), selector :: resolvable(String.t())) :: t()
+  def blur(%Context{} = ctx, selector), do: run(ctx, :blur, [selector])
+
+  @doc """
+  Hovers over an element that matches the given selector on the current page.
+  """
+  @spec hover(context :: t(), selector :: resolvable(String.t())) :: t()
+  def hover(%Context{} = ctx, selector), do: run(ctx, :hover, [selector])
+
+  @doc """
+  Drags from the source element matching the given selector to the target element matching the given selector.
+  """
+  @spec drag_and_drop(context :: t(), source :: resolvable(String.t()), target :: resolvable(String.t())) :: t()
+  def drag_and_drop(%Context{} = ctx, source, target), do: run(ctx, :drag_and_drop, [source, target])
 
   @doc """
   Detects whether or not the current page is a LiveView.
@@ -219,6 +301,84 @@ defmodule LiveLoad.Scenario.Context do
   """
   @spec inner_html(context :: t(), selector :: String.t(), opts :: [{:as, assigned_as()}]) :: t()
   def inner_html(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :inner_html, [selector], opts)
+
+  @doc """
+  Extracts the innerText value of an element matching the given selector and assigns it to the `:as` option on the context's assigns.
+
+  ## Options
+
+  * `:as` - an atom key to place the page content under on the context's assigns.
+  Alternatively, you can pass a 1-arity function which will be run with the returned value.
+  The function must return either an atom, which will be used as the key, or a map of new assigns
+  values that will be merged into the current assigns on the context.
+  """
+  @spec inner_text(context :: t(), selector :: String.t(), opts :: [{:as, assigned_as()}]) :: t()
+  def inner_text(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :inner_text, [selector], opts)
+
+  @doc """
+  Extracts the textContent value of an element matching the given selector and assigns it to the `:as` option on the context's assigns.
+
+  ## Options
+
+  * `:as` - an atom key to place the page content under on the context's assigns.
+  Alternatively, you can pass a 1-arity function which will be run with the returned value.
+  The function must return either an atom, which will be used as the key, or a map of new assigns
+  values that will be merged into the current assigns on the context.
+  """
+  @spec text_content(context :: t(), selector :: String.t(), opts :: [{:as, assigned_as()}]) :: t()
+  def text_content(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :text_content, [selector], opts)
+
+  @doc """
+  Extracts the value of an input, textarea, or select element matching the given selector and assigns it to the `:as` option on the context's assigns.
+
+  ## Options
+
+  * `:as` - an atom key to place the page content under on the context's assigns.
+  Alternatively, you can pass a 1-arity function which will be run with the returned value.
+  The function must return either an atom, which will be used as the key, or a map of new assigns
+  values that will be merged into the current assigns on the context.
+  """
+  @spec input_value(context :: t(), selector :: String.t(), opts :: [{:as, assigned_as()}]) :: t()
+  def input_value(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :input_value, [selector], opts)
+
+  @doc """
+  Extracts the element attribute value for an element matching the given selector and assigns it to the `:as` option on the context's assigns.
+
+  ## Options
+
+  * `:as` - an atom key to place the page content under on the context's assigns.
+  Alternatively, you can pass a 1-arity function which will be run with the returned value.
+  The function must return either an atom, which will be used as the key, or a map of new assigns
+  values that will be merged into the current assigns on the context.
+  """
+  @spec get_attribute(context :: t(), selector :: String.t(), name :: String.t(), opts :: [{:as, assigned_as()}]) :: t()
+  def get_attribute(%Context{} = ctx, selector, name, opts \\ []), do: run(ctx, :get_attribute, [selector, name], opts)
+
+  @doc """
+  Extracts whether or not an element matching the given selector is visible and assigns it to the `:as` option on the context's assigns.
+
+  ## Options
+
+  * `:as` - an atom key to place the page content under on the context's assigns.
+  Alternatively, you can pass a 1-arity function which will be run with the returned value.
+  The function must return either an atom, which will be used as the key, or a map of new assigns
+  values that will be merged into the current assigns on the context.
+  """
+  @spec visible?(context :: t(), selector :: String.t(), opts :: [{:as, assigned_as()}]) :: t()
+  def visible?(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :is_visible, [selector], opts)
+
+  @doc """
+  Extracts whether or not a checkbox or radio button element matching the given selector is checked and assigns it to the `:as` option on the context's assigns.
+
+  ## Options
+
+  * `:as` - an atom key to place the page content under on the context's assigns.
+  Alternatively, you can pass a 1-arity function which will be run with the returned value.
+  The function must return either an atom, which will be used as the key, or a map of new assigns
+  values that will be merged into the current assigns on the context.
+  """
+  @spec checked?(context :: t(), selector :: String.t(), opts :: [{:as, assigned_as()}]) :: t()
+  def checked?(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :is_checked, [selector], opts)
 
   defp run(ctx, op, args, opts \\ [])
 
