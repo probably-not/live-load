@@ -159,7 +159,6 @@ defmodule LiveLoad.Scenario.Context do
 
   Allowed in guard tests.
   """
-  @spec halted?(context :: t()) :: boolean()
   defguard halted?(context) when context.halted?
 
   @doc """
@@ -169,7 +168,6 @@ defmodule LiveLoad.Scenario.Context do
 
   Allowed in guard tests.
   """
-  @spec failed?(context :: t()) :: boolean()
   defguard failed?(context) when not is_nil(context.error)
 
   @doc """
