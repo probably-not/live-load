@@ -53,7 +53,7 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
 
       nil ->
         raise RuntimeError, """
-        The metrics`LiveLoad.Browser.Connection.Playwright.Metrics` could not be found under the given supervisor!
+        The metrics `LiveLoad.Browser.Connection.Playwright.Metrics` could not be found under the given supervisor!
 
         This should never happen, as the `LiveLoad.Browser.Connection.Playwright.Supervisor.metrics_pid!/1` function
         should only ever be called on a `LiveLoad.Browser.Connection.Playwright.Supervisor` that is successfully running
