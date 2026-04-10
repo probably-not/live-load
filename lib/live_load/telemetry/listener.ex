@@ -72,6 +72,7 @@ defmodule LiveLoad.Telemetry.Listener do
 
   defp events do
     [
+      [:amoc, :controller, :users],
       [:amoc, :scenario, :start, :start],
       [:amoc, :scenario, :start, :stop],
       [:amoc, :scenario, :start, :exception],
@@ -100,8 +101,7 @@ defmodule LiveLoad.Telemetry.Listener do
             bucket_width_ms: pos_integer(),
             monotonic_start: integer() | nil,
             start_system_time: integer() | nil,
-            started: MapSet.t(:amoc_scenario.user_id()),
-            stopped: MapSet.t(:amoc_scenario.user_id()),
+            expected_users: non_neg_integer() | nil,
             succeeded: non_neg_integer(),
             failed: non_neg_integer(),
             sketches: %{Result.sketch_name() => :ddskerl_std.ddsketch()},
@@ -117,8 +117,7 @@ defmodule LiveLoad.Telemetry.Listener do
       :bucket_width_ms,
       :monotonic_start,
       :start_system_time,
-      started: MapSet.new(),
-      stopped: MapSet.new(),
+      :expected_users,
       succeeded: 0,
       failed: 0,
       sketches: %{},
@@ -168,7 +167,7 @@ defmodule LiveLoad.Telemetry.Listener do
       end)
 
     stats = %Result{
-      total: MapSet.size(state.stopped),
+      total: state.succeeded + state.failed,
       succeeded: state.succeeded,
       failed: state.failed,
       sketches: state.sketches,
@@ -189,21 +188,34 @@ defmodule LiveLoad.Telemetry.Listener do
   end
 
   ###################################
+  ## AMoC Controller Telemetry
+  ###################################
+
+  @impl true
+  def handle_cast({:telemetry, [:amoc, :controller, :users], %{count: count}, %{type: :add}}, %State{} = state) do
+    expected = (state.expected_users || 0) + count
+    state = %{state | expected_users: expected}
+    {:noreply, tap(state, &maybe_send_completion/1)}
+  end
+
+  @impl true
+  def handle_cast({:telemetry, [:amoc, :controller, :users], %{count: count}, %{type: :remove}}, %State{} = state) do
+    expected = max(0, (state.expected_users || 0) - count)
+    state = %{state | expected_users: expected}
+    {:noreply, tap(state, &maybe_send_completion/1)}
+  end
+
+  ###################################
   ## AMoC Scenario Telemetry
   ###################################
 
   @impl true
   def handle_cast(
         {:telemetry, [:amoc, :scenario, :start, :start], %{system_time: system_time, monotonic_time: monotonic_time},
-         %{user_id: user_id}},
+         %{user_id: _user_id}},
         %State{monotonic_start: nil} = state
       ) do
-    state = %{
-      state
-      | started: MapSet.put(state.started, user_id),
-        monotonic_start: monotonic_time,
-        start_system_time: system_time
-    }
+    state = %{state | monotonic_start: monotonic_time, start_system_time: system_time}
 
     bucket = bucket(state, monotonic_time)
     counters = increment_counter(state.counters, :scenario_users_started)
@@ -214,21 +226,20 @@ defmodule LiveLoad.Telemetry.Listener do
 
   @impl true
   def handle_cast(
-        {:telemetry, [:amoc, :scenario, :start, :start], %{monotonic_time: monotonic_time}, %{user_id: user_id}},
+        {:telemetry, [:amoc, :scenario, :start, :start], %{monotonic_time: monotonic_time}, %{user_id: _user_id}},
         %State{} = state
       ) do
     bucket = bucket(state, monotonic_time)
     counters = increment_counter(state.counters, :scenario_users_started)
     counter_buckets = increment_counter_bucket(state.counter_buckets, bucket, :scenario_users_started)
 
-    {:noreply,
-     %{state | started: MapSet.put(state.started, user_id), counters: counters, counter_buckets: counter_buckets}}
+    {:noreply, %{state | counters: counters, counter_buckets: counter_buckets}}
   end
 
   @impl true
   def handle_cast(
         {:telemetry, [:amoc, :scenario, :start, :stop], %{duration: duration, monotonic_time: monotonic_time},
-         %{user_id: user_id}},
+         %{user_id: _user_id}},
         %State{} = state
       ) do
     duration_us = System.convert_time_unit(duration, :native, :microsecond)
@@ -243,8 +254,7 @@ defmodule LiveLoad.Telemetry.Listener do
 
     state = %{
       state
-      | stopped: MapSet.put(state.stopped, user_id),
-        succeeded: state.succeeded + 1,
+      | succeeded: state.succeeded + 1,
         sketches: sketches,
         sketch_buckets: sketch_buckets,
         counters: counters,
@@ -257,7 +267,7 @@ defmodule LiveLoad.Telemetry.Listener do
   @impl true
   def handle_cast(
         {:telemetry, [:amoc, :scenario, :start, :exception], %{duration: duration, monotonic_time: monotonic_time},
-         %{user_id: user_id}},
+         %{user_id: _user_id}},
         %State{} = state
       ) do
     duration_us = System.convert_time_unit(duration, :native, :microsecond)
@@ -272,8 +282,7 @@ defmodule LiveLoad.Telemetry.Listener do
 
     state = %{
       state
-      | stopped: MapSet.put(state.stopped, user_id),
-        failed: state.failed + 1,
+      | failed: state.failed + 1,
         sketches: sketches,
         sketch_buckets: sketch_buckets,
         counters: counters,
@@ -673,14 +682,12 @@ defmodule LiveLoad.Telemetry.Listener do
     div(elapsed_ms, width)
   end
 
+  defp maybe_send_completion(%State{expected_users: nil}), do: :ok
+
   defp maybe_send_completion(%State{} = state) do
-    # TODO: There's a race condition here whenever I use a small iteration timeout that it not enough for any scenario to run.
-    # When I'm testing locally with `iteration_timeout: 0`, this creates sporadic races where the amoc telemetry sometimes fires
-    # so fast that I get to this condition even without the total number of users (because the started and stopped match and the started is non-empty).
-    # In practice this probably wouldn't happen, but it is a real race condition...  I can probably fix it by using an expectation and an extra timeout?
-    # Something like only firing `:node_complete` when the started == the expected, and adding a timeout of a few seconds to let it catch up...
-    # I don't want to be in a situation where it doesn't fire though. I'll need to check amoc to see if there are any guarantees for the telemetry.
-    if MapSet.size(state.started) > 0 and MapSet.equal?(state.started, state.stopped) do
+    completed = state.succeeded + state.failed
+
+    if completed >= state.expected_users do
       :ok = LiveLoad.Browser.drain_metrics(state.browser)
       send(self(), :node_complete)
     end
