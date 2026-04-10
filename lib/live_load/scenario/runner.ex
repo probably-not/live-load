@@ -5,6 +5,8 @@ defmodule LiveLoad.Scenario.Runner do
 
   alias LiveLoad.Scenario
 
+  require LiveLoad.Scenario.Context
+
   defmodule Data do
     @moduledoc false
 
@@ -91,6 +93,16 @@ defmodule LiveLoad.Scenario.Runner do
         {{:timeout, :scenario_duration}, data.config.__config__.scenario_duration, :scenario_duration_expired}
       ]
     }
+  end
+
+  def looping(:info, {ref, %Scenario.Context{} = context}, %Data{} = data) when Scenario.Context.failed?(context) do
+    Process.demonitor(ref, [:flush])
+    {:next_state, :done, data, [{:next_event, :internal, {:completed, context}}]}
+  end
+
+  def looping(:info, {ref, %Scenario.Context{} = context}, %Data{} = data) when Scenario.Context.halted?(context) do
+    Process.demonitor(ref, [:flush])
+    {:next_state, :done, data, [{:next_event, :internal, {:completed, context}}]}
   end
 
   def looping(:info, {ref, %Scenario.Context{} = context}, %Data{} = data) do
