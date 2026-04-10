@@ -13,18 +13,46 @@ defmodule LiveLoad.Topology.AmocPeer do
     :gen_statem.start_link(__MODULE__, init_args, [])
   end
 
-  def stop(server) do
-    :gen_statem.stop(server)
+  def stop(server, distributed?)
+
+  def stop(server, true) do
+    peer = peer(server)
+    :rpc.call(peer, :amoc_dist, :stop, [])
   end
 
-  def run_scenario(server, scenario, distributed?, users, opts)
+  def stop(server, false) do
+    peer = peer(server)
+    :rpc.call(peer, :amoc, :stop, [])
+  end
 
-  def run_scenario(server, scenario, false, users, opts) do
+  def connect_amoc_cluster(server, nodes) do
+    peer = peer(server)
+    :ok = :rpc.call(peer, :amoc_cluster, :connect_nodes, [nodes])
+
+    get_status = fn -> :rpc.call(peer, :amoc_cluster, :get_status, []) end
+
+    # This is a brute-force hack since amoc doesn't currently expose a way to ensure that nodes
+    # are connected and that all nodes that are expected to be connected are working.
+    # amoc connects asynchronously so this just tries to see the status over and over.
+    Enum.reduce_while(1..30, {:error, {:waiting_for_cluster, get_status.()}}, fn
+      _, {:error, {_, %{to_ack: [], failed_to_connect: []}}} ->
+        {:halt, :ok}
+
+      _, {:error, {_, %{to_ack: [], failed_to_connect: [_ | _] = failed}}} ->
+        {:halt, {:error, {:failed_to_connect, failed}}}
+
+      _, {:error, {_, %{to_ack: [_ | _]}}} ->
+        Process.sleep(to_timeout(second: 1))
+        {:cont, {:error, {:waiting_for_cluster, get_status.()}}}
+    end)
+  end
+
+  def run_scenario(server, scenario, users, opts) do
     peer = peer(server)
     :rpc.call(peer, :amoc, :do, [scenario, users, opts])
   end
 
-  def run_scenario(server, scenario, true, users, opts) do
+  def run_distributed_scenario(server, scenario, users, opts) do
     peer = peer(server)
     :rpc.call(peer, :amoc_dist, :do, [scenario, users, opts])
   end

@@ -10,8 +10,12 @@ defmodule LiveLoad.Telemetry.Collector do
 
   require Logger
 
-  def start_link(cluster_nodes) when is_list(cluster_nodes) do
-    GenServer.start_link(__MODULE__, cluster_nodes)
+  def start_link(init_args) do
+    GenServer.start_link(__MODULE__, init_args)
+  end
+
+  def watch_cluster(server, cluster_nodes) when is_list(cluster_nodes) do
+    GenServer.call(server, {:watch_cluster, cluster_nodes})
   end
 
   def wait_for_completion(server, timeout \\ :infinity) do
@@ -26,25 +30,10 @@ defmodule LiveLoad.Telemetry.Collector do
       ])
 
       {:error, reason}
-  after
-    stop(server)
   end
 
   def node_complete(server, stats) do
     GenServer.cast(server, {:node_complete, node(), stats})
-  end
-
-  defp stop(server) do
-    if pid = GenServer.whereis(server) do
-      ref = Process.monitor(pid)
-      GenServer.cast(pid, :stop)
-
-      receive do
-        {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
-      end
-    else
-      :ok
-    end
   end
 
   defmodule State do
@@ -63,8 +52,8 @@ defmodule LiveLoad.Telemetry.Collector do
   end
 
   @impl true
-  def init(cluster_nodes) do
-    {:ok, State.new(cluster_nodes), {:continue, :monitor_nodes}}
+  def init(_init_arg) do
+    {:ok, nil}
   end
 
   @impl true
@@ -80,17 +69,17 @@ defmodule LiveLoad.Telemetry.Collector do
   end
 
   @impl true
+  def handle_call({:watch_cluster, cluster_nodes}, _from, nil) do
+    {:reply, :ok, State.new(cluster_nodes), {:continue, :monitor_nodes}}
+  end
+
+  @impl true
   def handle_call(:wait_for_completion, from, %State{} = state) do
     if map_size(state.node_stats) >= MapSet.size(state.cluster_nodes) do
       {:reply, state.node_stats, state}
     else
       {:noreply, %{state | waiters: [from | state.waiters]}}
     end
-  end
-
-  @impl true
-  def handle_cast(:stop, %State{} = state) do
-    {:stop, :normal, state}
   end
 
   @impl true

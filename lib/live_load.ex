@@ -7,7 +7,6 @@ defmodule LiveLoad do
   alias LiveLoad.Cluster
   alias LiveLoad.Scenario
   alias LiveLoad.Scenario.Discovery
-  alias LiveLoad.Telemetry.Collector
 
   @typedoc """
   Defines the OTP application to load test.
@@ -319,15 +318,12 @@ defmodule LiveLoad do
   end
 
   defp run_scenario(scenario, run_config, opts) do
-    Application.stop(:amoc)
-    Application.ensure_all_started(:amoc)
-
-    case do_scenario(scenario, run_config[:distributed?], run_config, opts) do
-      {:ok, results} -> LiveLoad.Result.new(scenario, results)
-      {:error, _reason} = error -> error
+    with {:ok, _topology_pid} <- LiveLoad.Topology.setup(scenario),
+         {:ok, results} <- do_scenario(scenario, run_config[:distributed?], run_config, opts) do
+      LiveLoad.Result.new(scenario, results)
     end
   after
-    Application.stop(:amoc)
+    LiveLoad.Topology.teardown(scenario)
   end
 
   defp do_scenario(scenario, distributed?, run_config, opts)
@@ -335,14 +331,12 @@ defmodule LiveLoad do
   defp do_scenario(scenario, false, run_config, opts) do
     scenario_duration = Keyword.fetch!(opts, :scenario_duration)
     users = Keyword.fetch!(run_config, :users)
+    timeout = collector_timeout(scenario_duration)
 
-    with {:ok, collector_pid} <- Collector.start_link([node()]),
-         :ok <- :amoc.do(scenario, users, Keyword.put(opts, :collector_pid, collector_pid)) do
-      timeout = collector_timeout(scenario_duration)
-      Collector.wait_for_completion(collector_pid, timeout)
+    case LiveLoad.Topology.run(scenario, users, opts, timeout) do
+      {:ok, _results} = ok -> ok
+      {:error, _reason} = error -> error
     end
-  after
-    :amoc.stop()
   end
 
   defp do_scenario(scenario, true, run_config, opts) do
@@ -351,19 +345,15 @@ defmodule LiveLoad do
     else
       do_distributed_scenario_with_flame(scenario, run_config, opts)
     end
-  after
-    :amoc_dist.stop()
   end
 
   defp do_distributed_scenario_with_nodes(nodes, scenario, run_config, opts) do
     users = Keyword.fetch!(run_config, :users)
     scenario_duration = Keyword.fetch!(opts, :scenario_duration)
+    timeout = collector_timeout(scenario_duration)
 
-    with {:ok, collector_pid} <- Collector.start_link(nodes),
-         :ok <- connect_amoc_cluster_nodes(nodes),
-         {:ok, _users} <- :amoc_dist.do(scenario, users, Keyword.put(opts, :collector_pid, collector_pid)) do
-      timeout = collector_timeout(scenario_duration)
-      Collector.wait_for_completion(collector_pid, timeout)
+    with :ok <- LiveLoad.Topology.connect_amoc_cluster(scenario, nodes) do
+      LiveLoad.Topology.run_distributed(scenario, nodes, users, opts, timeout)
     end
   end
 
@@ -371,38 +361,17 @@ defmodule LiveLoad do
     users = Keyword.fetch!(run_config, :users)
     browser_connection_adapter = Keyword.fetch!(opts, :browser_connection_adapter)
     scenario_duration = Keyword.fetch!(opts, :scenario_duration)
+    timeout = collector_timeout(scenario_duration)
 
     cluster_opts = Keyword.fetch!(run_config, :cluster_opts)
     flame_backend = Keyword.fetch!(run_config, :flame_backend)
     validate_flame_backend!(flame_backend)
 
     with {:ok, %Cluster{} = cluster} <-
-           Cluster.start_link(scenario, users, browser_connection_adapter, flame_backend, cluster_opts),
-         {:ok, collector_pid} <- Collector.start_link(cluster.pool_node_names),
-         :ok <- connect_amoc_cluster_nodes(cluster.pool_node_names),
-         {:ok, _users} <- :amoc_dist.do(scenario, users, Keyword.put(opts, :collector_pid, collector_pid)) do
-      timeout = collector_timeout(scenario_duration)
-      Collector.wait_for_completion(collector_pid, timeout)
+           Cluster.prepare(scenario, users, browser_connection_adapter, flame_backend, cluster_opts),
+         :ok <- LiveLoad.Topology.connect_amoc_cluster(scenario, cluster.pool_node_names) do
+      LiveLoad.Topology.run_distributed(scenario, cluster.pool_node_names, users, opts, timeout)
     end
-  end
-
-  defp connect_amoc_cluster_nodes(nodes) do
-    :ok = :amoc_cluster.connect_nodes(nodes)
-
-    # This is a brute-force hack since amoc doesn't currently expose a way to ensure that nodes
-    # are connected and that all nodes that are expected to be connected are working.
-    # amoc connects asynchronously so this just tries to see the status over and over.
-    Enum.reduce_while(1..30, {:error, {:waiting_for_cluster, :amoc_cluster.get_status()}}, fn
-      _, {:error, {_, %{to_ack: [], failed_to_connect: []}}} ->
-        {:halt, :ok}
-
-      _, {:error, {_, %{to_ack: [], failed_to_connect: [_ | _] = failed}}} ->
-        {:halt, {:error, {:failed_to_connect, failed}}}
-
-      _, {:error, {_, %{to_ack: [_ | _]}}} ->
-        Process.sleep(to_timeout(second: 1))
-        {:cont, {:error, {:waiting_for_cluster, :amoc_cluster.get_status()}}}
-    end)
   end
 
   defp build_options(opts) do

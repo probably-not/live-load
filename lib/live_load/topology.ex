@@ -4,6 +4,7 @@ defmodule LiveLoad.Topology do
   use Supervisor
 
   alias __MODULE__
+  alias LiveLoad.Telemetry.Collector
 
   def setup(scenario) do
     case DynamicSupervisor.start_child(
@@ -30,14 +31,58 @@ defmodule LiveLoad.Topology do
     end
   end
 
-  def run(scenario, users, distributed?, opts) do
+  def run(scenario, users, opts, timeout) do
     supervisor = supervisor_name(scenario)
-    Topology.AmocPeer.run_scenario(amoc_peer_pid!(supervisor), scenario, distributed?, users, opts)
+    amoc_peer_pid = amoc_peer_pid!(supervisor)
+    collector_pid = collector_pid!(supervisor)
+    opts = Keyword.put(opts, :collector_pid, collector_pid)
+
+    try do
+      with :ok <- Collector.watch_cluster(collector_pid, [node()]),
+           :ok <- Topology.AmocPeer.run_scenario(amoc_peer_pid, scenario, users, opts) do
+        Collector.wait_for_completion(collector_pid, timeout)
+      end
+    after
+      Topology.AmocPeer.stop(amoc_peer_pid, false)
+    end
   end
 
-  def start_flame_pool(scenario, opts) do
+  def run_distributed(scenario, cluster_nodes, users, opts, timeout) do
     supervisor = supervisor_name(scenario)
-    Topology.Cluster.start_flame_pool(cluster_pid!(supervisor), opts)
+    amoc_peer_pid = amoc_peer_pid!(supervisor)
+    collector_pid = collector_pid!(supervisor)
+    opts = Keyword.put(opts, :collector_pid, collector_pid)
+
+    try do
+      with :ok <- Collector.watch_cluster(collector_pid, cluster_nodes),
+           {:ok, _users} <- Topology.AmocPeer.run_distributed_scenario(amoc_peer_pid, scenario, users, opts) do
+        Collector.wait_for_completion(collector_pid, timeout)
+      end
+    after
+      Topology.AmocPeer.stop(amoc_peer_pid, true)
+    end
+  end
+
+  def prepare_cluster(scenario, pool_opts, users, browser_connection_adapter, max_allowed_nodes) do
+    supervisor = supervisor_name(scenario)
+    cluster_pid = cluster_pid!(supervisor)
+
+    pool_name = Module.concat([__MODULE__, FLAME.Pool, scenario])
+    pool_opts = Keyword.put(pool_opts, :name, pool_name)
+    cluster = %LiveLoad.Cluster{pool_name: pool_name}
+
+    with :ok <- Topology.Cluster.setup_flame_pool(cluster_pid, pool_opts),
+         {:ok, nodes} <- Topology.Cluster.prime_cluster(pool_name, users, browser_connection_adapter, max_allowed_nodes) do
+      {:ok, %{cluster | pool_nodes: nodes, pool_node_names: Enum.map(nodes, & &1.node)}}
+    else
+      error -> Topology.Cluster.teardown_cluster(cluster_pid) && error
+    end
+  end
+
+  def connect_amoc_cluster(scenario, nodes) do
+    supervisor = supervisor_name(scenario)
+    amoc_peer_pid = amoc_peer_pid!(supervisor)
+    Topology.AmocPeer.connect_amoc_cluster(amoc_peer_pid, nodes)
   end
 
   def start_link(scenario) do
@@ -51,7 +96,8 @@ defmodule LiveLoad.Topology do
   def init(_scenario) do
     children = [
       Topology.AmocPeer.child_spec([], id: :amoc_peer, restart: :temporary, significant: true),
-      Supervisor.child_spec(Topology.Cluster, id: :cluster, restart: :temporary, significant: true)
+      Supervisor.child_spec(Topology.Cluster, id: :cluster, restart: :temporary, significant: true),
+      Supervisor.child_spec(Collector, id: :collector, restart: :temporary, significant: true)
     ]
 
     Supervisor.init(children, strategy: :one_for_one, auto_shutdown: :any_significant)
@@ -68,6 +114,13 @@ defmodule LiveLoad.Topology do
     case LiveLoad.SupUtils.find_child(supervisor, :amoc_peer) do
       amoc_peer when is_pid(amoc_peer) -> amoc_peer
       nil -> raise RuntimeError, "Topology does not contain the amoc_peer child process"
+    end
+  end
+
+  defp collector_pid!(supervisor) do
+    case LiveLoad.SupUtils.find_child(supervisor, :collector) do
+      collector when is_pid(collector) -> collector
+      nil -> raise RuntimeError, "Topology does not contain the collector child process"
     end
   end
 
