@@ -12,6 +12,8 @@ defmodule LiveLoad.Topology do
            Supervisor.child_spec({Topology, scenario}, restart: :temporary)
          ) do
       {:ok, pid} when is_pid(pid) ->
+        # We link to the calling process so that if the calling process has any issues and exits, we close out the resources.
+        # This should probably be passed in as an option somewhere instead of forcing the link.
         Process.link(pid)
         {:ok, pid}
 
@@ -25,6 +27,7 @@ defmodule LiveLoad.Topology do
 
   def teardown(scenario) do
     with {:lookup, [{pid, _}]} <- {:lookup, Registry.lookup(LiveLoad.Registry, scenario)},
+         # Because we linked in the setup, we need to unlink. Otherwise the termination will kill our calling process... not good.
          true <- Process.unlink(pid),
          :ok <-
            DynamicSupervisor.terminate_child(
