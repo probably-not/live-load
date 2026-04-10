@@ -105,6 +105,20 @@ defmodule LiveLoad.Scenario.Context do
   end
 
   @doc """
+  Resets all of the assigns on the context.
+
+  During a `LiveLoad.Scenario`, the scenario will loop and run many iterations per user process.
+  The `LiveLoad.Scenario.Context` is maintained across the loops, so that you can use assigns
+  from a previous loop in order to take new actions on the previous data.
+
+  See `assign/3` for information about the `assigns` storage.
+  """
+  @spec reset_assigns(context :: t()) :: t
+  def reset_assigns(%Context{} = context) do
+    %{context | assigns: %{}}
+  end
+
+  @doc """
   Clears a specific assign on the context.
 
   After clearing this key will no longer be available and assertive access will cause an exception.
@@ -142,17 +156,21 @@ defmodule LiveLoad.Scenario.Context do
   Checks to see if the `LiveLoad.Scenario.Context` was halted.
 
   Halting occurs when the `halt/1` function is called on the context directly.
+
+  Allowed in guard tests.
   """
   @spec halted?(context :: t()) :: boolean()
-  def halted?(%Context{halted?: halted?}), do: halted?
+  defguard halted?(context) when context.halted?
 
   @doc """
   Checks to see if the `LiveLoad.Scenario.Context` failed to complete.
 
   Failure occurs when an error occurs while the `LiveLoad.Scenario` is running.
+
+  Allowed in guard tests.
   """
   @spec failed?(context :: t()) :: boolean()
-  def failed?(%Context{error: error}), do: not is_nil(error)
+  defguard failed?(context) when not is_nil(context.error)
 
   @doc """
   Navigates to the given URL.
