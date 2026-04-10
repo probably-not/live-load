@@ -8,6 +8,35 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.19
+
+Alright, first pass at a topology has been completed! I kept this to specifically the topology of LiveLoad on the primary node, instead of LiveLoad runner nodes. Since the runner nodes are currently pretty closed off and don't have much of a topology (only the browser, the telemetry listener, and the task supervisor) and they get torn down when the primary process completes, I'll take care of that at a slightly later stage (or when I want to procrastinate a bit...).
+
+For now, the topology is pretty cool (I think? Maybe not...):
+- A `LiveLoad.Topology` supervisor, which starts up the underlying processes in a lazy initialization.
+- A peer node linked GenServer for the Amoc peer node. This way I don't have to keep doing the `Application.stop` and `Application.ensure_all_started` calls every time. The peer node is isolated and it runs where necessary. Of course, this doesn't solve the whole locking thing... I did that by using the scenario name and a registry. So, everything is locked by scenario name, and the registry takes care of everything that handles uniqueness.
+- A Supervisor that is prepared for the FLAME.Pool if necessary
+- The Telemetry Collector which now has a lazy initialization of the cluster nodes that it is handling.
+
+That is all put together under a Dynamic Supervisor, so I have a tree now! Maybe I'll have some LLM whip up a nice diagram that shows the topology itself at some point... that would be nice!
+
+Ok, this was a short devlog entry, I'm really feeling it today, so I want to keep running and actually take some benchmarks by tonight. But I wanted to cut a release with all of these changes, since the library is actually close to a full usable state now!
+
+Copying over the next up section from the previous entry to here, just so I can keep track of it (something about seeing the todos has been helping my ADHD keep track of them, strange, right?):
+
+### Next Up TODOs
+
+So, we're almost done with everything! Now it's a lot of busy work. Things are working and running, but I need to actually finalize the code and make it usable as a real library. Some of the list stays the same:
+- Finish implementing all of the browser stuff (of course)
+- The UI/Reporting (for pretty graphs!)
+- Actual examples of a LiveView app and benchmarks (I'll need to set up a demo application and then run benchmarks against it)
+- Clear the TODOs of the guides (so people can see examples and baselines) and polish the documentation of the `LiveLoad` module and the README.md
+
+And then we have some less important but super cool ones that I would love to throw in:
+- `:amoc_coordinator` implementation within a `LiveLoad.Scenario` to allow multiple users to coordinate together
+- `:amoc_throttle` implementation within a `LiveLoad.Scenario` to allow user throttling, gradual increase, the works
+
+
 ## 0.0.1-rc.18
 
 Wooooooooow! Ok, I'm just gonna get right to the updates here, because I'm feeling good, I'm in the zone, I'm finishing and finalizing and polishing this package to perfection.
