@@ -11,9 +11,15 @@ defmodule LiveLoad.Topology do
            {:via, PartitionSupervisor, {LiveLoad.Topology.DynamicSupervisor, scenario}},
            Supervisor.child_spec({Topology, scenario}, restart: :temporary)
          ) do
-      {:ok, pid} when is_pid(pid) -> Process.link(pid) and {:ok, pid}
-      {:error, {:already_started, _pid}} -> {:error, :scenario_is_already_running}
-      {:error, _reason} = error -> error
+      {:ok, pid} when is_pid(pid) ->
+        Process.link(pid)
+        {:ok, pid}
+
+      {:error, {:already_started, _pid}} ->
+        {:error, :scenario_is_already_running}
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
