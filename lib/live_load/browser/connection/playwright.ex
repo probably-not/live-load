@@ -120,9 +120,9 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @impl true
   @doc false
   def reload(%Context{} = context) do
-    if frame = context.private[:playwright_connection_page_id] do
+    if page_id = context.private[:playwright_connection_page_id] do
       with {:ok, _} <-
-             PlaywrightEx.Page.reload(frame.guid,
+             PlaywrightEx.Page.reload(page_id,
                connection: Supervisor.playwright_connection_name(),
                timeout: command_timeout(context.browser)
              ) do
