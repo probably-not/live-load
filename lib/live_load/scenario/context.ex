@@ -8,6 +8,18 @@ defmodule LiveLoad.Scenario.Context do
   - A scenario that has an `:error` at any point in the scenario will short-circuit and not run any other functions.
   - Values can be extracted from the page through the available functions and `assign`ed onto the context for future use in the pipeline.
 
+  ## Scenario Context Lifecycle
+
+  A `LiveLoad.Scenario.Context` is created once per user process at the start of the load test, before
+  the scenario's `c:LiveLoad.Scenario.run/3` callback is called for the first time. It wraps the
+  `LiveLoad.Browser.Context` that was created for that user, and is then passed into `c:LiveLoad.Scenario.run/3`
+  as the first argument on every iteration of the scenario.
+
+  The same context is reused across all iterations of a scenario for a given user. This means that
+  any `assigns` set during one iteration will still be present on the context at the start of the next
+  iteration. If you want to start each iteration with a clean set of assigns, you can call `reset_assigns/1`
+  at the start of your `c:LiveLoad.Scenario.run/3` callback.
+
   ## Halting and Errors
 
   Halting and errors are mutually exclusive:
@@ -24,6 +36,9 @@ defmodule LiveLoad.Scenario.Context do
   to preserve the reason for the scenario not completing.
 
   Two helper functions, `halted?/1` and `failed?/1` are provided in order to determine if a scenario failed or was halted manually.
+
+  A `LiveLoad.Scenario.Context` which is `halted?` or `failed?` will stop the `LiveLoad.Scenario` from iterating any further, and no more
+  iterations will occur for this user's process.
 
   ## Assigns
 

@@ -25,6 +25,30 @@ defmodule LiveLoad.Scenario do
   > define an empty `c:config/1` function for you which will return an empty map.
   > If you don't need any configurable parts in your scenario, this injected
   > callback can remain and does not need to be overriden by your scenario module.
+
+  ## Scenario Lifecycle
+
+  When a `LiveLoad.Scenario` is run, the `c:config/1` callback is called once per node, before any
+  user processes are created. The value returned from `c:config/1` is then passed into the `c:run/3`
+  callback on every iteration of the scenario for every user.
+
+  After `c:config/1` returns, `LiveLoad` creates the configured number of user processes for this node.
+  Each user process is given its own `LiveLoad.Browser.Context` and `LiveLoad.Scenario.Context`, and
+  the user process enters a loop that calls the scenario's `c:run/3` callback over and over until
+  the configured `:scenario_duration` has been reached.
+
+  Each iteration of the loop runs `c:run/3` with the current `LiveLoad.Scenario.Context` and the config
+  that was returned from `c:config/1`. The `LiveLoad.Scenario.Context` returned from `c:run/3` becomes
+  the context for the next iteration, allowing values to be carried forward via `LiveLoad.Scenario.Context.assign/3`.
+  See `LiveLoad.Scenario.Context` for more details on how the context is maintained across iterations.
+
+  If `c:run/3` returns a context that is `halted?` or `failed?`, or if it raises an exception, the
+  user process will be terminated and no further iterations will run for that user. Any other users
+  on the node will continue running their own iterations until the `:scenario_duration` is reached.
+
+  Once the `:scenario_duration` has elapsed, the user processes will finish their current iteration
+  and then terminate. The scenario is considered complete once all user processes on all nodes have
+  terminated.
   """
 
   alias __MODULE__
