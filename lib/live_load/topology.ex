@@ -75,7 +75,9 @@ defmodule LiveLoad.Topology do
          {:ok, nodes} <- Topology.Cluster.prime_cluster(pool_name, users, browser_connection_adapter, max_allowed_nodes) do
       {:ok, %{cluster | pool_nodes: nodes, pool_node_names: Enum.map(nodes, & &1.node)}}
     else
-      error -> Topology.Cluster.teardown_cluster(cluster_pid) && error
+      error ->
+        Topology.Cluster.teardown_cluster(cluster_pid)
+        error
     end
   end
 
