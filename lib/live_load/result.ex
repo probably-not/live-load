@@ -225,8 +225,9 @@ defmodule LiveLoad.Result do
       |> Enum.filter(fn {_node, value} -> is_struct(value, Telemetry.Result) end)
       |> merge_cross_node_time_series(bucket_width_ms)
 
-    active_users_per_bucket = active_users_per_time_series_bucket(merged_time_series)
     max_bucket = merged_time_series |> Map.keys() |> Enum.max(fn -> 0 end)
+    merged_time_series = fill_time_series_gaps(merged_time_series, max_bucket)
+    active_users_per_bucket = active_users_per_time_series_bucket(merged_time_series)
 
     nodes =
       Enum.map(node_results, fn
@@ -237,8 +238,9 @@ defmodule LiveLoad.Result do
           }
 
         {node_name, %Telemetry.Result{} = result} ->
-          node_active_users_per_bucket = active_users_per_time_series_bucket(result.time_series)
           node_max_bucket = result.time_series |> Map.keys() |> Enum.max(fn -> 0 end)
+          filled_time_series = fill_time_series_gaps(result.time_series, node_max_bucket)
+          node_active_users_per_bucket = active_users_per_time_series_bucket(filled_time_series)
 
           %NodeResult{
             node: to_string(node_name),
@@ -248,7 +250,7 @@ defmodule LiveLoad.Result do
               duration_ms: (node_max_bucket + 1) * bucket_width_ms,
               histograms: precompute_histograms(result.sketches),
               counters: calculate_counters(result.counters),
-              time_series: precompute_time_series(result.time_series, node_active_users_per_bucket, bucket_width_ms)
+              time_series: precompute_time_series(filled_time_series, node_active_users_per_bucket, bucket_width_ms)
             }
           }
       end)
@@ -413,6 +415,17 @@ defmodule LiveLoad.Result do
       end)
 
     result
+  end
+
+  defp fill_time_series_gaps(time_series, max_bucket) do
+    Map.new(0..max_bucket, fn bucket_idx ->
+      {bucket_idx,
+       Map.get(time_series, bucket_idx, %{
+         sketches: %{},
+         counters: %{},
+         node_count: nil
+       })}
+    end)
   end
 
   defp liveload_version do

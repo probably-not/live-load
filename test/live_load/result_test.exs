@@ -459,6 +459,47 @@ defmodule LiveLoad.ResultTest do
       node_active = Enum.map(node_result.result.time_series, & &1.active_users)
       assert node_active == [5, 0]
     end
+
+    test "active users carry through buckets where no telemetry fired" do
+      result =
+        Result.new(Example, %{
+          node1:
+            telemetry_result(
+              total: 3,
+              succeeded: 3,
+              time_series: %{
+                0 => %{
+                  sketches: %{},
+                  counters: %{scenario_users_started: 3}
+                },
+                2 => %{
+                  sketches: %{},
+                  counters: %{scenario_users_completed: 3}
+                }
+              }
+            )
+        })
+
+      active_users_by_offset =
+        Map.new(result.global.time_series, fn %Bucket{offset_ms: offset, active_users: active} ->
+          {offset, active}
+        end)
+
+      assert active_users_by_offset[0] == 3
+      assert active_users_by_offset[@bucket_width_ms] == 3
+      assert active_users_by_offset[2 * @bucket_width_ms] == 0
+
+      [%NodeResult{result: node_result}] = result.nodes
+
+      per_node_active_users =
+        Map.new(node_result.time_series, fn %Bucket{offset_ms: offset, active_users: active} ->
+          {offset, active}
+        end)
+
+      assert per_node_active_users[0] == 3
+      assert per_node_active_users[@bucket_width_ms] == 3
+      assert per_node_active_users[2 * @bucket_width_ms] == 0
+    end
   end
 
   # ── Time Series ────────────────────────────────────────────────────
@@ -493,7 +534,7 @@ defmodule LiveLoad.ResultTest do
         })
 
       offsets = Enum.map(result.global.time_series, & &1.offset_ms)
-      assert offsets == [0, 6_000, 14_000]
+      assert offsets == [0, 2_000, 4_000, 6_000, 8_000, 10_000, 12_000, 14_000]
     end
 
     test "per-bucket histograms and counters are materialized" do
