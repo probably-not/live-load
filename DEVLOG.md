@@ -8,6 +8,15 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.20
+
+Aaaaaaand a big push to just get all the browser operations done! Well, not really all, it's the "most commonly needed" browser operations.
+
+Same day guys! Wow. That was a bunch of work in a day.
+
+Tomorrow is benchmarks day! Hell yeah!
+
+
 ## 0.0.1-rc.19
 
 Alright, first pass at a topology has been completed! I kept this to specifically the topology of LiveLoad on the primary node, instead of LiveLoad runner nodes. Since the runner nodes are currently pretty closed off and don't have much of a topology (only the browser, the telemetry listener, and the task supervisor) and they get torn down when the primary process completes, I'll take care of that at a slightly later stage (or when I want to procrastinate a bit...).
