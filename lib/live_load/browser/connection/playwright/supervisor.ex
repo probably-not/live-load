@@ -47,7 +47,7 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
   end
 
   def metrics_pid!(supervisor) do
-    case find_child(supervisor, :metrics) do
+    case LiveLoad.SupUtils.find_child(supervisor, :metrics) do
       metrics when is_pid(metrics) ->
         metrics
 
@@ -79,18 +79,5 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
 
   defp browsers_path(version) do
     Application.app_dir(:live_load, ["priv", "playwright", version, "bin", "browsers"])
-  end
-
-  defp find_child(supervisor, child_id) do
-    supervisor
-    |> Supervisor.which_children()
-    |> Enum.find(fn
-      {^child_id, pid, _type, _modules} when is_pid(pid) -> true
-      _ -> false
-    end)
-    |> then(fn
-      {^child_id, pid, _type, _modules} when is_pid(pid) -> pid
-      _other -> nil
-    end)
   end
 end

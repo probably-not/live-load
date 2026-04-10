@@ -26,7 +26,7 @@ defmodule LiveLoad.Browser.Supervisor do
   end
 
   def connection_pid!(supervisor) do
-    case find_child(supervisor, :connection) do
+    case LiveLoad.SupUtils.find_child(supervisor, :connection) do
       connection when is_pid(connection) ->
         connection
 
@@ -54,18 +54,5 @@ defmodule LiveLoad.Browser.Supervisor do
         Please file issues at: https://github.com/probably-not/live-load/issues.
         """
     end
-  end
-
-  defp find_child(supervisor, child_id) do
-    supervisor
-    |> Supervisor.which_children()
-    |> Enum.find(fn
-      {^child_id, pid, _type, _modules} when is_pid(pid) -> true
-      _ -> false
-    end)
-    |> then(fn
-      {^child_id, pid, _type, _modules} when is_pid(pid) -> pid
-      _other -> nil
-    end)
   end
 end
