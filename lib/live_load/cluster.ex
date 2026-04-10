@@ -20,7 +20,7 @@ defmodule LiveLoad.Cluster do
   @type flame_backend :: module()
 
   @typedoc """
-  Options passed to the given `t:flame_backend_opt/0` on initialization of the `FLAME.Pool`.
+  Options passed to the given `t:flame_backend/0` on initialization of the `FLAME.Pool`.
 
   Defaults to an empty list.
   """
