@@ -388,7 +388,7 @@ defmodule LiveLoad do
   end
 
   defp base_run_config do
-    [users: 1, distributed?: false, cluster_opts: [], flame_backend: :unset]
+    [users: 1, distributed?: false, cluster_opts: [], flame_backend: :unset, cluster_nodes: nil]
   end
 
   defp base_runner_opts do
