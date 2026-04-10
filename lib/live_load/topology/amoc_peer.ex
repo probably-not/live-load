@@ -111,7 +111,7 @@ defmodule LiveLoad.Topology.AmocPeer do
   def setup_peer(:internal, :setup_peer, %Data{} = data) do
     add_code_paths(data.peer)
     transfer_configuration(data.peer)
-    ensure_apps_started(data.peer, [:amoc])
+    ensure_apps_started(data.peer, [:amoc, :live_load])
     {:next_state, :ready, data}
   end
 
@@ -210,7 +210,7 @@ defmodule LiveLoad.Topology.AmocPeer do
     else
       case rpc(node, Application, :ensure_all_started, [app]) do
         {:ok, new_apps} -> MapSet.union(started, MapSet.new(new_apps))
-        {:error, _reason} -> started
+        {:error, reason} -> raise RuntimeError, "Unable to start #{app} on amoc_peer node: #{inspect(reason)}"
       end
     end
   end
