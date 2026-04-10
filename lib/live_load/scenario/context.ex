@@ -365,7 +365,7 @@ defmodule LiveLoad.Scenario.Context do
   values that will be merged into the current assigns on the context.
   """
   @spec visible?(context :: t(), selector :: String.t(), opts :: [{:as, assigned_as()}]) :: t()
-  def visible?(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :is_visible, [selector], opts)
+  def visible?(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :visible?, [selector], opts)
 
   @doc """
   Extracts whether or not a checkbox or radio button element matching the given selector is checked and assigns it to the `:as` option on the context's assigns.
@@ -378,7 +378,7 @@ defmodule LiveLoad.Scenario.Context do
   values that will be merged into the current assigns on the context.
   """
   @spec checked?(context :: t(), selector :: String.t(), opts :: [{:as, assigned_as()}]) :: t()
-  def checked?(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :is_checked, [selector], opts)
+  def checked?(%Context{} = ctx, selector, opts \\ []), do: run(ctx, :checked?, [selector], opts)
 
   defp run(ctx, op, args, opts \\ [])
 
