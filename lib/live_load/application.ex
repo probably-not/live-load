@@ -6,8 +6,9 @@ defmodule LiveLoad.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {PartitionSupervisor, child_spec: Task.Supervisor, name: LiveLoad.Scenario.Runner.TaskSupervisor},
-      {PartitionSupervisor, child_spec: DynamicSupervisor, name: LiveLoad.Cluster.DynamicSupervisor}
+      {Registry, keys: :unique, name: LiveLoad.Registry},
+      {PartitionSupervisor, child_spec: DynamicSupervisor, name: LiveLoad.Topology.DynamicSupervisor},
+      {PartitionSupervisor, child_spec: Task.Supervisor, name: LiveLoad.Scenario.Runner.TaskSupervisor}
     ]
 
     opts = [strategy: :one_for_one, name: LiveLoad.Supervisor]
