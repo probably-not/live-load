@@ -17,10 +17,15 @@ defmodule LiveLoad.Topology.AmocPeer do
     peer = peer(server)
 
     Enum.reduce_while(scenarios, :ok, fn scenario, :ok ->
-      case rpc(peer, :amoc_code_server, :add_module, [scenario]) do
-        :ok -> {:cont, :ok}
-        {:error, reason} -> {:halt, {:error, {:add_module_failed, scenario, reason}}}
-        {:badrpc, reason} -> {:halt, {:error, {:add_module_rpc_failed, scenario, reason}}}
+      with {:module, ^scenario} <- rpc(peer, Code, :ensure_loaded, [scenario]),
+           :ok <- rpc(peer, :amoc_code_server, :add_module, [scenario]) do
+        {:cont, :ok}
+      else
+        {:error, reason} ->
+          {:halt, {:error, {:add_module_failed, scenario, reason}}}
+
+        {:badrpc, reason} ->
+          {:halt, {:error, {:add_module_rpc_failed, scenario, reason}}}
       end
     end)
   end
