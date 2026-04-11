@@ -105,7 +105,7 @@ defmodule LiveLoad.Scenario do
           update_assign!: 3,
           halt: 1,
           halted?: 1,
-          fail: 1,
+          fail: 2,
           failed?: 1,
           context_storage_snapshot: 1,
           context_storage_snapshot: 2,

@@ -48,7 +48,7 @@ defmodule LiveLoad.Browser.Context do
 
   @doc """
   Delegates to the connection implementation on the context and
-  runs the `c:LiveLoad.Browser.Connection.restore_context_storage/1` callback
+  runs the `c:LiveLoad.Browser.Connection.restore_context_storage/2` callback
   found on the implementation.
   """
   def restore_context_storage(%Context{browser: %Browser{connection: {mod, _opts}}} = context, snapshot) do
