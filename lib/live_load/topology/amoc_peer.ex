@@ -81,7 +81,18 @@ defmodule LiveLoad.Topology.AmocPeer do
       args: peer_args()
     }
 
+    args = Map.merge(args, peer_name_opts())
     args = maybe_add_env_arg(args, init_args[:env])
+
+    debug? = init_args[:debug] || false
+
+    args =
+      if debug? do
+        # Standard IO connection will give debug logs on the primary node so that I can see why a node may not be starting up.
+        Map.put(args, :connection, :standard_io)
+      else
+        args
+      end
 
     controller_pid =
       case :peer.start_link(args) do
@@ -89,6 +100,9 @@ defmodule LiveLoad.Topology.AmocPeer do
           raise RuntimeError, "Failed to initialize `:peer` node for `:amoc` to run on: #{inspect(reason)}"
 
         {:ok, controller_pid} ->
+          controller_pid
+
+        {:ok, controller_pid, _node} ->
           controller_pid
       end
 
@@ -127,7 +141,14 @@ defmodule LiveLoad.Topology.AmocPeer do
   end
 
   defp maybe_add_env_arg(args, env) when is_map(env) do
-    Map.put(args, :env, Enum.map(env, fn {k, v} -> {maybe_charlist(k), maybe_charlist(v)} end))
+    env =
+      env
+      |> Map.new(fn {k, v} -> {maybe_charlist(k), maybe_charlist(v)} end)
+      |> Map.put_new(~c"ERL_AFLAGS", String.to_charlist(System.get_env("ERL_AFLAGS", "")))
+      |> Map.put_new(~c"ERL_ZFLAGS", String.to_charlist(System.get_env("ERL_ZFLAGS", "")))
+      |> Map.to_list()
+
+    Map.put(args, :env, env)
   end
 
   defp peer_args do
@@ -139,6 +160,23 @@ defmodule LiveLoad.Topology.AmocPeer do
       add_release_boot!(args)
     else
       args
+    end
+  end
+
+  defp peer_name_opts do
+    case Node.self() do
+      :nonode@nohost ->
+        %{}
+
+      node ->
+        host =
+          node
+          |> Atom.to_string()
+          |> String.split("@", parts: 2)
+          |> List.last()
+          |> String.to_charlist()
+
+        %{host: host, longnames: :net_kernel.longnames()}
     end
   end
 
