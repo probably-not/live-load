@@ -8,6 +8,15 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.22
+
+Well, now that I'm actually pushing out a full benchmark suite, I'm starting to see bugs!
+
+A couple of small fixes here:
+- Ensure that we give a good error message when the Playwright bundle doesn't exist on the node
+- Allow the AmocPeer node to start up with a longname directly. On Fly.io, this was causing weird issues with their IPv6, so I ran into it as I deployed a runner there.
+
+
 ## 0.0.1-rc.21
 
 A quick release here, just adding in some more operations. Storage snapshot and clearing, and forcing failures. Stuff that's necessary when you are building a test.
