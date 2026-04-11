@@ -8,6 +8,11 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.23
+
+Another bug! Because I'm not including `:amoc` in the `:extra_applications`, it's not being packaged in releases. I don't want it to be started, so keeping it out of the `:extra_applications` is fine, but I need to add it to the `:included_applications` so that it is at least within the release.
+
+
 ## 0.0.1-rc.22
 
 Well, now that I'm actually pushing out a full benchmark suite, I'm starting to see bugs!
