@@ -29,6 +29,6 @@ defmodule LiveLoad.Browser.Connection.Playwright.Decompressor do
     File.rm_rf!(dest)
     File.mkdir_p!(dest)
     :ok = :erl_tar.extract(String.to_charlist(archive), [:compressed, {:cwd, String.to_charlist(dest)}])
-    Path.join(dest, "driver/package/cli.js")
+    Path.join(dest, "driver/playwright-driver")
   end
 end

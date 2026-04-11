@@ -8,6 +8,11 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.27
+
+Playwright packaging is just too much man. So many hoops to run through.
+
+
 ## 0.0.1-rc.26
 
 Hang on, almost there. `:amoc` doesn't load the module that's given to it... another issue I should open up for them. So first load, then register.
