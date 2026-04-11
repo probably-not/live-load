@@ -48,7 +48,8 @@ defmodule LiveLoad.Topology do
     opts = Keyword.put(opts, :collector_pid, collector_pid)
 
     try do
-      with :ok <- Collector.watch_cluster(collector_pid, [node()]),
+      with :ok <- Topology.AmocPeer.register_scenarios_to_amoc(amoc_peer_pid, [scenario]),
+           :ok <- Collector.watch_cluster(collector_pid, [node()]),
            :ok <- Topology.AmocPeer.run_scenario(amoc_peer_pid, scenario, users, opts) do
         Collector.wait_for_completion(collector_pid, timeout)
       end
@@ -94,7 +95,11 @@ defmodule LiveLoad.Topology do
   def connect_amoc_cluster(scenario, nodes) do
     supervisor = supervisor_name(scenario)
     amoc_peer_pid = amoc_peer_pid!(supervisor)
-    Topology.AmocPeer.connect_amoc_cluster(amoc_peer_pid, nodes)
+
+    with :ok <- Topology.AmocPeer.register_scenarios_to_amoc(amoc_peer_pid, [scenario]),
+         :ok <- Topology.AmocPeer.connect_amoc_cluster(amoc_peer_pid, nodes) do
+      Topology.AmocPeer.distribute_scenarios_to_amoc_cluster(amoc_peer_pid, nodes)
+    end
   end
 
   def start_link({scenario, topology_opts}) do

@@ -13,6 +13,39 @@ defmodule LiveLoad.Topology.AmocPeer do
     :gen_statem.start_link(__MODULE__, init_args, [])
   end
 
+  def register_scenarios_to_amoc(server, scenarios) do
+    peer = peer(server)
+
+    Enum.reduce_while(scenarios, :ok, fn scenario, :ok ->
+      case rpc(peer, :amoc_code_server, :add_module, [scenario]) do
+        :ok -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, {:add_module_failed, scenario, reason}}}
+        {:badrpc, reason} -> {:halt, {:error, {:add_module_rpc_failed, scenario, reason}}}
+      end
+    end)
+  end
+
+  def distribute_scenarios_to_amoc_cluster(server, nodes) do
+    peer = peer(server)
+
+    Enum.reduce_while(nodes, :ok, fn node, :ok ->
+      do_distribute_scenarios_to_amoc_cluster(peer, node)
+    end)
+  end
+
+  defp do_distribute_scenarios_to_amoc_cluster(peer, node) do
+    with results when is_list(results) <- rpc(peer, :amoc_code_server, :distribute_modules, [node]),
+         [] <- Enum.filter(results, fn {_mod, status} -> status != :ok end) do
+      {:cont, :ok}
+    else
+      {:badrpc, reason} ->
+        {:halt, {:error, {:distribute_modules_rpc_failed, node, reason}}}
+
+      failures ->
+        {:halt, {:error, {:distribute_modules_failed, node, failures}}}
+    end
+  end
+
   def stop(server, distributed?)
 
   def stop(server, true) do

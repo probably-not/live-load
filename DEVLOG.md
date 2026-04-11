@@ -8,6 +8,11 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.25
+
+So, `:amoc` needs to register scenarios. Veeerrrry interesting. I'll have to open up an issue on their repo and see if we can work something out in this, because that's a bit buggy when it comes to releases.
+
+
 ## 0.0.1-rc.24
 
 Once more! I gotta make sure to start the applications on each cluster node. Man I love deployment days, so many bugs being found.
