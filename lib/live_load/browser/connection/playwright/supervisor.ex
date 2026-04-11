@@ -23,7 +23,7 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
         Decompressor.extract!(playwright_version)
       end)
 
-    case System.cmd(playwright_cli_path, ["install-deps chromium"]) do
+    case System.cmd(playwright_cli_path, ["install-deps", "chromium"]) do
       {_, 0} ->
         :ok
 
