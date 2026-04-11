@@ -36,46 +36,91 @@ defmodule LiveLoad.Cluster.Node do
 
   @doc false
   def new! do
-    # Guarantee that the os_mon application is running on the node.
+    # Guarantee that the various applications necessary for LiveLoad are running on the node.
     # The FlamePeer library needs `:peer_applications` to define what's started on the peer,
-    # so if that's not set then os_mon won't be running.
-    case Application.ensure_all_started(:os_mon) do
-      {:ok, _} ->
-        # TODO: I need to get the actual limits of the current node.
-        # This is sort of a "best-effort get the available resources for the node" situation.
-        # It doesn't account for Kubernetes and containerization and stuff... I haven't dealt with that
-        # in a really long time and I don't remember all of the /proc stuff that I need to read to get the details.
-        # For now this is good enough. LiveLoad probably shouldn't be run on a node that can have other stuff on it
-        # anyways, so in theory it should assume that it has control of the entire node.
-        memory_data = :memsup.get_system_memory_data()
+    # so if that's not set then these applications won't be running.
 
-        %__MODULE__{
-          node: node(),
-          ref: make_ref(),
-          schedulers_online: System.schedulers_online(),
-          logical_processors: system_info_or_nil(:logical_processors),
-          logical_processors_online: system_info_or_nil(:logical_processors_online),
-          logical_processors_available: system_info_or_nil(:logical_processors_available),
-          total_memory: Keyword.fetch!(memory_data, :total_memory),
-          available_memory:
-            Keyword.get_lazy(memory_data, :available_memory, fn ->
-              Keyword.fetch!(memory_data, :cached_memory) + Keyword.fetch!(memory_data, :buffered_memory) +
-                Keyword.fetch!(memory_data, :free_memory)
-            end)
-        }
+    reason = """
+    `LiveLoad` requires that its own application be started on nodes.
+
+    If the FLAME node has been created with the current release code,
+    it should be properly handled and should not be causing an error.
+    """
+
+    :ok = ensure_required_app_started!(:live_load, reason)
+
+    reason = """
+    `LiveLoad` uses the `:amoc` application in order to manage the load test
+    lifecycle in a distributed fashion. `:amoc` powers the core of `LiveLoad`'s
+    application.
+
+    `:amoc` is included in LiveLoad's mix.exs as part of the `:included_applications`
+    list, so if the FLAME node has been created with the current release code,
+    it should be properly handled and should not be causing an error.
+    """
+
+    :ok = ensure_required_app_started!(:amoc, reason)
+
+    reason = """
+    `LiveLoad.Cluster` uses the `:os_mon` application in order to calculate
+    the correct number of nodes for the load test to run. This calculation
+    is done by checking the details of the FLAME node, including checking
+    the available disk space, memory, CPUs, and schedulers available.
+
+    `:os_mon` is included in LiveLoad's mix.exs as part of the `:extra_applications`
+    list, so if the FLAME node has been created with the current release code,
+    it should be properly handled and should not be causing an error.
+    """
+
+    :ok = ensure_required_app_started!(:os_mon, reason)
+
+    reason = """
+    `LiveLoad.Cluster` uses the `:os_mon` application in order to calculate
+    the correct number of nodes for the load test to run. This calculation
+    is done by checking the details of the FLAME node, including checking
+    the available disk space, memory, CPUs, and schedulers available.
+
+    `:os_mon` is included in LiveLoad's mix.exs as part of the `:extra_applications`
+    list, so if the FLAME node has been created with the current release code,
+    it should be properly handled and should not be causing an error.
+    """
+
+    :ok = ensure_required_app_started!(:os_mon, reason)
+
+    # TODO: I need to get the actual limits of the current node.
+    # This is sort of a "best-effort get the available resources for the node" situation.
+    # It doesn't account for Kubernetes and containerization and stuff... I haven't dealt with that
+    # in a really long time and I don't remember all of the /proc stuff that I need to read to get the details.
+    # For now this is good enough. LiveLoad probably shouldn't be run on a node that can have other stuff on it
+    # anyways, so in theory it should assume that it has control of the entire node.
+    memory_data = :memsup.get_system_memory_data()
+
+    %__MODULE__{
+      node: node(),
+      ref: make_ref(),
+      schedulers_online: System.schedulers_online(),
+      logical_processors: system_info_or_nil(:logical_processors),
+      logical_processors_online: system_info_or_nil(:logical_processors_online),
+      logical_processors_available: system_info_or_nil(:logical_processors_available),
+      total_memory: Keyword.fetch!(memory_data, :total_memory),
+      available_memory:
+        Keyword.get_lazy(memory_data, :available_memory, fn ->
+          Keyword.fetch!(memory_data, :cached_memory) + Keyword.fetch!(memory_data, :buffered_memory) +
+            Keyword.fetch!(memory_data, :free_memory)
+        end)
+    }
+  end
+
+  defp ensure_required_app_started!(app_name, app_reason) do
+    case Application.ensure_all_started(app_name) do
+      {:ok, _} ->
+        :ok
 
       {:error, reason} ->
         raise RuntimeError, """
-        The `:os_mon` application could not be started on the FLAME node!
+        The `:#{app_name}` application could not be started on the FLAME node!
 
-        `LiveLoad.Cluster` uses the `:os_mon` application in order to calculate
-        the correct number of nodes for the load test to run. This calculation
-        is done by checking the details of the FLAME node, including checking
-        the available disk space, memory, CPUs, and schedulers available.
-
-        `:os_mon` is included in LiveLoad's mix.exs as part of the `:extra_applications`
-        list, so if the FLAME node has been created with the current release code,
-        it should be properly handled and should not be causing an error.
+        #{app_reason}
 
         If you are hitting this error, it means that either you are starting a separate
         release from the one that LiveLoad was built with, or the FLAME backend you are
