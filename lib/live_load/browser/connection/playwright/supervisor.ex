@@ -23,6 +23,20 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
         Decompressor.extract!(playwright_version)
       end)
 
+    case System.cmd(playwright_cli_path, ["install-deps chromium"]) do
+      {_, 0} ->
+        :ok
+
+      {output, code} ->
+        raise """
+        Failed to install dependencies of the chromium browser during decompression (code: #{code}).
+
+        Command output:
+
+        #{output}
+        """
+    end
+
     Supervisor.start_link(__MODULE__, {playwright_cli_path, browsers_path(playwright_version), timeout}, name: name)
   end
 
