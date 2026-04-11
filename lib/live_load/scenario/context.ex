@@ -162,6 +162,15 @@ defmodule LiveLoad.Scenario.Context do
   defguard halted?(context) when context.halted?
 
   @doc """
+  Marks a `LiveLoad.Scenario` as failed and prevents the scenario from doing any further operations on the context.
+
+  If the scenario has already had an error, this results in a No-Op in order to preserve the error.
+  """
+  @spec fail(context :: t(), reason :: term()) :: t()
+  def fail(%Context{error: nil} = ctx, reason), do: %{ctx | error: %Error{step: ctx.step, reason: reason}}
+  def fail(%Context{error: %Error{}} = ctx, _reason), do: ctx
+
+  @doc """
   Checks to see if the `LiveLoad.Scenario.Context` failed to complete.
 
   Failure occurs when an error occurs while the `LiveLoad.Scenario` is running.
