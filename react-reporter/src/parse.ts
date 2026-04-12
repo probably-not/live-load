@@ -25,7 +25,9 @@ import type {
 } from "./types";
 
 /** Parse a PrecomputedQuantiles entry into display stats. */
-export function parseHist(h: RawPrecomputedQuantiles | null | undefined): ParsedHistogramStats {
+export function parseHist(
+  h: RawPrecomputedQuantiles | null | undefined,
+): ParsedHistogramStats {
   if (!h || h.count === 0) return { count: 0, empty: true };
   const v = h.values;
   return {
@@ -45,13 +47,17 @@ export function parseHist(h: RawPrecomputedQuantiles | null | undefined): Parsed
 }
 
 /** Parse a DimensionedCounter — already nearly the right shape, just normalize defaults. */
-export function parseCounter(c: RawDimensionedCounter | null | undefined): ParsedCounter {
+export function parseCounter(
+  c: RawDimensionedCounter | null | undefined,
+): ParsedCounter {
   if (c == null) return { aggregate: 0, by: {} };
   return { aggregate: c.aggregate || 0, by: c.by || {} };
 }
 
 /** Parse a ScenarioResult (either global or per-node). */
-export function parseScenarioResult(sr: RawScenarioResult): ParsedScenarioResult {
+export function parseScenarioResult(
+  sr: RawScenarioResult,
+): ParsedScenarioResult {
   const histograms: Record<string, ParsedDimensionedHistogram> = {};
   for (const [k, h] of Object.entries(sr.histograms || {})) {
     const aggregate = parseHist(h.aggregate);
@@ -93,6 +99,7 @@ export function parseScenarioResult(sr: RawScenarioResult): ParsedScenarioResult
     histograms,
     counters,
     time_series,
+    failure_samples: sr.failure_samples ?? {},
   };
 }
 

@@ -43,6 +43,7 @@ import type {
   ParsedBucket,
   ParsedCounter,
   ParsedDimensionedHistogram,
+  ParsedFailureSample,
   ParsedScenario,
 } from "../types";
 import { CDFModal } from "./CDFModal";
@@ -531,6 +532,99 @@ function TimeSeriesCharts({ ts, bucket_width_ms }: TimeSeriesChartsProps) {
   );
 }
 
+// ─── FailureSamples ─────────────────────────────────────────────────────────────
+
+interface FailureSamplesProps {
+  samples: Record<string, ParsedFailureSample[]>;
+}
+
+function FailureSamples({ samples }: FailureSamplesProps) {
+  const categories = Object.keys(samples)
+    .filter((c) => samples[c].length > 0)
+    .sort();
+  if (categories.length === 0) return null;
+
+  const total = categories.reduce((sum, c) => sum + samples[c].length, 0);
+
+  return (
+    <div className="Se">
+      <div className="Sh">
+        <span className="Stl">Failure Samples</span>
+        <span className="Sbg">
+          {total} sample{total === 1 ? "" : "s"} across {categories.length} categor
+          {categories.length === 1 ? "y" : "ies"}
+        </span>
+      </div>
+      {categories.map((cat) => (
+        <FailureCategory key={cat} category={cat} samples={samples[cat]} />
+      ))}
+    </div>
+  );
+}
+
+interface FailureCategoryProps {
+  category: string;
+  samples: ParsedFailureSample[];
+}
+
+function FailureCategory({ category, samples }: FailureCategoryProps) {
+  // Default open when there's only one category, collapsed when there are several
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="Fcat">
+      <button className="Fcat-h" onClick={() => setOpen(!open)}>
+        <span className={`Ex${open ? " o" : ""}`}>▶</span>
+        <span className="Fcat-n">{category}</span>
+        <span className="Fcat-c">
+          {samples.length} sample{samples.length === 1 ? "" : "s"}
+        </span>
+      </button>
+      {open && (
+        <div className="Fcat-b">
+          {samples.map((s, i) => (
+            <FailureSampleCard key={i} sample={s} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FailureSampleCard({ sample }: { sample: ParsedFailureSample }) {
+  const [stackOpen, setStackOpen] = useState(false);
+  return (
+    <div className="Fs">
+      <div className="Fs-h">
+        <span className={`Fs-k Fs-k-${sample.kind}`}>{sample.kind}</span>
+        <span className="Fs-r">{sample.reason_inspect}</span>
+      </div>
+      <div className="Fs-m">
+        <span>
+          user: <code>{String(sample.user_id)}</code>
+        </span>
+        <span>
+          t: <code>{sample.monotonic_time}</code>
+        </span>
+      </div>
+      {sample.stacktrace.length > 0 && (
+        <>
+          <button className="Fs-tg" onClick={() => setStackOpen(!stackOpen)}>
+            {stackOpen ? "▼" : "▶"} stacktrace ({sample.stacktrace.length} frame
+            {sample.stacktrace.length === 1 ? "" : "s"})
+          </button>
+          {stackOpen && (
+            <pre className="Fs-st">
+              {sample.stacktrace.map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+            </pre>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── ScenarioReport ─────────────────────────────────────────────────────────────
 
 interface ScenarioReportProps {
@@ -708,6 +802,7 @@ export function ScenarioReport({
         onCDF={setCdfInfo}
       />
       <CountersTable counters={view.counters} />
+      <FailureSamples samples={view.failure_samples} />
       {view.time_series.length > 0 && (
         <TimeSeriesCharts ts={view.time_series} bucket_width_ms={s.bucket_width_ms} />
       )}

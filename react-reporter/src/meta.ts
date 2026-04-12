@@ -85,6 +85,10 @@ export const HIST_META: Record<string, HistogramMeta> = {
 };
 
 export const COUNTER_META: Record<string, CounterMeta> = {
+  scenario_failures: {
+    label: "Scenario Failures",
+    tsLabel: "Failures",
+  },
   websocket_connections_opened: {
     label: "WS Connections Opened",
     tsLabel: "WS Opened",
@@ -152,4 +156,4 @@ export const PERCENTILE_OPTIONS = [
   { key: "mean", label: "mean" },
 ] as const;
 
-export type PercentileKey = typeof PERCENTILE_OPTIONS[number]["key"];
+export type PercentileKey = (typeof PERCENTILE_OPTIONS)[number]["key"];

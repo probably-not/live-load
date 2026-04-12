@@ -44,6 +44,18 @@ export interface RawUsers {
   failed: number;
 }
 
+/**
+ * A sample of a failed scenario user, captured for debugging.
+ * The category key (in failure_samples) is the failure classification.
+ */
+export interface RawFailureSample {
+  kind: "throw" | "error" | "exit";
+  reason_inspect: string;
+  stacktrace: string[];
+  monotonic_time: number;
+  user_id: unknown;
+}
+
 /** A successful scenario result, either global (cluster-wide) or per-node. */
 export interface RawScenarioResult {
   users: RawUsers;
@@ -51,6 +63,8 @@ export interface RawScenarioResult {
   histograms: Record<string, RawDimensionedHistogram>;
   counters: Record<string, RawDimensionedCounter>;
   time_series: RawBucket[];
+  /** Optional: older reports from before failure samples landed won't have this field. */
+  failure_samples?: Record<string, RawFailureSample[]>;
 }
 
 export interface RawNodeResult {
@@ -128,12 +142,15 @@ export interface ParsedBucket {
   counters: Record<string, ParsedCounter>;
 }
 
+export type ParsedFailureSample = RawFailureSample;
+
 export interface ParsedScenarioResult {
   users: RawUsers;
   duration_ms: number;
   histograms: Record<string, ParsedDimensionedHistogram>;
   counters: Record<string, ParsedCounter>;
   time_series: ParsedBucket[];
+  failure_samples: Record<string, ParsedFailureSample[]>;
 }
 
 export interface ParsedNode {
