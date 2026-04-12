@@ -51,7 +51,8 @@ defmodule LiveLoad.Scenario.Topology do
         id: :telemetry_listener,
         restart: :temporary,
         significant: true
-      )
+      ),
+      LiveLoad.Scenario.Topology.BrowserStore
     ]
 
     Supervisor.init(children, strategy: :one_for_one, auto_shutdown: :any_significant)
@@ -61,6 +62,10 @@ defmodule LiveLoad.Scenario.Topology do
 
   def browser! do
     %Browser{} = :persistent_term.get(@key)
+  end
+
+  def clear_browser do
+    :persistent_term.erase(@key)
   end
 
   defp store_browser(%Browser{} = browser) do
