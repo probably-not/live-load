@@ -8,6 +8,10 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.31
+
+Alright, after a bunch of debugging, trying to figure out the whole playwright thing, hitting timeouts, and all that fun stuff, I've finally just gone ahead and written the topology for each scenario runner. It's very brute-forced and put together quickly, but it's hopefully going to do the job. I'll push it out and then test out the bench application and hope for the best!
+
 ## 0.0.1-rc.30
 
 Whoops again...
