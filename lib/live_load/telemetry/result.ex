@@ -54,6 +54,8 @@ defmodule LiveLoad.Telemetry.Result do
   @type counter_name() ::
           :scenario_users_started
           | :scenario_users_completed
+          | :scenario_failures
+          | {:scenario_failures, category :: String.t()}
           | :liveview_navigations
           | {:liveview_navigations, type :: String.t()}
           | :liveview_disconnections
@@ -83,6 +85,11 @@ defmodule LiveLoad.Telemetry.Result do
           counters: %{counter_name() => non_neg_integer()}
         }
 
+  @typedoc """
+  A sample of a failed scenario run to allow debugging and understanding of why users may have failed their scenario.
+  """
+  @type failure_sample() :: LiveLoad.Result.ScenarioResult.failure_sample()
+
   @type t() :: %__MODULE__{
           total: pos_integer(),
           succeeded: non_neg_integer(),
@@ -91,11 +98,32 @@ defmodule LiveLoad.Telemetry.Result do
           counters: %{counter_name() => non_neg_integer()},
           bucket_width_ms: pos_integer(),
           start_system_time: integer(),
-          time_series: %{bucket_index() => bucket()}
+          time_series: %{bucket_index() => bucket()},
+          failure_samples: %{String.t() => [failure_sample()]}
         }
 
-  @enforce_keys [:total, :succeeded, :failed, :sketches, :counters, :bucket_width_ms, :start_system_time, :time_series]
-  defstruct [:total, :succeeded, :failed, :sketches, :counters, :bucket_width_ms, :start_system_time, :time_series]
+  @enforce_keys [
+    :total,
+    :succeeded,
+    :failed,
+    :sketches,
+    :counters,
+    :bucket_width_ms,
+    :start_system_time,
+    :time_series,
+    :failure_samples
+  ]
+  defstruct [
+    :total,
+    :succeeded,
+    :failed,
+    :sketches,
+    :counters,
+    :bucket_width_ms,
+    :start_system_time,
+    :time_series,
+    :failure_samples
+  ]
 
   @doc false
   def sketch_names do
@@ -120,6 +148,7 @@ defmodule LiveLoad.Telemetry.Result do
     [
       :scenario_users_started,
       :scenario_users_completed,
+      :scenario_failures,
       :liveview_navigations,
       :liveview_disconnections,
       :liveview_reconnections,

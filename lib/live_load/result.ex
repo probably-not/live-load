@@ -117,16 +117,28 @@ defmodule LiveLoad.Result do
     A result for a scenario run, including summarized user results, aggregated counters, histograms, and bucketed time series data.
     """
 
+    @typedoc """
+    A sample of a failed scenario run to allow debugging and understanding of why users may have failed their scenario.
+    """
+    @type failure_sample() :: %{
+            kind: :throw | :error | :exit,
+            reason_inspect: String.t(),
+            stacktrace: [String.t()],
+            monotonic_time: integer(),
+            user_id: term()
+          }
+
     @type t() :: %__MODULE__{
             users: Users.t(),
             duration_ms: pos_integer(),
             histograms: %{String.t() => DimensionedHistogram.t()},
             counters: %{String.t() => DimensionedCounter.t()},
-            time_series: [Bucket.t()]
+            time_series: [Bucket.t()],
+            failure_samples: %{String.t() => [failure_sample()]}
           }
 
     LiveLoad.JSON.derive_encoder()
-    defstruct [:users, :duration_ms, :histograms, :counters, :time_series]
+    defstruct [:users, :duration_ms, :histograms, :counters, :time_series, :failure_samples]
   end
 
   defmodule NodeResult do
@@ -159,6 +171,7 @@ defmodule LiveLoad.Result do
 
   @quantile_points Enum.map(0..100, &(&1 / 100))
   @quantile_points_count length(@quantile_points)
+  @failure_samples_per_category 10
 
   @type t() :: %__MODULE__{
           name: String.t(),
@@ -212,6 +225,11 @@ defmodule LiveLoad.Result do
       |> Enum.map(& &1.counters)
       |> merge_cross_node_counters()
 
+    merged_failure_samples =
+      successful_results
+      |> Enum.map(& &1.failure_samples)
+      |> merge_cross_node_failure_samples()
+
     user_summary = %Users{
       total: sum_by(successful_results, & &1.total),
       succeeded: sum_by(successful_results, & &1.succeeded),
@@ -250,7 +268,8 @@ defmodule LiveLoad.Result do
               duration_ms: (node_max_bucket + 1) * bucket_width_ms,
               histograms: precompute_histograms(result.sketches),
               counters: calculate_counters(result.counters),
-              time_series: precompute_time_series(filled_time_series, node_active_users_per_bucket, bucket_width_ms)
+              time_series: precompute_time_series(filled_time_series, node_active_users_per_bucket, bucket_width_ms),
+              failure_samples: result.failure_samples
             }
           }
       end)
@@ -266,7 +285,8 @@ defmodule LiveLoad.Result do
         histograms: precompute_histograms(merged_sketches),
         counters: calculate_counters(merged_counters),
         users: user_summary,
-        time_series: precompute_time_series(merged_time_series, active_users_per_bucket, bucket_width_ms)
+        time_series: precompute_time_series(merged_time_series, active_users_per_bucket, bucket_width_ms),
+        failure_samples: merged_failure_samples
       },
       nodes: nodes
     }
@@ -395,6 +415,16 @@ defmodule LiveLoad.Result do
       counters: merge_cross_node_counters(Enum.map(bucket_data, & &1.counters)),
       node_count: length(bucket_data)
     }
+  end
+
+  defp merge_cross_node_failure_samples(node_failure_samples) do
+    node_failure_samples
+    |> Enum.reduce(%{}, fn samples, acc ->
+      Map.merge(acc, samples, fn _category, a, b -> a ++ b end)
+    end)
+    |> Map.new(fn {category, samples} ->
+      {category, Enum.take(samples, @failure_samples_per_category)}
+    end)
   end
 
   defp active_users_per_time_series_bucket(time_series) do

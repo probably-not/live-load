@@ -80,6 +80,9 @@ defmodule LiveLoad.Telemetry.Listener do
     ]
   end
 
+  @failure_samples_per_category 10
+  @stacktrace_frames 10
+
   defmodule State do
     @moduledoc false
 
@@ -96,7 +99,8 @@ defmodule LiveLoad.Telemetry.Listener do
             sketches: %{Result.sketch_name() => :ddskerl_std.ddsketch()},
             counters: %{Result.counter_name() => non_neg_integer()},
             sketch_buckets: %{Result.bucket_index() => %{Result.sketch_name() => :ddskerl_std.ddsketch()}},
-            counter_buckets: %{Result.bucket_index() => %{Result.counter_name() => non_neg_integer()}}
+            counter_buckets: %{Result.bucket_index() => %{Result.counter_name() => non_neg_integer()}},
+            failure_samples: %{String.t() => [map()]}
           }
 
     defstruct [
@@ -112,7 +116,8 @@ defmodule LiveLoad.Telemetry.Listener do
       sketches: %{},
       counters: %{},
       sketch_buckets: %{},
-      counter_buckets: %{}
+      counter_buckets: %{},
+      failure_samples: %{}
     ]
 
     def new(collector_pid, error_rate, bucket_width_ms) do
@@ -174,7 +179,8 @@ defmodule LiveLoad.Telemetry.Listener do
       counters: state.counters,
       bucket_width_ms: state.bucket_width_ms,
       start_system_time: state.start_system_time,
-      time_series: time_series
+      time_series: time_series,
+      failure_samples: state.failure_samples
     }
 
     :ok = LiveLoad.Telemetry.Collector.node_complete(state.collector_pid, stats)
@@ -267,18 +273,32 @@ defmodule LiveLoad.Telemetry.Listener do
   @impl true
   def handle_cast(
         {:telemetry, [:amoc, :scenario, :start, :exception], %{duration: duration, monotonic_time: monotonic_time},
-         %{user_id: _user_id}},
+         %{user_id: user_id, kind: kind, reason: reason, stacktrace: stacktrace}},
         %State{} = state
       ) do
     duration_us = System.convert_time_unit(duration, :native, :microsecond)
     sketches = maybe_insert_to_sketch(state.sketches, :scenario_duration_us, duration_us, state.error_rate)
     bucket = bucket(state, monotonic_time)
 
+    category = categorize_failure(kind, reason)
+    sample = build_failure_sample(kind, reason, stacktrace, monotonic_time, user_id)
+
     sketch_buckets =
       maybe_insert_to_sketch_bucket(state.sketch_buckets, bucket, :scenario_duration_us, duration_us, state.error_rate)
 
-    counters = increment_counter(state.counters, :scenario_users_completed)
-    counter_buckets = increment_counter_bucket(state.counter_buckets, bucket, :scenario_users_completed)
+    counters =
+      state.counters
+      |> increment_counter(:scenario_users_completed)
+      |> increment_counter(:scenario_failures)
+      |> increment_counter({:scenario_failures, category})
+
+    counter_buckets =
+      state.counter_buckets
+      |> increment_counter_bucket(bucket, :scenario_users_completed)
+      |> increment_counter_bucket(bucket, :scenario_failures)
+      |> increment_counter_bucket(bucket, {:scenario_failures, category})
+
+    failure_samples = maybe_add_failure_sample(state.failure_samples, category, sample)
 
     state = %{
       state
@@ -286,7 +306,8 @@ defmodule LiveLoad.Telemetry.Listener do
         sketches: sketches,
         sketch_buckets: sketch_buckets,
         counters: counters,
-        counter_buckets: counter_buckets
+        counter_buckets: counter_buckets,
+        failure_samples: failure_samples
     }
 
     {:noreply, tap(state, &maybe_send_completion/1)}
@@ -691,5 +712,33 @@ defmodule LiveLoad.Telemetry.Listener do
       :ok = LiveLoad.Browser.drain_metrics(state.browser)
       send(self(), :node_complete)
     end
+  end
+
+  defp categorize_failure(:error, %module{}), do: inspect(module)
+  defp categorize_failure(:error, _), do: "error:other"
+  defp categorize_failure(:exit, :timeout), do: "exit:timeout"
+  defp categorize_failure(:exit, :killed), do: "exit:killed"
+  defp categorize_failure(:exit, {:shutdown, _}), do: "exit:shutdown"
+  defp categorize_failure(:exit, _), do: "exit:other"
+  defp categorize_failure(:throw, _), do: "throw"
+
+  defp build_failure_sample(kind, reason, stacktrace, monotonic_time, user_id) do
+    %{
+      kind: kind,
+      reason_inspect: inspect(reason, limit: :infinity, printable_limit: 4096),
+      stacktrace:
+        stacktrace
+        |> Enum.take(@stacktrace_frames)
+        |> Enum.map(&Exception.format_stacktrace_entry/1),
+      monotonic_time: monotonic_time,
+      user_id: user_id
+    }
+  end
+
+  defp maybe_add_failure_sample(samples, category, sample) do
+    Map.update(samples, category, [sample], fn
+      current when length(current) < @failure_samples_per_category -> [sample | current]
+      current -> current
+    end)
   end
 end
