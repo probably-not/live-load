@@ -9,7 +9,7 @@ defmodule LiveLoad.Topology do
   def setup(scenario, topology_opts \\ []) do
     case DynamicSupervisor.start_child(
            {:via, PartitionSupervisor, {LiveLoad.Topology.DynamicSupervisor, scenario}},
-           Supervisor.child_spec({Topology, {scenario, topology_opts}}, restart: :temporary)
+           Supervisor.child_spec({__MODULE__, {scenario, topology_opts}}, restart: :temporary)
          ) do
       {:ok, pid} when is_pid(pid) ->
         # We link to the calling process so that if the calling process has any issues and exits, we close out the resources.
@@ -45,7 +45,20 @@ defmodule LiveLoad.Topology do
     supervisor = supervisor_name(scenario)
     amoc_peer_pid = amoc_peer_pid!(supervisor)
     collector_pid = collector_pid!(supervisor)
-    opts = Keyword.put(opts, :collector_pid, collector_pid)
+    runner_pid = runner_pid!(supervisor)
+
+    amoc_peer_node = Topology.AmocPeer.peer(amoc_peer_pid)
+    {browser_connection_adapter, opts} = Keyword.pop!(opts, :browser_connection_adapter)
+    {browser_connection_opts, opts} = Keyword.pop!(opts, :browser_connection_opts)
+
+    :ok =
+      Topology.Runner.setup!(
+        runner_pid,
+        amoc_peer_node,
+        browser_connection_adapter,
+        browser_connection_opts,
+        collector_pid
+      )
 
     try do
       with :ok <- Topology.AmocPeer.register_scenarios_to_amoc(amoc_peer_pid, [scenario]),
@@ -62,7 +75,22 @@ defmodule LiveLoad.Topology do
     supervisor = supervisor_name(scenario)
     amoc_peer_pid = amoc_peer_pid!(supervisor)
     collector_pid = collector_pid!(supervisor)
-    opts = Keyword.put(opts, :collector_pid, collector_pid)
+    runner_pid = runner_pid!(supervisor)
+
+    {browser_connection_adapter, opts} = Keyword.pop!(opts, :browser_connection_adapter)
+    {browser_connection_opts, opts} = Keyword.pop!(opts, :browser_connection_opts)
+
+    :ok =
+      Enum.each(
+        cluster_nodes,
+        &Topology.Runner.setup!(
+          runner_pid,
+          &1,
+          browser_connection_adapter,
+          browser_connection_opts,
+          collector_pid
+        )
+      )
 
     try do
       with :ok <- Collector.watch_cluster(collector_pid, cluster_nodes),
@@ -115,6 +143,7 @@ defmodule LiveLoad.Topology do
 
     children = [
       Topology.AmocPeer.child_spec(amoc_peer_opts, id: :amoc_peer, restart: :temporary, significant: true),
+      Supervisor.child_spec(Topology.Runner, id: :runner, restart: :temporary, significant: true),
       Supervisor.child_spec(Topology.Cluster, id: :cluster, restart: :temporary, significant: true),
       Supervisor.child_spec(Collector, id: :collector, restart: :temporary, significant: true)
     ]
@@ -140,6 +169,13 @@ defmodule LiveLoad.Topology do
     case LiveLoad.SupUtils.find_child(supervisor, :collector) do
       collector when is_pid(collector) -> collector
       nil -> raise RuntimeError, "Topology does not contain the collector child process"
+    end
+  end
+
+  defp runner_pid!(supervisor) do
+    case LiveLoad.SupUtils.find_child(supervisor, :runner) do
+      collector when is_pid(collector) -> collector
+      nil -> raise RuntimeError, "Topology does not contain the runner child process"
     end
   end
 

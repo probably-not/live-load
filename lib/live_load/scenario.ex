@@ -65,7 +65,6 @@ defmodule LiveLoad.Scenario do
 
   @typedoc false
   @type internal_config() :: %{
-          local_listener_pid: pid(),
           browser: LiveLoad.Browser.t(),
           iteration_timeout: timeout(),
           scenario_duration: timeout()
@@ -149,31 +148,6 @@ defmodule LiveLoad.Scenario do
         ]
 
       Module.register_attribute(__MODULE__, :required_variable, persist: true, accumulate: true)
-
-      @required_variable %{
-        name: :collector_pid,
-        default_value: nil,
-        description: "INTERNAL VARIABLE. The PID of the telemetry collector process on the runner node"
-      }
-
-      @required_variable %{
-        name: :browser_connection_adapter,
-        default_value: nil,
-        description: """
-        INTERNAL VARIABLE.
-        The `LiveLoad.Browser.Connection` adapter that will be used for this load test.
-        """
-      }
-
-      @required_variable %{
-        name: :browser_connection_opts,
-        default_value: [],
-        description: """
-        INTERNAL VARIABLE.
-        The `t:LiveLoad.Browser.Connection.opts()` that will be passed
-        to the browser initialization during this load test.
-        """
-      }
 
       @required_variable %{
         name: :iteration_timeout,

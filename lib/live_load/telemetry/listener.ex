@@ -11,9 +11,9 @@ defmodule LiveLoad.Telemetry.Listener do
 
   require Logger
 
-  def start_link({collector_pid, %LiveLoad.Browser{} = browser, error_rate, bucket_width_ms})
+  def start_link({collector_pid, error_rate, bucket_width_ms})
       when is_pid(collector_pid) and is_float(error_rate) and error_rate >= 0.0 do
-    case GenServer.start_link(__MODULE__, {collector_pid, browser, error_rate, bucket_width_ms}) do
+    case GenServer.start_link(__MODULE__, {collector_pid, error_rate, bucket_width_ms}) do
       {:ok, pid} when is_pid(pid) -> {:ok, tap(pid, &install/1)}
       # For right now, the listener doesn't have a name, so I'm not adding a catch
       # for `{:error, {:already_started, pid}}`. Since this runs on each child node
@@ -25,33 +25,22 @@ defmodule LiveLoad.Telemetry.Listener do
   @default_error_rate 0.02
   @default_bucket_width_ms to_timeout(second: 5)
 
-  def start_link({collector_pid, %LiveLoad.Browser{} = browser, error_rate}) when is_pid(collector_pid) do
+  def start_link({collector_pid, error_rate}) when is_pid(collector_pid) do
     Logger.warning([
       "[LiveLoad.Telemetry.Listener] received invalid error rate: ",
       inspect(error_rate),
       "; defaulting to #{@default_error_rate}"
     ])
 
-    start_link({collector_pid, browser, @default_error_rate, @default_bucket_width_ms})
+    start_link({collector_pid, @default_error_rate, @default_bucket_width_ms})
   end
 
-  def start_link({collector_pid, %LiveLoad.Browser{} = browser}) when is_pid(collector_pid) do
-    start_link({collector_pid, browser, @default_error_rate, @default_bucket_width_ms})
+  def start_link(collector_pid) when is_pid(collector_pid) do
+    start_link({collector_pid, @default_error_rate, @default_bucket_width_ms})
   end
 
-  def stop(server) do
-    if pid = GenServer.whereis(server) do
-      ref = Process.monitor(pid)
-      GenServer.cast(pid, :stop)
-
-      receive do
-        {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
-      end
-    else
-      :ok
-    end
-  after
-    uninstall(server)
+  def connect_browser(server, %LiveLoad.Browser{} = browser) do
+    GenServer.call(server, {:connect_browser, browser})
   end
 
   def handle_telemetry(event, measurements, metadata, %{listener: server}) do
@@ -96,7 +85,7 @@ defmodule LiveLoad.Telemetry.Listener do
 
     @type t() :: %__MODULE__{
             collector_pid: pid(),
-            browser: LiveLoad.Browser.t(),
+            browser: LiveLoad.Browser.t() | nil,
             error_rate: float(),
             bucket_width_ms: pos_integer(),
             monotonic_start: integer() | nil,
@@ -126,10 +115,9 @@ defmodule LiveLoad.Telemetry.Listener do
       counter_buckets: %{}
     ]
 
-    def new(collector_pid, browser, error_rate, bucket_width_ms) do
+    def new(collector_pid, error_rate, bucket_width_ms) do
       %__MODULE__{
         collector_pid: collector_pid,
-        browser: browser,
         error_rate: error_rate,
         bucket_width_ms: bucket_width_ms
       }
@@ -137,8 +125,20 @@ defmodule LiveLoad.Telemetry.Listener do
   end
 
   @impl true
-  def init({collector_pid, browser, error_rate, bucket_width_ms}) do
-    {:ok, State.new(collector_pid, browser, error_rate, bucket_width_ms), {:continue, :initialize_metrics}}
+  def init({collector_pid, error_rate, bucket_width_ms}) do
+    Process.flag(:trap_exit, true)
+    {:ok, State.new(collector_pid, error_rate, bucket_width_ms), {:continue, :initialize_metrics}}
+  end
+
+  @impl true
+  def handle_call({:connect_browser, %LiveLoad.Browser{} = browser}, _from, %State{} = state) do
+    {:reply, :ok, %{state | browser: browser}}
+  end
+
+  @impl true
+  def terminate(_reason, state) do
+    uninstall(self())
+    {:noreply, state}
   end
 
   @impl true

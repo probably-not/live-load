@@ -8,6 +8,7 @@ defmodule LiveLoad.Application do
     children = [
       {Registry, keys: :unique, name: LiveLoad.Registry},
       {PartitionSupervisor, child_spec: DynamicSupervisor, name: LiveLoad.Topology.DynamicSupervisor},
+      {DynamicSupervisor, name: LiveLoad.Scenario.Topology.DynamicSupervisor},
       {PartitionSupervisor, child_spec: Task.Supervisor, name: LiveLoad.Scenario.Runner.TaskSupervisor}
     ]
 
