@@ -120,16 +120,16 @@ defmodule LiveLoad.Browser.Connection do
   ## Lifecycle Hook Callbacks ##
   ##############################
 
-  @doc "A hook called before the supervision tree for the browser is initialized in `LiveLoad.Browser.start_link/2`"
+  @doc "A hook called before the supervision tree for the browser is initialized."
   @callback before_start(browser :: Browser.t()) :: Browser.t()
 
-  @doc "A hook called after the supervision tree for the browser is initialized in `LiveLoad.Browser.start_link/2`."
+  @doc "A hook called after the supervision tree for the browser is initialized."
   @callback after_start(browser :: Browser.t()) :: Browser.t()
 
-  @doc "A hook called before the supervision tree for the browser is stopped in `LiveLoad.Browser.stop/3`"
+  @doc "A hook called before the supervision tree for the browser is stopped."
   @callback before_stop(browser :: Browser.t()) :: Browser.t()
 
-  @doc "A hook called after the supervision tree for the browser is stopped in `LiveLoad.Browser.stop/3`"
+  @doc "A hook called after the supervision tree for the browser is stopped."
   @callback after_stop(browser :: Browser.t()) :: :ok
 
   defmacro __using__(opts) do
