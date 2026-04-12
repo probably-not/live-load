@@ -3,8 +3,12 @@ defmodule LiveLoad.Topology.Runner do
 
   use GenServer
 
-  def setup!(server, runner_node, browser_connection_adapter, browser_connection_opts, collector_pid) do
-    GenServer.call(server, {:setup, runner_node, browser_connection_adapter, browser_connection_opts, collector_pid})
+  def setup!(server, runner_node, browser_connection_adapter, browser_connection_opts, collector_pid, timeout) do
+    GenServer.call(
+      server,
+      {:setup, runner_node, browser_connection_adapter, browser_connection_opts, collector_pid},
+      timeout
+    )
   end
 
   def start_link(_opts) do

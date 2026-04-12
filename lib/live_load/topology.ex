@@ -50,6 +50,7 @@ defmodule LiveLoad.Topology do
     amoc_peer_node = Topology.AmocPeer.peer(amoc_peer_pid)
     {browser_connection_adapter, opts} = Keyword.pop!(opts, :browser_connection_adapter)
     {browser_connection_opts, opts} = Keyword.pop!(opts, :browser_connection_opts)
+    {scenario_setup_timeout, opts} = Keyword.pop(opts, :scenario_setup_timeout, to_timeout(minute: 2))
 
     :ok =
       Topology.Runner.setup!(
@@ -57,7 +58,8 @@ defmodule LiveLoad.Topology do
         amoc_peer_node,
         browser_connection_adapter,
         browser_connection_opts,
-        collector_pid
+        collector_pid,
+        scenario_setup_timeout
       )
 
     try do
@@ -79,6 +81,7 @@ defmodule LiveLoad.Topology do
 
     {browser_connection_adapter, opts} = Keyword.pop!(opts, :browser_connection_adapter)
     {browser_connection_opts, opts} = Keyword.pop!(opts, :browser_connection_opts)
+    {scenario_setup_timeout, opts} = Keyword.pop(opts, :scenario_setup_timeout, to_timeout(minute: 2))
 
     :ok =
       Enum.each(
@@ -88,7 +91,8 @@ defmodule LiveLoad.Topology do
           &1,
           browser_connection_adapter,
           browser_connection_opts,
-          collector_pid
+          collector_pid,
+          scenario_setup_timeout
         )
       )
 
