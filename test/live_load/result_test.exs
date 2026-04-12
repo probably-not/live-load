@@ -39,7 +39,8 @@ defmodule LiveLoad.ResultTest do
       counters: %{},
       bucket_width_ms: @bucket_width_ms,
       start_system_time: System.system_time(),
-      time_series: %{}
+      time_series: %{},
+      failure_samples: %{}
     }
 
     struct!(Telemetry.Result, Map.merge(defaults, Map.new(attrs)))
