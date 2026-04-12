@@ -24,7 +24,7 @@ defmodule LiveLoad.Topology.Runner do
         runner_node,
         LiveLoad.Scenario.Topology,
         :setup,
-        {browser_connection_adapter, browser_connection_opts, collector_pid}
+        [{browser_connection_adapter, browser_connection_opts, collector_pid}]
       )
 
     # Link the topology from the runner node to the current topology. If we go down or lose connection, everything should come down.
