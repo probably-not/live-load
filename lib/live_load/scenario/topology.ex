@@ -43,7 +43,9 @@ defmodule LiveLoad.Scenario.Topology do
   end
 
   def start_link({browser_connection_adapter, browser_connection_opts, collector_pid}) do
-    Supervisor.start_link(__MODULE__, {browser_connection_adapter, browser_connection_opts, collector_pid})
+    Supervisor.start_link(__MODULE__, {browser_connection_adapter, browser_connection_opts, collector_pid},
+      name: __MODULE__
+    )
   end
 
   @impl true
@@ -64,7 +66,7 @@ defmodule LiveLoad.Scenario.Topology do
 
     # Using the module as the name should be fine here. The topology of a scenario runs in an isolated node,
     # either under the amoc peer or the flame node running the distributed test. It should be unique to the node.
-    Supervisor.init(children, strategy: :one_for_one, auto_shutdown: :any_significant, name: __MODULE__)
+    Supervisor.init(children, strategy: :one_for_one, auto_shutdown: :any_significant)
   end
 
   @key {__MODULE__, :browser}
