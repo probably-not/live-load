@@ -24,6 +24,13 @@ defmodule LiveLoad.Scenario.Topology do
     end
   end
 
+  def teardown(supervisor \\ __MODULE__) do
+    browser = browser!()
+    browser = Browser.run_hook(browser, :before_stop)
+    :ok = Supervisor.stop(supervisor)
+    Browser.run_hook(browser, :after_stop)
+  end
+
   defp prepare_browser(supervisor, %Browser{} = browser) do
     browser_supervisor_pid = browser_supervisor_pid!(supervisor)
     browser = Browser.run_hook(%{browser | supervisor_pid: browser_supervisor_pid}, :after_start)
@@ -55,7 +62,9 @@ defmodule LiveLoad.Scenario.Topology do
       LiveLoad.Scenario.Topology.BrowserStore
     ]
 
-    Supervisor.init(children, strategy: :one_for_one, auto_shutdown: :any_significant)
+    # Using the module as the name should be fine here. The topology of a scenario runs in an isolated node,
+    # either under the amoc peer or the flame node running the distributed test. It should be unique to the node.
+    Supervisor.init(children, strategy: :one_for_one, auto_shutdown: :any_significant, name: __MODULE__)
   end
 
   @key {__MODULE__, :browser}

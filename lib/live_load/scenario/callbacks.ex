@@ -40,6 +40,6 @@ defmodule LiveLoad.Scenario.Callbacks do
   end
 
   def terminate(_scenario, _opts) do
-    :ok
+    Scenario.Topology.teardown()
   end
 end
