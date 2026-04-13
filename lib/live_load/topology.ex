@@ -73,7 +73,7 @@ defmodule LiveLoad.Topology do
     end
   end
 
-  def run_distributed(scenario, cluster_nodes, users, opts, timeout) do
+  def run_distributed(scenario, %LiveLoad.Cluster{} = cluster, users, opts, timeout) do
     supervisor = supervisor_name(scenario)
     amoc_peer_pid = amoc_peer_pid!(supervisor)
     collector_pid = collector_pid!(supervisor)
@@ -85,7 +85,7 @@ defmodule LiveLoad.Topology do
 
     :ok =
       Enum.each(
-        cluster_nodes,
+        cluster.pool_node_names,
         &Topology.Runner.setup!(
           runner_pid,
           &1,
@@ -97,9 +97,9 @@ defmodule LiveLoad.Topology do
       )
 
     try do
-      with :ok <- Collector.watch_cluster(collector_pid, cluster_nodes),
+      with :ok <- Collector.watch_cluster(collector_pid, cluster.pool_node_names),
            {:ok, _users} <-
-             Topology.AmocPeer.run_distributed_scenario(amoc_peer_pid, scenario, users, opts, cluster_nodes) do
+             Topology.AmocPeer.run_distributed_scenario(amoc_peer_pid, scenario, users, opts, cluster.pool_node_names) do
         Collector.wait_for_completion(collector_pid, timeout)
       end
     after
@@ -116,9 +116,8 @@ defmodule LiveLoad.Topology do
     cluster = %LiveLoad.Cluster{pool_name: pool_name}
 
     with :ok <- Topology.Cluster.setup_flame_pool(cluster_pid, pool_opts),
-         {:ok, nodes} <- Topology.Cluster.prime_cluster(pool_name, users, browser_connection_adapter, max_allowed_nodes),
-         cluster = %{cluster | pool_nodes: nodes, pool_node_names: Enum.map(nodes, & &1.node)},
-         :ok <- Topology.Cluster.preconnect_mesh(cluster) do
+         {:ok, nodes} <- Topology.Cluster.prime_cluster(pool_name, users, browser_connection_adapter, max_allowed_nodes) do
+      cluster = %{cluster | pool_nodes: nodes, pool_node_names: Enum.map(nodes, & &1.node)}
       {:ok, cluster}
     else
       error ->
@@ -127,13 +126,15 @@ defmodule LiveLoad.Topology do
     end
   end
 
-  def connect_amoc_cluster(scenario, nodes) do
+  def connect_amoc_cluster(scenario, %LiveLoad.Cluster{} = cluster) do
     supervisor = supervisor_name(scenario)
     amoc_peer_pid = amoc_peer_pid!(supervisor)
+    amoc_master_peer_node = Topology.AmocPeer.peer(amoc_peer_pid)
 
     with :ok <- Topology.AmocPeer.register_scenarios_to_amoc(amoc_peer_pid, [scenario]),
-         :ok <- Topology.AmocPeer.connect_amoc_cluster(amoc_peer_pid, nodes) do
-      Topology.AmocPeer.distribute_scenarios_to_amoc_cluster(amoc_peer_pid, nodes)
+         :ok <- Topology.Cluster.preconnect_mesh(cluster),
+         :ok <- Topology.Cluster.seed_amoc_cluster(amoc_master_peer_node, cluster) do
+      Topology.AmocPeer.distribute_scenarios_to_amoc_cluster(amoc_peer_pid, cluster.pool_node_names)
     end
   end
 

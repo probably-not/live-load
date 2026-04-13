@@ -43,7 +43,7 @@ defmodule LiveLoad.Topology.Cluster do
 
     failures =
       for {node, node_results} <- results,
-          bad_peers = Enum.reject(node_results, &match?({_, true}, &1)),
+          bad_peers = Enum.reject(List.wrap(node_results), &match?({_, true}, &1)),
           bad_peers != [],
           into: %{},
           do: {node, bad_peers}
@@ -52,6 +52,39 @@ defmodule LiveLoad.Topology.Cluster do
       :ok
     else
       {:error, {:preconnect_mesh_failed, failures}}
+    end
+  end
+
+  def seed_amoc_cluster(amoc_master_peer_node, %Cluster{} = cluster) do
+    seeds = [amoc_master_peer_node | cluster.pool_node_names]
+
+    results =
+      cluster.pool_nodes
+      |> Map.new(fn %Cluster.Node{} = cluster_node ->
+        {cluster_node.node, Cluster.Node.seed_amoc_cluster(cluster_node, seeds, to_timeout(minute: 2))}
+      end)
+      |> Map.put(
+        amoc_master_peer_node,
+        :rpc.call(
+          amoc_master_peer_node,
+          LiveLoad.Cluster.AmocSeed,
+          :seed_amoc_cluster_on_node,
+          [seeds],
+          to_timeout(minute: 2)
+        )
+      )
+
+    failures =
+      for {node, ping_results} <- results,
+          bad = Enum.reject(List.wrap(ping_results), &match?({_, :pong}, &1)),
+          bad != [],
+          into: %{},
+          do: {node, bad}
+
+    if map_size(failures) == 0 do
+      :ok
+    else
+      {:error, {:seed_amoc_cluster_failed, failures}}
     end
   end
 

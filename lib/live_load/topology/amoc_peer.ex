@@ -65,60 +65,6 @@ defmodule LiveLoad.Topology.AmocPeer do
     :rpc.call(peer, :amoc, :stop, [])
   end
 
-  def connect_amoc_cluster(server, nodes) do
-    peer = peer(server)
-    :ok = :rpc.call(peer, :amoc_cluster, :connect_nodes, [nodes])
-
-    target_nodes = [{:primary, peer} | Enum.map(nodes, &{:runner, &1})]
-
-    target_nodes
-    |> Enum.reduce_while(:ok, fn {target_type, target_node}, :ok ->
-      case wait_for_amoc_cluster_on_target_node(target_node) do
-        :ok -> {:cont, :ok}
-        {:error, reason} -> {:halt, {:error, {target_type, target_node, reason}}}
-      end
-    end)
-    |> with_diagnostics(nodes)
-  end
-
-  defp wait_for_amoc_cluster_on_target_node(target_node) do
-    get_status = fn -> :rpc.call(target_node, :amoc_cluster, :get_status, []) end
-
-    # This is a brute-force hack since amoc doesn't currently expose a way to ensure that nodes
-    # are connected and that all nodes that are expected to be connected are working.
-    # amoc connects asynchronously so this just tries to see the status over and over.
-    Enum.reduce_while(1..300, {[], {:error, {:waiting_for_cluster, get_status.()}}}, fn
-      _, {_rpc_errors, {:error, {_, %{to_ack: [], failed_to_connect: []}}}} ->
-        {:halt, :ok}
-
-      _, {_rpc_errors, {:error, {_, %{to_ack: [], failed_to_connect: [_ | _] = failed}}}} ->
-        {:halt, {:error, {:failed_to_connect, failed}}}
-
-      _, {rpc_errors, {:error, {_, %{to_ack: [_ | _]}}}} ->
-        Process.sleep(to_timeout(second: 1))
-        {:cont, {rpc_errors, {:error, {:waiting_for_cluster, get_status.()}}}}
-
-      _, {_rpc_errors, {:error, {_, %{} = status}}} ->
-        {:halt, {:error, {:unknown_amoc_cluster_status, status}}}
-
-      _, {rpc_errors, {:error, {_, {:badrpc, reason}}}} when length(rpc_errors) > 20 ->
-        {:halt, {:error, {:waiting_for_cluster_rpc_failed, [reason | rpc_errors]}}}
-
-      _, {rpc_errors, {:error, {_, {:badrpc, reason}}}} ->
-        Process.sleep(to_timeout(second: 1))
-        {:cont, {[reason | rpc_errors], {:error, {:waiting_for_cluster, get_status.()}}}}
-
-      idx, other ->
-        {:halt, {:error, {:bad_match_returned_waiting_for_cluster, idx, other}}}
-    end)
-  end
-
-  defp with_diagnostics(:ok, _nodes), do: :ok
-
-  defp with_diagnostics({:error, reason}, nodes) do
-    {:error, {reason, Diagnostics.diagnose_runners(nodes)}}
-  end
-
   def run_scenario(server, scenario, users, opts) do
     peer = peer(server)
     :rpc.call(peer, :amoc, :do, [scenario, users, opts])

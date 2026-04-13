@@ -116,23 +116,12 @@ defmodule LiveLoad do
   @type cluster_opts_opt() :: {:cluster_opts, [Cluster.option()]}
 
   @typedoc """
-  Configures the node list for a distributed load test directly.
-
-  This is mostly used for internal testing and demos in order to pass in a ready made cluster of nodes
-  instead of waiting for the nodes to be allocated by the given `t:flame_backend_opt/0`.
-
-  Typical users should avoid passing this in directly, as it bypasses the cluster sizing checks that ensure
-  the cluster has proper resources available for the load test to run.
-  """
-  @type cluster_nodes_opt() :: {:cluster_nodes, [node()]}
-
-  @typedoc """
   Initialization options for running a `LiveLoad.Scenario`.
 
   These are split between options for the overall run configuration (`t:distributed_run_opt/0`, `t:users_count_opt/0`,
-  `t:flame_backend_opt/0`, `t:cluster_opts_opt/0`, `t:cluster_nodes_opt/0`), options for the runner itself
-  (`t:browser_connection_adapter_opt/0`, `t:scenario_iteration_timeout_opt/0`, `t:scenario_duration_opt/0`)
-  and any other options that should be passed in as configuration to the scenario `c:LiveLoad.Scenario.config/1` callback.
+  `t:flame_backend_opt/0`, `t:cluster_opts_opt/0`), options for the runner itself (`t:browser_connection_adapter_opt/0`,
+  `t:scenario_iteration_timeout_opt/0`, `t:scenario_duration_opt/0`) and any other options that should be passed in as
+  configuration to the scenario `c:LiveLoad.Scenario.config/1` callback.
   """
   @type option() ::
           scenario_opt()
@@ -145,7 +134,6 @@ defmodule LiveLoad do
           | scenario_duration_opt()
           | flame_backend_opt()
           | cluster_opts_opt()
-          | cluster_nodes_opt()
           | {atom(), term()}
 
   @typedoc """
@@ -208,7 +196,7 @@ defmodule LiveLoad do
   ## Scenario Configuration
 
   Any additional options passed to `run/1` that are not consumed as part of the run configuration (such as
-  `t:distributed_run_opt/0`, `t:users_count_opt/0`, `t:flame_backend_opt/0`, `t:cluster_opts_opt/0`, and `t:cluster_nodes_opt/0`)
+  `t:distributed_run_opt/0`, `t:users_count_opt/0`, `t:flame_backend_opt/0`, `t:cluster_opts_opt/0`)
   or runner options (such as `t:browser_connection_adapter_opt/0`, `t:scenario_iteration_timeout_opt/0`, and `t:scenario_duration_opt/0`)
   are forwarded to each scenario's `c:LiveLoad.Scenario.config/1` callback as the `opts` argument. This allows you to pass arbitrary,
   scenario-specific configuration to each `LiveLoad.Scenario` run during the load test.
@@ -340,24 +328,6 @@ defmodule LiveLoad do
   end
 
   defp do_scenario(scenario, true, run_config, opts) do
-    if nodes = run_config[:cluster_nodes] do
-      do_distributed_scenario_with_nodes(nodes, scenario, run_config, opts)
-    else
-      do_distributed_scenario_with_flame(scenario, run_config, opts)
-    end
-  end
-
-  defp do_distributed_scenario_with_nodes(nodes, scenario, run_config, opts) do
-    users = Keyword.fetch!(run_config, :users)
-    scenario_duration = Keyword.fetch!(opts, :scenario_duration)
-    timeout = collector_timeout(scenario_duration)
-
-    with :ok <- LiveLoad.Topology.connect_amoc_cluster(scenario, nodes) do
-      LiveLoad.Topology.run_distributed(scenario, nodes, users, opts, timeout)
-    end
-  end
-
-  defp do_distributed_scenario_with_flame(scenario, run_config, opts) do
     users = Keyword.fetch!(run_config, :users)
     browser_connection_adapter = Keyword.fetch!(opts, :browser_connection_adapter)
     scenario_duration = Keyword.fetch!(opts, :scenario_duration)
@@ -369,8 +339,8 @@ defmodule LiveLoad do
 
     with {:ok, %Cluster{} = cluster} <-
            Cluster.prepare(scenario, users, browser_connection_adapter, flame_backend, cluster_opts),
-         :ok <- LiveLoad.Topology.connect_amoc_cluster(scenario, cluster.pool_node_names) do
-      LiveLoad.Topology.run_distributed(scenario, cluster.pool_node_names, users, opts, timeout)
+         :ok <- LiveLoad.Topology.connect_amoc_cluster(scenario, cluster) do
+      LiveLoad.Topology.run_distributed(scenario, cluster, users, opts, timeout)
     end
   end
 
@@ -388,7 +358,7 @@ defmodule LiveLoad do
   end
 
   defp base_run_config do
-    [users: 1, distributed?: false, cluster_opts: [], flame_backend: :unset, cluster_nodes: nil]
+    [users: 1, distributed?: false, cluster_opts: [], flame_backend: :unset]
   end
 
   defp base_runner_opts do

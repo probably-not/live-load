@@ -148,14 +148,22 @@ defmodule LiveLoad.Cluster.Node do
   end
 
   def preconnect(%__MODULE__{} = cluster_node, cluster_nodes, timeout) do
+    call_node(cluster_node, :preconnect, :preconnect_done, cluster_nodes, timeout)
+  end
+
+  def seed_amoc_cluster(%__MODULE__{} = cluster_node, cluster_nodes, timeout) do
+    call_node(cluster_node, :seed_amoc_cluster, :seed_amoc_cluster_done, cluster_nodes, timeout)
+  end
+
+  defp call_node(%__MODULE__{} = cluster_node, request, reply, cluster_nodes, timeout) do
     ref = make_ref()
     reply_to = self()
-    send(cluster_node.tracked_pid, {:preconnect, cluster_node.ref, ref, cluster_nodes, reply_to})
+    send(cluster_node.tracked_pid, {request, cluster_node.ref, ref, cluster_nodes, reply_to})
 
     monitor_ref = Process.monitor(cluster_node.tracked_pid)
 
     receive do
-      {:preconnect_done, ^ref, results} ->
+      {^reply, ^ref, results} ->
         Process.demonitor(monitor_ref, [:flush])
         results
 
@@ -205,6 +213,11 @@ defmodule LiveLoad.Cluster.Node do
             end)
 
           send(reply_to, {:preconnect_done, request_ref, results})
+          loop(ref)
+
+        {:seed_amoc_cluster, ^ref, request_ref, cluster_nodes, reply_to} ->
+          results = LiveLoad.Cluster.AmocSeed.seed_amoc_cluster_on_node(cluster_nodes)
+          send(reply_to, {:seed_amoc_cluster_done, request_ref, results})
           loop(ref)
 
         {^ref, :stop} ->
