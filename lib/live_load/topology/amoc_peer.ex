@@ -69,13 +69,25 @@ defmodule LiveLoad.Topology.AmocPeer do
     peer = peer(server)
     :ok = :rpc.call(peer, :amoc_cluster, :connect_nodes, [nodes])
 
-    get_status = fn -> :rpc.call(peer, :amoc_cluster, :get_status, []) end
+    target_nodes = [{:primary, peer} | Enum.map(nodes, &{:runner, &1})]
+
+    target_nodes
+    |> Enum.reduce_while(:ok, fn {target_type, target_node}, :ok ->
+      case wait_for_amoc_cluster_on_target_node(target_node) do
+        :ok -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, {target_type, target_node, reason}}}
+      end
+    end)
+    |> with_diagnostics(nodes)
+  end
+
+  defp wait_for_amoc_cluster_on_target_node(target_node) do
+    get_status = fn -> :rpc.call(target_node, :amoc_cluster, :get_status, []) end
 
     # This is a brute-force hack since amoc doesn't currently expose a way to ensure that nodes
     # are connected and that all nodes that are expected to be connected are working.
     # amoc connects asynchronously so this just tries to see the status over and over.
-    1..300
-    |> Enum.reduce_while({[], {:error, {:waiting_for_cluster, get_status.()}}}, fn
+    Enum.reduce_while(1..300, {[], {:error, {:waiting_for_cluster, get_status.()}}}, fn
       _, {_rpc_errors, {:error, {_, %{to_ack: [], failed_to_connect: []}}}} ->
         {:halt, :ok}
 
@@ -99,7 +111,12 @@ defmodule LiveLoad.Topology.AmocPeer do
       idx, other ->
         {:halt, {:error, {:bad_match_returned_waiting_for_cluster, idx, other}}}
     end)
-    |> with_diagnostics(nodes)
+  end
+
+  defp with_diagnostics(:ok, _nodes), do: :ok
+
+  defp with_diagnostics({:error, reason}, nodes) do
+    {:error, {reason, Diagnostics.diagnose_runners(nodes)}}
   end
 
   def run_scenario(server, scenario, users, opts) do
@@ -118,12 +135,6 @@ defmodule LiveLoad.Topology.AmocPeer do
 
   def peer(server) do
     :gen_statem.call(server, :peer)
-  end
-
-  defp with_diagnostics(:ok, _nodes), do: :ok
-
-  defp with_diagnostics({:error, reason}, nodes) do
-    {:error, {reason, Diagnostics.diagnose_runners(nodes)}}
   end
 
   def child_spec(init_args, child_opts \\ []) do
