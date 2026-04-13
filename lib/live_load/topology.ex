@@ -98,7 +98,8 @@ defmodule LiveLoad.Topology do
 
     try do
       with :ok <- Collector.watch_cluster(collector_pid, cluster_nodes),
-           {:ok, _users} <- Topology.AmocPeer.run_distributed_scenario(amoc_peer_pid, scenario, users, opts) do
+           {:ok, _users} <-
+             Topology.AmocPeer.run_distributed_scenario(amoc_peer_pid, scenario, users, opts, cluster_nodes) do
         Collector.wait_for_completion(collector_pid, timeout)
       end
     after
