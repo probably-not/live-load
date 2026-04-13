@@ -92,6 +92,9 @@ defmodule LiveLoad.Topology.AmocPeer do
       _, {rpc_errors, {:badrpc, reason}} ->
         Process.sleep(to_timeout(second: 1))
         {:cont, {[reason | rpc_errors], {:error, {:waiting_for_cluster, get_status.()}}}}
+
+      idx, other ->
+        {:halt, {:error, {:bad_match_returned_waiting_for_cluster, idx, other}}}
     end)
   end
 
