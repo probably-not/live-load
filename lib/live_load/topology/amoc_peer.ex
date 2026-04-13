@@ -86,10 +86,10 @@ defmodule LiveLoad.Topology.AmocPeer do
       _, {_rpc_errors, {:error, {_, %{} = status}}} ->
         {:halt, {:error, {:unknown_amoc_cluster_status, status}}}
 
-      _, {rpc_errors, {:badrpc, reason}} when length(rpc_errors) > 20 ->
+      _, {rpc_errors, {:error, {_, {:badrpc, reason}}}} when length(rpc_errors) > 20 ->
         {:halt, {:error, {:waiting_for_cluster_rpc_failed, [reason | rpc_errors]}}}
 
-      _, {rpc_errors, {:badrpc, reason}} ->
+      _, {rpc_errors, {:error, {_, {:badrpc, reason}}}} ->
         Process.sleep(to_timeout(second: 1))
         {:cont, {[reason | rpc_errors], {:error, {:waiting_for_cluster, get_status.()}}}}
 
