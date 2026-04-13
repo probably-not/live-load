@@ -8,6 +8,11 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.43
+
+When I move things around, I really need to test things and make sure that they still work, because otherwise, I'll push things out that don't have the right names.
+
+
 ## 0.0.1-rc.42
 
 Now we're hitting the fun nitty gritty stuff. Amoc seems to be failing on clusters that are larger, and since we are spinning up hundreds of nodes, that is a problem.
