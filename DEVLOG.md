@@ -8,6 +8,11 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.47
+
+Wow. Things worked! But now I need to avoid crashes that are unnecessary.
+
+
 ## 0.0.1-rc.46
 
 Let's try an alternative approach. Amoc's clustering seems to be deadlocking on large clusters. Here, I'm going to bypass the connect option and directly ping the nodes for each node in the FLAME cluster.

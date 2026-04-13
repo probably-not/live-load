@@ -145,10 +145,13 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def stop_context(%Context{} = context) do
     if playwright_context = context.private[:playwright_connection_context] do
-      PlaywrightEx.BrowserContext.close(playwright_context.guid,
-        connection: Supervisor.playwright_connection_name(),
-        timeout: command_timeout(context.browser)
-      )
+      with {:ok, _} <-
+             PlaywrightEx.BrowserContext.close(playwright_context.guid,
+               connection: Supervisor.playwright_connection_name(),
+               timeout: command_timeout(context.browser)
+             ) do
+        :ok
+      end
     else
       :ok
     end

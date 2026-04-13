@@ -4,6 +4,8 @@ defmodule LiveLoad.Scenario.Callbacks do
   alias LiveLoad.Browser
   alias LiveLoad.Scenario
 
+  require Logger
+
   def init(scenario) do
     iteration_timeout = :amoc_config.get(:iteration_timeout)
     scenario_duration = :amoc_config.get(:scenario_duration)
@@ -29,7 +31,16 @@ defmodule LiveLoad.Scenario.Callbacks do
         try do
           Scenario.Runner.run(scenario, Scenario.Context.new(browser_context), user_id, opts)
         after
-          Browser.Context.stop(browser_context)
+          case safe_stop_context(browser_context) do
+            {:error, reason} ->
+              Logger.error([
+                "[LiveLoad.Scenario.Callbacks] Failed to stop browser context: ",
+                Exception.format_exit(reason)
+              ])
+
+            _ ->
+              :ok
+          end
         end
 
       {:error, reason} ->
@@ -41,5 +52,13 @@ defmodule LiveLoad.Scenario.Callbacks do
 
   def terminate(_scenario, _opts) do
     Scenario.Topology.teardown()
+  end
+
+  defp safe_stop_context(%Browser.Context{} = browser_context) do
+    Browser.Context.stop(browser_context)
+  rescue
+    exception -> {:error, exception}
+  catch
+    kind, reason -> {:error, {kind, reason}}
   end
 end
