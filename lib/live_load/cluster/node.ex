@@ -147,6 +147,25 @@ defmodule LiveLoad.Cluster.Node do
     end
   end
 
+  def preconnect(%__MODULE__{} = cluster_node, cluster_nodes, timeout) do
+    ref = make_ref()
+    reply_to = self()
+    send(cluster_node.tracked_pid, {:preconnect, cluster_node.ref, ref, cluster_nodes, reply_to})
+
+    monitor_ref = Process.monitor(cluster_node.tracked_pid)
+
+    receive do
+      {:preconnect_done, ^ref, results} ->
+        Process.demonitor(monitor_ref, [:flush])
+        results
+
+      {:DOWN, ^monitor_ref, _, _, reason} ->
+        {:error, reason}
+    after
+      timeout -> {:error, :timeout}
+    end
+  end
+
   defimpl FLAME.Trackable do
     def track(%LiveLoad.Cluster.Node{ref: ref} = data, acc, node) do
       parent = self()
@@ -154,10 +173,7 @@ defmodule LiveLoad.Cluster.Node do
       {pid, monitor_ref} =
         Node.spawn_monitor(node, fn ->
           send(parent, {ref, :started})
-
-          receive do
-            {^ref, :stop} -> :ok
-          end
+          loop(ref)
         end)
 
       receive do
@@ -167,6 +183,32 @@ defmodule LiveLoad.Cluster.Node do
 
         {:DOWN, ^monitor_ref, _, _, reason} ->
           exit(reason)
+      end
+    end
+
+    defp loop(ref) do
+      receive do
+        {:preconnect, ^ref, request_ref, cluster_nodes, reply_to} ->
+          results =
+            cluster_nodes
+            |> Task.async_stream(
+              fn cluster_node ->
+                {cluster_node, :net_kernel.connect_node(cluster_node)}
+              end,
+              timeout: to_timeout(second: 15),
+              on_timeout: :kill_task
+            )
+            |> Enum.map(fn
+              {:ok, {node, :ignored}} -> {:error, {:cluster_node_not_alive, node}}
+              {:ok, {node, result}} -> {node, result}
+              {:exit, reason} -> {:error, {:preconnect_task_exit, reason}}
+            end)
+
+          send(reply_to, {:preconnect_done, request_ref, results})
+          loop(ref)
+
+        {^ref, :stop} ->
+          :ok
       end
     end
   end

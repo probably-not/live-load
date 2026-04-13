@@ -35,6 +35,26 @@ defmodule LiveLoad.Topology.Cluster do
     Supervisor.start_child(supervisor, wrapped)
   end
 
+  def preconnect_mesh(%Cluster{} = cluster) do
+    results =
+      Map.new(cluster.pool_nodes, fn %Cluster.Node{} = cluster_node ->
+        {cluster_node.node, Cluster.Node.preconnect(cluster_node, cluster.pool_node_names, to_timeout(minute: 1))}
+      end)
+
+    failures =
+      for {node, node_results} <- results,
+          bad_peers = Enum.reject(node_results, &match?({_, true}, &1)),
+          bad_peers != [],
+          into: %{},
+          do: {node, bad_peers}
+
+    if map_size(failures) == 0 do
+      :ok
+    else
+      {:error, {:preconnect_mesh_failed, failures}}
+    end
+  end
+
   def prime_cluster(cluster_pool_name, users, browser_connection_adapter, max_allowed_nodes) do
     with %Cluster.Node{} = initial_cluster_node <- wrapped_node_create(cluster_pool_name),
          {:ok, necessary_nodes} <-

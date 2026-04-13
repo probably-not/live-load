@@ -116,8 +116,10 @@ defmodule LiveLoad.Topology do
     cluster = %LiveLoad.Cluster{pool_name: pool_name}
 
     with :ok <- Topology.Cluster.setup_flame_pool(cluster_pid, pool_opts),
-         {:ok, nodes} <- Topology.Cluster.prime_cluster(pool_name, users, browser_connection_adapter, max_allowed_nodes) do
-      {:ok, %{cluster | pool_nodes: nodes, pool_node_names: Enum.map(nodes, & &1.node)}}
+         {:ok, nodes} <- Topology.Cluster.prime_cluster(pool_name, users, browser_connection_adapter, max_allowed_nodes),
+         cluster = %{cluster | pool_nodes: nodes, pool_node_names: Enum.map(nodes, & &1.node)},
+         :ok <- Topology.Cluster.preconnect_mesh(cluster) do
+      {:ok, cluster}
     else
       error ->
         Topology.Cluster.teardown_cluster(cluster_pid)
