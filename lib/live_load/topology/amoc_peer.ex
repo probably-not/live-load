@@ -129,7 +129,7 @@ defmodule LiveLoad.Topology.AmocPeer do
            peer,
            :erpc,
            :multicall,
-           [nodes, LiveLoad.Diagnostics, :probe_self, [], timeout],
+           [nodes, LiveLoad.Topology.Diagnostics, :probe_self, [], timeout],
            to_timeout(second: 10)
          ) do
       {:badrpc, reason} ->
