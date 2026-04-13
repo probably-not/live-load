@@ -8,6 +8,14 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.45
+
+Ok, so, here's the situation. Amoc's cluster mechanism seems to have this massive backup when force connecting nodes, which on networked nodes, can cause a really big slowdown in answering messages. The full mesh that Amoc builds on its own has a full gossip mechanism inside that basically ends up exponentially growing the mailbox on every node connection. This ends up causing this huge backup, which then causes even the built in 5 second timeout to pass. Wow. Insane stuff.
+
+So, the solution? Preconnect all of the mesh first, and make sure that all nodes have the status that is completed and all acked. Once that happens, then running the amoc cluster itself should be fast, since everything should be responsive.
+
+Let's see what happens!
+
 ## 0.0.1-rc.44
 
 Ok, so the 2 second probe was too short. I made a couple of changes and added a liveness check to just be certain that the node even responds and that this isn't a problem with the BEAM itself.
