@@ -72,7 +72,7 @@ defmodule LiveLoad.Topology.AmocPeer do
     # This is a brute-force hack since amoc doesn't currently expose a way to ensure that nodes
     # are connected and that all nodes that are expected to be connected are working.
     # amoc connects asynchronously so this just tries to see the status over and over.
-    Enum.reduce_while(1..30, {:error, {:waiting_for_cluster, get_status.()}}, fn
+    Enum.reduce_while(1..300, {:error, {:waiting_for_cluster, get_status.()}}, fn
       _, {:error, {_, %{to_ack: [], failed_to_connect: []}}} ->
         {:halt, :ok}
 
@@ -82,6 +82,9 @@ defmodule LiveLoad.Topology.AmocPeer do
       _, {:error, {_, %{to_ack: [_ | _]}}} ->
         Process.sleep(to_timeout(second: 1))
         {:cont, {:error, {:waiting_for_cluster, get_status.()}}}
+
+      _, {:error, {_, %{} = status}} ->
+        {:halt, {:error, {:unknown_amoc_cluster_status, status}}}
     end)
   end
 
