@@ -4,6 +4,48 @@ defmodule LiveLoad.Topology.Diagnostics do
   # on the amoc peer and amoc runners so that when amoc has failures we can see what the direct issues
   # are without needing to introspect the nodes manually.
 
+  def diagnose_runners(nodes) do
+    liveness = run_liveness(nodes)
+    probe = run_probe(nodes)
+
+    Map.new(nodes, fn node ->
+      {node,
+       %{
+         liveness: Map.fetch!(liveness, node),
+         probe: Map.fetch!(probe, node)
+       }}
+    end)
+  catch
+    kind, reason ->
+      %{probe_error: {:diagnose_runners_crashed, kind, reason}}
+  end
+
+  defp run_liveness(nodes) do
+    nodes
+    |> :erpc.multicall(:erlang, :node, [], 2000)
+    |> then(&Enum.zip(nodes, &1))
+    |> Map.new(fn {node, result} -> {node, format_liveness(result)} end)
+  end
+
+  defp run_probe(nodes) do
+    nodes
+    |> :erpc.multicall(__MODULE__, :probe_self, [], 30_000)
+    |> then(&Enum.zip(nodes, &1))
+    |> Map.new(fn {node, result} -> {node, format_probe(result)} end)
+  end
+
+  defp format_liveness({:ok, node}) when is_atom(node), do: :responsive
+  defp format_liveness({:exit, {:erpc, :timeout}}), do: :timeout
+  defp format_liveness({:exit, reason}), do: {:exit, reason}
+  defp format_liveness({:error, reason}), do: {:error, reason}
+  defp format_liveness({:throw, value}), do: {:throw, value}
+
+  defp format_probe({:ok, snapshot}), do: snapshot
+  defp format_probe({:error, reason}), do: %{probe_error: reason}
+  defp format_probe({:exit, {:erpc, :timeout}}), do: %{probe_error: :erpc_timeout}
+  defp format_probe({:exit, reason}), do: %{probe_error: {:probe_exit, reason}}
+  defp format_probe({:throw, value}), do: %{probe_error: {:probe_throw, value}}
+
   @process_info_keys [
     :message_queue_len,
     :current_function,

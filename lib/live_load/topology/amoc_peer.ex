@@ -3,6 +3,8 @@ defmodule LiveLoad.Topology.AmocPeer do
 
   @behaviour :gen_statem
 
+  alias LiveLoad.Topology.Diagnostics
+
   defmodule Data do
     @moduledoc false
     @type t() :: %__MODULE__{controller_pid: pid(), peer: node()}
@@ -97,7 +99,7 @@ defmodule LiveLoad.Topology.AmocPeer do
       idx, other ->
         {:halt, {:error, {:bad_match_returned_waiting_for_cluster, idx, other}}}
     end)
-    |> with_diagnostics(peer, nodes)
+    |> with_diagnostics(nodes)
   end
 
   def run_scenario(server, scenario, users, opts) do
@@ -110,7 +112,7 @@ defmodule LiveLoad.Topology.AmocPeer do
 
     case :rpc.call(peer, :amoc_dist, :do, [scenario, users, opts]) do
       {:ok, result} -> {:ok, result}
-      other -> {:error, {:failed_to_run_distributed_load_test, other, do_diagnose_runners(peer, runners, 2_000)}}
+      other -> {:error, {:failed_to_run_distributed_load_test, other, Diagnostics.diagnose_runners(runners)}}
     end
   end
 
@@ -118,35 +120,10 @@ defmodule LiveLoad.Topology.AmocPeer do
     :gen_statem.call(server, :peer)
   end
 
-  defp with_diagnostics(:ok, _peer, _nodes), do: :ok
+  defp with_diagnostics(:ok, _nodes), do: :ok
 
-  defp with_diagnostics({:error, reason}, peer, nodes) do
-    {:error, {reason, do_diagnose_runners(peer, nodes, 2_000)}}
-  end
-
-  defp do_diagnose_runners(peer, nodes, timeout) do
-    case :rpc.call(
-           peer,
-           :erpc,
-           :multicall,
-           [nodes, LiveLoad.Topology.Diagnostics, :probe_self, [], timeout],
-           to_timeout(second: 10)
-         ) do
-      {:badrpc, reason} ->
-        %{probe_error: {:peer_rpc_failed, reason}}
-
-      results when is_list(results) ->
-        nodes
-        |> Enum.zip(results)
-        |> Map.new(fn
-          {node, {:ok, snapshot}} -> {node, snapshot}
-          {node, {:error, reason}} -> {node, %{probe_error: reason}}
-          {node, {:exit, reason}} -> {node, %{probe_error: {:probe_exit, reason}}}
-          {node, {:throw, value}} -> {node, %{probe_error: {:probe_throw, value}}}
-        end)
-    end
-  catch
-    kind, reason -> %{probe_error: {:diagnose_runners_crashed, kind, reason}}
+  defp with_diagnostics({:error, reason}, nodes) do
+    {:error, {reason, Diagnostics.diagnose_runners(nodes)}}
   end
 
   def child_spec(init_args, child_opts \\ []) do
