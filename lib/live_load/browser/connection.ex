@@ -153,15 +153,15 @@ defmodule LiveLoad.Browser.Connection do
       defoverridable drain_metrics: 1
 
       @doc false
-      def before_start(browser), do: browser
+      def before_start(browser), do: {:ok, browser}
       defoverridable before_start: 1
 
       @doc false
-      def after_start(browser), do: browser
+      def after_start(browser), do: {:ok, browser}
       defoverridable after_start: 1
 
       @doc false
-      def before_stop(browser), do: browser
+      def before_stop(browser), do: :ok
       defoverridable before_stop: 1
 
       @doc false
