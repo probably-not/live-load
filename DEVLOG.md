@@ -8,6 +8,11 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.46
+
+Let's try an alternative approach. Amoc's clustering seems to be deadlocking on large clusters. Here, I'm going to bypass the connect option and directly ping the nodes for each node in the FLAME cluster.
+
+
 ## 0.0.1-rc.45
 
 Ok, so, here's the situation. Amoc's cluster mechanism seems to have this massive backup when force connecting nodes, which on networked nodes, can cause a really big slowdown in answering messages. The full mesh that Amoc builds on its own has a full gossip mechanism inside that basically ends up exponentially growing the mailbox on every node connection. This ends up causing this huge backup, which then causes even the built in 5 second timeout to pass. Wow. Insane stuff.
