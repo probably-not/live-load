@@ -8,6 +8,11 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.44
+
+Ok, so the 2 second probe was too short. I made a couple of changes and added a liveness check to just be certain that the node even responds and that this isn't a problem with the BEAM itself.
+
+
 ## 0.0.1-rc.43
 
 When I move things around, I really need to test things and make sure that they still work, because otherwise, I'll push things out that don't have the right names.

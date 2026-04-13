@@ -22,7 +22,7 @@ defmodule LiveLoad.Topology.Diagnostics do
 
   defp run_liveness(nodes) do
     nodes
-    |> :erpc.multicall(:erlang, :node, [], 2000)
+    |> :erpc.multicall(Node, :self, [], 2000)
     |> then(&Enum.zip(nodes, &1))
     |> Map.new(fn {node, result} -> {node, format_liveness(result)} end)
   end
