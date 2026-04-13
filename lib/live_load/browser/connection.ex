@@ -121,15 +121,23 @@ defmodule LiveLoad.Browser.Connection do
   ##############################
 
   @doc "A hook called before the supervision tree for the browser is initialized."
-  @callback before_start(browser :: Browser.t()) :: Browser.t()
+  @callback before_start(browser :: Browser.t()) :: {:ok, Browser.t()} | {:error, term()}
 
   @doc "A hook called after the supervision tree for the browser is initialized."
-  @callback after_start(browser :: Browser.t()) :: Browser.t()
+  @callback after_start(browser :: Browser.t()) :: {:ok, Browser.t()} | {:error, term()}
 
-  @doc "A hook called before the supervision tree for the browser is stopped."
-  @callback before_stop(browser :: Browser.t()) :: Browser.t()
+  @doc """
+  A hook called before the supervision tree for the browser is stopped.
 
-  @doc "A hook called after the supervision tree for the browser is stopped."
+  This hook is meant for side effects and as such cannot return any value other than `:ok`
+  """
+  @callback before_stop(browser :: Browser.t()) :: :ok
+
+  @doc """
+  A hook called after the supervision tree for the browser is stopped.
+
+  This hook is meant for side effects and as such cannot return any value other than `:ok`
+  """
   @callback after_stop(browser :: Browser.t()) :: :ok
 
   defmacro __using__(opts) do

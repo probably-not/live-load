@@ -8,33 +8,33 @@ defmodule LiveLoad.Scenario.Topology do
 
   def setup({browser_connection_adapter, browser_connection_opts, _collector_pid} = init_arg) do
     browser = %Browser{connection: {browser_connection_adapter, browser_connection_opts}}
-    browser = Browser.run_hook(browser, :before_start)
 
-    case DynamicSupervisor.start_child(
-           LiveLoad.Scenario.Topology.DynamicSupervisor,
-           Supervisor.child_spec({__MODULE__, init_arg}, restart: :temporary)
-         ) do
-      {:ok, pid} when is_pid(pid) ->
-        browser = prepare_browser(pid, browser)
-        :ok = connect_browser(pid, browser)
-        {:ok, pid}
-
-      {:error, _reason} = error ->
-        error
+    with {:ok, %Browser{} = browser} <- Browser.run_hook(browser, :before_start),
+         {:ok, pid} when is_pid(pid) <-
+           DynamicSupervisor.start_child(
+             LiveLoad.Scenario.Topology.DynamicSupervisor,
+             Supervisor.child_spec({__MODULE__, init_arg}, restart: :temporary)
+           ),
+         {:ok, %Browser{} = prepared_browser} <- prepare_browser(pid, browser) do
+      :ok = connect_browser(pid, prepared_browser)
+      {:ok, pid}
     end
   end
 
   def teardown(supervisor \\ __MODULE__) do
     browser = browser!()
-    browser = Browser.run_hook(browser, :before_stop)
+    :ok = Browser.run_hook(browser, :before_stop)
     :ok = Supervisor.stop(supervisor)
-    Browser.run_hook(browser, :after_stop)
+    :ok = Browser.run_hook(browser, :after_stop)
   end
 
   defp prepare_browser(supervisor, %Browser{} = browser) do
     browser_supervisor_pid = browser_supervisor_pid!(supervisor)
-    browser = Browser.run_hook(%{browser | supervisor_pid: browser_supervisor_pid}, :after_start)
-    tap(browser, &store_browser/1)
+
+    with {:ok, %Browser{} = browser} <-
+           Browser.run_hook(%{browser | supervisor_pid: browser_supervisor_pid}, :after_start) do
+      tap(browser, &store_browser/1)
+    end
   end
 
   defp connect_browser(supervisor, %Browser{} = browser) do

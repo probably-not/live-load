@@ -557,20 +557,20 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @impl true
   @doc false
   def after_start(%Browser{} = browser) do
-    {:ok, playwright_browser} =
-      PlaywrightEx.launch_browser(:chromium,
-        headless: true,
-        connection: Supervisor.playwright_connection_name(),
-        timeout: command_timeout(browser),
-        args: [
-          "--disable-dev-shm-usage",
-          "--disable-gpu",
-          "--no-zygote",
-          "--js-flags=--max-old-space-size=256"
-        ]
-      )
-
-    Browser.put_private(browser, :playwright_connection_browser, playwright_browser)
+    with {:ok, playwright_browser} <-
+           PlaywrightEx.launch_browser(:chromium,
+             headless: true,
+             connection: Supervisor.playwright_connection_name(),
+             timeout: command_timeout(browser),
+             args: [
+               "--disable-dev-shm-usage",
+               "--disable-gpu",
+               "--no-zygote",
+               "--js-flags=--max-old-space-size=256"
+             ]
+           ) do
+      {:ok, Browser.put_private(browser, :playwright_connection_browser, playwright_browser)}
+    end
   end
 
   defp command_timeout(%Browser{connection: {_mod, opts}}) do
