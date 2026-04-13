@@ -8,6 +8,13 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.42
+
+Now we're hitting the fun nitty gritty stuff. Amoc seems to be failing on clusters that are larger, and since we are spinning up hundreds of nodes, that is a problem.
+
+Let's see if we can hack something together that will let us diagnose why it's failing. Looks like maybe something with the cluster gossip that's happening?
+
+
 ## 0.0.1-rc.41
 
 I realized I should probably actually run this locally as I'm making changes that can cause match errors... because this is a stupid one on my part. I updated the contract for the hooks but forgot to update the default implementations!

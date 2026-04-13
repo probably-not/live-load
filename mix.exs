@@ -1,7 +1,7 @@
 defmodule LiveLoad.MixProject do
   use Mix.Project
 
-  @version "0.0.1-rc.41"
+  @version "0.0.1-rc.42"
   @source_url "https://github.com/probably-not/live-load"
   @homepage_url @source_url
 
