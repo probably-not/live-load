@@ -33,7 +33,7 @@ defmodule LiveLoad.Scenario.Topology do
 
     with {:ok, %Browser{} = browser} <-
            Browser.run_hook(%{browser | supervisor_pid: browser_supervisor_pid}, :after_start) do
-      tap(browser, &store_browser/1)
+      {:ok, tap(browser, &store_browser/1)}
     end
   end
 
