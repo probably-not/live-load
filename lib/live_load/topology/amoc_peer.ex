@@ -72,7 +72,8 @@ defmodule LiveLoad.Topology.AmocPeer do
     # This is a brute-force hack since amoc doesn't currently expose a way to ensure that nodes
     # are connected and that all nodes that are expected to be connected are working.
     # amoc connects asynchronously so this just tries to see the status over and over.
-    Enum.reduce_while(1..300, {[], {:error, {:waiting_for_cluster, get_status.()}}}, fn
+    1..300
+    |> Enum.reduce_while({[], {:error, {:waiting_for_cluster, get_status.()}}}, fn
       _, {_rpc_errors, {:error, {_, %{to_ack: [], failed_to_connect: []}}}} ->
         {:halt, :ok}
 
@@ -96,6 +97,7 @@ defmodule LiveLoad.Topology.AmocPeer do
       idx, other ->
         {:halt, {:error, {:bad_match_returned_waiting_for_cluster, idx, other}}}
     end)
+    |> with_diagnostics(peer, nodes)
   end
 
   def run_scenario(server, scenario, users, opts) do
@@ -103,13 +105,48 @@ defmodule LiveLoad.Topology.AmocPeer do
     :rpc.call(peer, :amoc, :do, [scenario, users, opts])
   end
 
-  def run_distributed_scenario(server, scenario, users, opts) do
+  def run_distributed_scenario(server, scenario, users, opts, runners) do
     peer = peer(server)
-    :rpc.call(peer, :amoc_dist, :do, [scenario, users, opts])
+
+    case :rpc.call(peer, :amoc_dist, :do, [scenario, users, opts]) do
+      {:ok, result} -> {:ok, result}
+      other -> {:error, {:failed_to_run_distributed_load_test, other, do_diagnose_runners(peer, runners, 2_000)}}
+    end
   end
 
   def peer(server) do
     :gen_statem.call(server, :peer)
+  end
+
+  defp with_diagnostics(:ok, _peer, _nodes), do: :ok
+
+  defp with_diagnostics({:error, reason}, peer, nodes) do
+    {:error, {reason, do_diagnose_runners(peer, nodes, 2_000)}}
+  end
+
+  defp do_diagnose_runners(peer, nodes, timeout) do
+    case :rpc.call(
+           peer,
+           :erpc,
+           :multicall,
+           [nodes, LiveLoad.Diagnostics, :probe_self, [], timeout],
+           to_timeout(second: 10)
+         ) do
+      {:badrpc, reason} ->
+        %{probe_error: {:peer_rpc_failed, reason}}
+
+      results when is_list(results) ->
+        nodes
+        |> Enum.zip(results)
+        |> Map.new(fn
+          {node, {:ok, snapshot}} -> {node, snapshot}
+          {node, {:error, reason}} -> {node, %{probe_error: reason}}
+          {node, {:exit, reason}} -> {node, %{probe_error: {:probe_exit, reason}}}
+          {node, {:throw, value}} -> {node, %{probe_error: {:probe_throw, value}}}
+        end)
+    end
+  catch
+    kind, reason -> %{probe_error: {:diagnose_runners_crashed, kind, reason}}
   end
 
   def child_spec(init_args, child_opts \\ []) do
