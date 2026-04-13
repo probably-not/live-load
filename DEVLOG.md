@@ -8,6 +8,11 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.39
+
+Still a bad match... I feel like I'm being stupid here and missing something obvious, but screw it, I'm just going to add a bare match so I can track what this issue is.
+
+
 ## 0.0.1-rc.38
 
 This one is a my bad... I forgot to add the wait to not spin out on bad rpc errors.
