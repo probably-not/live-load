@@ -72,19 +72,25 @@ defmodule LiveLoad.Topology.AmocPeer do
     # This is a brute-force hack since amoc doesn't currently expose a way to ensure that nodes
     # are connected and that all nodes that are expected to be connected are working.
     # amoc connects asynchronously so this just tries to see the status over and over.
-    Enum.reduce_while(1..300, {:error, {:waiting_for_cluster, get_status.()}}, fn
-      _, {:error, {_, %{to_ack: [], failed_to_connect: []}}} ->
+    Enum.reduce_while(1..300, {[], {:error, {:waiting_for_cluster, get_status.()}}}, fn
+      _, {_rpc_errors, {:error, {_, %{to_ack: [], failed_to_connect: []}}}} ->
         {:halt, :ok}
 
-      _, {:error, {_, %{to_ack: [], failed_to_connect: [_ | _] = failed}}} ->
+      _, {_rpc_errors, {:error, {_, %{to_ack: [], failed_to_connect: [_ | _] = failed}}}} ->
         {:halt, {:error, {:failed_to_connect, failed}}}
 
-      _, {:error, {_, %{to_ack: [_ | _]}}} ->
+      _, {rpc_errors, {:error, {_, %{to_ack: [_ | _]}}}} ->
         Process.sleep(to_timeout(second: 1))
-        {:cont, {:error, {:waiting_for_cluster, get_status.()}}}
+        {:cont, {rpc_errors, {:error, {:waiting_for_cluster, get_status.()}}}}
 
-      _, {:error, {_, %{} = status}} ->
+      _, {_rpc_errors, {:error, {_, %{} = status}}} ->
         {:halt, {:error, {:unknown_amoc_cluster_status, status}}}
+
+      _, {rpc_errors, {:badrpc, reason}} when length(rpc_errors) > 20 ->
+        {:halt, {:error, {:waiting_for_cluster_rpc_failed, [reason | rpc_errors]}}}
+
+      _, {rpc_errors, {:badrpc, reason}} ->
+        {:cont, {[reason | rpc_errors], {:error, {:waiting_for_cluster, get_status.()}}}}
     end)
   end
 
