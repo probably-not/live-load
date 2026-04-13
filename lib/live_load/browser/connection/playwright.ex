@@ -574,6 +574,6 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   end
 
   defp command_timeout(%Browser{connection: {_mod, opts}}) do
-    opts[:command_timeout] || to_timeout(second: 10)
+    opts[:command_timeout] || to_timeout(minute: 1)
   end
 end
