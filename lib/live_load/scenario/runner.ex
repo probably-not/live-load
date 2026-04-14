@@ -107,6 +107,10 @@ defmodule LiveLoad.Scenario.Runner do
 
   def looping(:info, {ref, %Scenario.Context{} = context}, %Data{} = data) do
     Process.demonitor(ref, [:flush])
+
+    # Step is the only thing that's reset since it is used for telemetry to understand which step the context failed at.
+    context = %{context | step: 0}
+
     %Task{} = task = partitioned_async_nolink(data.scenario, context, data.user_id, data.config.scenario_config)
 
     {
