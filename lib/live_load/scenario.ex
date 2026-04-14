@@ -67,7 +67,8 @@ defmodule LiveLoad.Scenario do
   @type internal_config() :: %{
           browser: LiveLoad.Browser.t(),
           iteration_timeout: timeout(),
-          scenario_duration: timeout()
+          scenario_duration: timeout(),
+          throttle_names: MapSet.t(atom())
         }
 
   @typedoc "The user ID passed to the `c:run/3` callback. It can be either an integer or a binary."
@@ -91,6 +92,34 @@ defmodule LiveLoad.Scenario do
   @callback run(context :: Scenario.Context.t(), user_id :: user_id(), config :: config()) ::
               Scenario.Context.t() | {:error, term()}
 
+  @doc """
+  Define any throttles that the load test will need.
+
+  Throttles are cluster wide throttling and rate limiting mechanisms that
+  enforce a smoothed, non-bursty execution rate through the throttle.
+  If you configure a `LiveLoad.Scenario.Throttle.Rate` throttle to
+  100 per minute, you get one execution approximately once every 600ms,
+  not 100 executions in the first moment of each minute.
+
+  There are 3 types of built-in throttles that each enable different mechanisms:
+  - `LiveLoad.Scenario.Throttle.Rate`: A basic rate limiter which limits to a specific
+    number of events per interval configured.
+  - `LiveLoad.Scenario.Throttle.Interarrival`: A rate limiter which defines the amount of time
+    between each event.
+  - `LiveLoad.Scenario.Throttle.Parallelism`: A rate limiter which ensures a specific number of
+    concurrent executions.
+
+  Throttles must be named with a specific name and can be utilized in a `c:run/3` callback
+  through a `LiveLoad.Scenario.Context.throttle/2` call with the same name.
+
+  Documentation about how to configure each rate limiter can be found in their respective moduledocs.
+  """
+  @callback throttles(config()) :: [
+              LiveLoad.Scenario.Throttle.Rate.t()
+              | LiveLoad.Scenario.Throttle.Interarrival.t()
+              | LiveLoad.Scenario.Throttle.Parallelism.t()
+            ]
+
   defmacro __using__(_opts) do
     quote location: :keep do
       @behaviour :amoc_scenario
@@ -106,6 +135,7 @@ defmodule LiveLoad.Scenario do
           halted?: 1,
           fail: 2,
           failed?: 1,
+          throttle: 2,
           context_storage_snapshot: 1,
           context_storage_snapshot: 2,
           restore_context_storage: 2,
@@ -201,6 +231,11 @@ defmodule LiveLoad.Scenario do
       @doc false
       def config(_opts), do: {:ok, %{}}
       defoverridable config: 1
+
+      @impl LiveLoad.Scenario
+      @doc false
+      def throttles(_config), do: []
+      defoverridable throttles: 1
     end
   end
 end

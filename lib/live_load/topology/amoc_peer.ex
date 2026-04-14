@@ -174,7 +174,7 @@ defmodule LiveLoad.Topology.AmocPeer do
   end
 
   defp peer_args do
-    args = [~c"-hidden"]
+    args = []
     args = maybe_add_cookie_args(args)
     in_release? = System.get_env("RELEASE_ROOT") != nil
 

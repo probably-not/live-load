@@ -1,5 +1,7 @@
 import Config
 
+config :flame, FlamePeer, start_peers_hidden?: false
+
 config :git_hooks,
   auto_install: true,
   verbose: true,

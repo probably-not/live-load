@@ -62,6 +62,7 @@ defmodule LiveLoad.Scenario.Context do
 
   @type t() :: %__MODULE__{
           browser_context: LiveLoad.Browser.Context.t(),
+          throttle_names: MapSet.t(atom()),
           assigns: %{optional(atom()) => term()},
           halted?: boolean(),
           step: non_neg_integer(),
@@ -85,11 +86,11 @@ defmodule LiveLoad.Scenario.Context do
   """
   @type assigned_as() :: atom() | (term() -> atom()) | (term() -> %{atom() => term()})
 
-  defstruct [:browser_context, :error, halted?: false, assigns: %{}, step: 0]
+  defstruct [:browser_context, :throttle_names, :error, halted?: false, assigns: %{}, step: 0]
 
   @doc false
-  def new(%LiveLoad.Browser.Context{} = browser_context) do
-    %Context{browser_context: browser_context}
+  def new(%LiveLoad.Browser.Context{} = browser_context, throttle_names) do
+    %Context{browser_context: browser_context, throttle_names: throttle_names}
   end
 
   @doc """
@@ -178,6 +179,27 @@ defmodule LiveLoad.Scenario.Context do
   Allowed in guard tests.
   """
   defguard failed?(context) when not is_nil(context.error)
+
+  @doc """
+  Wait for a named throttle to allow the next step in the pipeline.
+  """
+  @spec throttle(context :: t(), name :: atom()) :: t()
+  def throttle(%Context{} = ctx, _name) when halted?(ctx), do: ctx
+
+  def throttle(%Context{} = ctx, _name) when failed?(ctx), do: ctx
+
+  def throttle(%Context{} = ctx, name) do
+    ctx = %{ctx | step: ctx.step + 1}
+
+    if MapSet.member?(ctx.throttle_names, name) do
+      case :amoc_throttle.wait(name) do
+        :ok -> ctx
+        {:error, reason} -> fail(ctx, {:throttle_failure, reason})
+      end
+    else
+      fail(ctx, {:unknown_throttle, name, MapSet.to_list(ctx.throttle_names)})
+    end
+  end
 
   @doc """
   Gets a snapshot of the current storage state of the browser context.
