@@ -12,10 +12,6 @@ defmodule LiveLoad.Cluster.Sizing do
   # 512 MB should cover everything we start up for amoc and the telemetry processes.
   @reserved_headroom_bytes 512 * 1024 * 1024
 
-  # For each CPU code, the number of browser contexts we can create.
-  # This is a pretty conservative number, but Playwright is a resource hog.
-  @contexts_per_core 4
-
   def calculate_possible_users_per_node(%LiveLoad.Cluster.Node{} = node, browser_connection_adapter) do
     limited_by_node_memory =
       max_possible_by_memory_limits(
@@ -24,7 +20,7 @@ defmodule LiveLoad.Cluster.Sizing do
         browser_connection_adapter.context_memory_usage_bytes()
       )
 
-    limited_by_node_cpu = max_possible_by_cpu_limits(node)
+    limited_by_node_cpu = max_possible_by_cpu_limits(node, browser_connection_adapter)
 
     min(limited_by_node_memory, limited_by_node_cpu)
   end
@@ -39,13 +35,13 @@ defmodule LiveLoad.Cluster.Sizing do
     end
   end
 
-  defp max_possible_by_cpu_limits(%LiveLoad.Cluster.Node{} = node) do
+  defp max_possible_by_cpu_limits(%LiveLoad.Cluster.Node{} = node, browser_connection_adapter) do
     cores =
       node.logical_processors_available ||
         node.logical_processors_online ||
         node.logical_processors ||
         node.schedulers_online
 
-    cores * @contexts_per_core
+    cores * browser_connection_adapter.browser_contexts_per_core()
   end
 end

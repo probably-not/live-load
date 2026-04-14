@@ -24,6 +24,10 @@ defmodule LiveLoad.Browser.Connection.Playwright do
 
   @impl true
   @doc false
+  def browser_contexts_per_core, do: 2
+
+  @impl true
+  @doc false
   def browser_memory_usage_bytes, do: 250 * 1024 * 1024
 
   @impl true

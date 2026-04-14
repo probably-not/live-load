@@ -6,10 +6,11 @@ defmodule LiveLoad.Cluster do
   and ensuring that a node can have a maximum concurrency of 1, to ensure that only a single FLAME process is run on each node.
 
   The cluster initialization goes through optimization phases by checking the expected resource usage of a browser and calculating
-  how many nodes will be necessary based on the node's actual resource availability. A `LiveLoad.Browser.Connection` must provide 2
-  callbacks: `c:LiveLoad.Browser.Connection.browser_memory_usage_bytes/0` and `c:LiveLoad.Browser.Connection.context_memory_usage_bytes/0` to
-  allow the cluster initialization to calculate how many nodes are necessary in order to pre-warm the pool. If the amount of nodes
-  necessary exceeds the configured `max_allowed_nodes`, an error will be returned and the scenario will not be run.
+  how many nodes will be necessary based on the node's actual resource availability. A `LiveLoad.Browser.Connection` must provide 3
+  callbacks: `c:LiveLoad.Browser.Connection.browser_contexts_per_core/0`, `c:LiveLoad.Browser.Connection.browser_memory_usage_bytes/0`
+  and `c:LiveLoad.Browser.Connection.context_memory_usage_bytes/0` to allow the cluster initialization to calculate how many nodes
+  are necessary in order to pre-warm the pool. If the amount of nodes necessary exceeds the configured `max_allowed_nodes`, an error
+  will be returned and the scenario will not be run.
   """
 
   alias __MODULE__
@@ -79,9 +80,9 @@ defmodule LiveLoad.Cluster do
   configured by the the given FLAME configurations.
 
   The calculation of necessary nodes is a heuristic based on the expected resource usage per user process
-  determined by the `c:LiveLoad.Browser.Connection.browser_memory_usage_bytes/0` and
-  `c:LiveLoad.Browser.Connection.context_memory_usage_bytes/0` callbacks on the selected
-  `LiveLoad.Browser.Connection` implementation for this run.
+  determined by the `c:LiveLoad.Browser.Connection.browser_contexts_per_core/0`,
+  `c:LiveLoad.Browser.Connection.browser_memory_usage_bytes/0` and `c:LiveLoad.Browser.Connection.context_memory_usage_bytes/0`
+  callbacks on the selected `LiveLoad.Browser.Connection` implementation for this run.
   """
   @type not_enough_nodes_error() :: {:error, {:necessary_nodes_exceeds_max_allowed_nodes, necessary :: pos_integer()}}
 

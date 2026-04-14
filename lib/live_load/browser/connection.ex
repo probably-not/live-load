@@ -20,6 +20,14 @@ defmodule LiveLoad.Browser.Connection do
   ####################################
 
   @doc """
+  Different browser implementations may have different CPU requirements, depending on how they are implemented.
+  The `LiveLoad.Cluster` initialization procedure uses this callback in order to calculate the optimal amount of nodes
+  to use for running a `LiveLoad.Scenario` based on the number of users for the test and the resources available on each
+  cluster node.
+  """
+  @callback browser_contexts_per_core() :: pos_integer()
+
+  @doc """
   Different browser implementations may have different memory requirements, depending on how they are implemented.
   The `LiveLoad.Cluster` initialization procedure uses this callback in order to calculate the optimal amount of nodes
   to use for running a `LiveLoad.Scenario` based on the number of users for the test and the resources available on each
