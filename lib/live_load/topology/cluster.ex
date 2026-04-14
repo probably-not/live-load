@@ -89,7 +89,7 @@ defmodule LiveLoad.Topology.Cluster do
   end
 
   def prime_cluster(cluster_pool_name, users, browser_connection_adapter, max_allowed_nodes) do
-    with %Cluster.Node{} = initial_cluster_node <- wrapped_node_create(cluster_pool_name),
+    with %Cluster.Node{} = initial_cluster_node <- wrapped_node_create(cluster_pool_name, 10),
          {:ok, necessary_nodes} <-
            validate_cluster_sizing(initial_cluster_node, users, browser_connection_adapter, max_allowed_nodes) do
       spin_up_nodes(necessary_nodes - 1, cluster_pool_name, [initial_cluster_node])
@@ -99,21 +99,32 @@ defmodule LiveLoad.Topology.Cluster do
   defp spin_up_nodes(count, cluster_pool_name, initial_nodes) do
     # TODO: Should this be done in parallel? It may speed things up so that I'm just waiting for all of to boot up at once.
     Enum.reduce_while(1..count//1, {:ok, initial_nodes}, fn _, {:ok, nodes} ->
-      case wrapped_node_create(cluster_pool_name) do
+      case wrapped_node_create(cluster_pool_name, 10) do
         %Cluster.Node{} = cluster_node -> {:cont, {:ok, [cluster_node | nodes]}}
         {:error, _reason} = error -> {:halt, error}
       end
     end)
   end
 
-  defp wrapped_node_create(pool_name) do
+  defp wrapped_node_create(pool_name, attempts_left, errors \\ [])
+
+  defp wrapped_node_create(_pool_name, 0, errors) do
+    {:error, {:retries_exhausted, Enum.reverse(errors)}}
+  end
+
+  defp wrapped_node_create(pool_name, attempts_left, errors) do
     FLAME.call(pool_name, &Cluster.Node.new!/0, track_resources: true)
   rescue
     exception -> {:error, exception}
   catch
-    :exit, {:timeout, {FLAME.Pool, :call, _}} -> {:error, :cluster_node_creation_timeout}
-    :exit, {:noproc, {FLAME.Pool, :call, _}} -> {:error, :cluster_name_invalid}
-    :exit, reason -> {:error, reason}
+    :exit, {:timeout, {FLAME.Pool, :call, _}} ->
+      wrapped_node_create(pool_name, attempts_left - 1, [{:exit, :timeout} | errors])
+
+    :exit, {:noproc, {FLAME.Pool, :call, _}} ->
+      {:error, :cluster_name_invalid}
+
+    :exit, reason ->
+      {:exit, reason}
   end
 
   defp validate_cluster_sizing(%Cluster.Node{} = cluster_node, users, browser_connection_adapter, max_allowed_nodes) do
