@@ -9,16 +9,19 @@ defmodule LiveLoad.Scenario.Throttle.Rate do
 
   ```elixir
   # 100 per minute (the default interval)
-  #{__MODULE__}.new(:my_throttle, 100)
+  #{inspect(__MODULE__)}.new(:my_throttle, 100)
 
   # 10 per second
-  #{__MODULE__}.new(:my_throttle, 10) |> #{__MODULE__}.interval(to_timeout(second: 1))
+  #{inspect(__MODULE__)}.new(:my_throttle, 10)
+  |> #{inspect(__MODULE__)}.interval(to_timeout(second: 1))
 
   # 500 per 30 seconds
-  #{__MODULE__}.new(:my_throttle, 500) |> #{__MODULE__}.interval(to_timeout(second: 30))
+  #{inspect(__MODULE__)}.new(:my_throttle, 500)
+  |> #{inspect(__MODULE__)}.interval(to_timeout(second: 30))
 
   # Start at 10 per minute and ramp up to 100 per minute over the next 5 minutes
-  #{__MODULE__}.new(:my_throttle, 10) |> #{__MODULE__}.ramp(100, duration: to_timeout(minute: 5))
+  #{inspect(__MODULE__)}.new(:my_throttle, 10)
+  |> #{inspect(__MODULE__)}.ramp(100, duration: to_timeout(minute: 5))
   ```
   """
 

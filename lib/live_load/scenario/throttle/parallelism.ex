@@ -5,7 +5,7 @@ defmodule LiveLoad.Scenario.Throttle.Parallelism do
   ## Example
 
   ```elixir
-  #{__MODULE__}.new(:my_throttle, 5)
+  #{inspect(__MODULE__)}.new(:my_throttle, 5)
   ```
   """
 

@@ -158,6 +158,12 @@ defmodule LiveLoad.MixProject do
         LiveLoad.Scenario.Context,
         LiveLoad.Scenario.Error
       ],
+      "Scenario.Throttle": [
+        LiveLoad.Scenario.Throttle.Rate,
+        LiveLoad.Scenario.Throttle.Parallelism,
+        LiveLoad.Scenario.Throttle.Interarrival,
+        LiveLoad.Scenario.Throttle.Ramp
+      ],
       Browser: [
         LiveLoad.Browser,
         LiveLoad.Browser.Context

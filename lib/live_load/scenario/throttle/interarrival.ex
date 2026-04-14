@@ -6,13 +6,14 @@ defmodule LiveLoad.Scenario.Throttle.Interarrival do
 
   ```elixir
   # One event every 500 milliseconds
-  #{__MODULE__}.new(:my_throttle, to_timeout(millisecond: 500))
+  #{inspect(__MODULE__)}.new(:my_throttle, to_timeout(millisecond: 500))
 
   # One event every 2 seconds
-  #{__MODULE__}.new(:my_throttle, to_timeout(second: 2))
+  #{inspect(__MODULE__)}.new(:my_throttle, to_timeout(second: 2))
 
   # Start at 1 event per second and ramp up over the next 2 minutes
-  #{__MODULE__}.new(:my_throttle, to_timeout(second: 1)) |> #{__MODULE__}.ramp(100, duration: to_timeout(minute: 2))
+  #{inspect(__MODULE__)}.new(:my_throttle, to_timeout(second: 1))
+  |> #{inspect(__MODULE__)}.ramp(100, duration: to_timeout(minute: 2))
   ```
   """
   alias __MODULE__
