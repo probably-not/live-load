@@ -8,6 +8,11 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.48
+
+Alright, so as I'm testing all of this stuff, I'm seeing that Playwright is even more of a resource hog than I though! Damn. So, I added a `browser_contexts_per_core` callback so that browser connections can define how many contexts per core they can create. Hopefully LightPanda's browser gets to a semi-usable state soon... I'd love to see the difference that they can make with optimized browser rendering that is 20x less than Chrome/Playwright.
+
+
 ## 0.0.1-rc.47
 
 Wow. Things worked! But now I need to avoid crashes that are unnecessary.
