@@ -32,7 +32,7 @@ defmodule LiveLoad.Reporter.HTML do
 
         unknown ->
           %{
-            name: "unkown_result_value",
+            name: "unknown_result_value",
             value: inspect(unknown, limit: :infinity, printable_limit: :infinity, pretty: true)
           }
       end)
