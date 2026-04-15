@@ -132,7 +132,6 @@ defmodule LiveLoad.Topology do
     amoc_master_peer_node = Topology.AmocPeer.peer(amoc_peer_pid)
 
     with :ok <- Topology.AmocPeer.register_scenarios_to_amoc(amoc_peer_pid, [scenario]),
-         :ok <- Topology.Cluster.preconnect_mesh(cluster),
          :ok <- Topology.Cluster.seed_amoc_cluster(amoc_master_peer_node, cluster) do
       Topology.AmocPeer.distribute_scenarios_to_amoc_cluster(amoc_peer_pid, cluster.pool_node_names)
     end

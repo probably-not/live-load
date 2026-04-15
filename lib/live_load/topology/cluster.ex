@@ -35,50 +35,21 @@ defmodule LiveLoad.Topology.Cluster do
     Supervisor.start_child(supervisor, wrapped)
   end
 
-  def preconnect_mesh(%Cluster{} = cluster) do
-    results =
-      cluster.pool_nodes
-      |> Task.async_stream(
-        fn %Cluster.Node{} = cluster_node ->
-          Cluster.Node.preconnect(cluster_node, cluster.pool_node_names, to_timeout(minute: 1))
-        end,
-        max_concurrency: min(8, max(length(cluster.pool_nodes), 1)),
-        timeout: :infinity
-      )
-      |> Enum.zip(cluster.pool_nodes)
-      |> Map.new(fn {{:ok, node_results}, %Cluster.Node{node: node}} ->
-        {node, node_results}
-      end)
-
-    failures =
-      for {node, node_results} <- results,
-          bad_peers = Enum.reject(List.wrap(node_results), &match?({_, true}, &1)),
-          bad_peers != [],
-          into: %{},
-          do: {node, bad_peers}
-
-    if map_size(failures) == 0 do
-      :ok
-    else
-      {:error, {:preconnect_mesh_failed, failures}}
-    end
-  end
-
   def seed_amoc_cluster(amoc_master_peer_node, %Cluster{} = cluster) do
-    seeds = [amoc_master_peer_node | cluster.pool_node_names]
+    runner_nodes = cluster.pool_node_names
 
     runner_results =
       cluster.pool_nodes
       |> Task.async_stream(
         fn %Cluster.Node{} = cluster_node ->
-          Cluster.Node.seed_amoc_cluster(cluster_node, seeds, to_timeout(minute: 2))
+          Cluster.Node.seed_amoc_cluster(cluster_node, runner_nodes, amoc_master_peer_node, to_timeout(minute: 2))
         end,
         max_concurrency: min(8, max(length(cluster.pool_nodes), 1)),
         timeout: :infinity
       )
       |> Enum.zip(cluster.pool_nodes)
-      |> Map.new(fn {{:ok, ping_results}, %Cluster.Node{node: node}} ->
-        {node, ping_results}
+      |> Map.new(fn {{:ok, result}, %Cluster.Node{node: node}} ->
+        {node, result}
       end)
 
     amoc_master_peer_node_result =
@@ -87,7 +58,7 @@ defmodule LiveLoad.Topology.Cluster do
           amoc_master_peer_node,
           LiveLoad.Cluster.AmocSeed,
           :seed_amoc_cluster_on_node,
-          [seeds],
+          [runner_nodes, amoc_master_peer_node],
           to_timeout(minute: 2)
         )
       end
@@ -97,11 +68,10 @@ defmodule LiveLoad.Topology.Cluster do
     results = Map.put(runner_results, amoc_master_peer_node, amoc_master_peer_node_result)
 
     failures =
-      for {node, ping_results} <- results,
-          bad = Enum.reject(List.wrap(ping_results), &match?({_, :pong}, &1)),
-          bad != [],
+      for {node, result} <- results,
+          result != :ok,
           into: %{},
-          do: {node, bad}
+          do: {node, result}
 
     if map_size(failures) == 0 do
       :ok
