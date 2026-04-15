@@ -8,6 +8,10 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.55
+
+A quick follow up where I come out looking like an idiot... I used a link to link the watcher to the caller process, but then when the watcher dies the calling process dies. Monitors man... monitors.
+
 ## 0.0.1-rc.54
 
 I had a process leak in my topology! I've made this mistake a few times and gotten bitten by it, and I definitely think that it needs to be more obvious in the documentation somewhere... In my topology, I originally relied on `Process.link/1` in order to link the caller to the Topology. However, at a certain point I turned my topology into a supervisor because I needed it to have children, and I fully forgot that the link won't do anything on a supervisor! Supervisors trap exits and use them to manage restarts, and only use the original caller in order to properly exit (when `start_link`ed). However, since my supervisor's original caller was a dynamic supervisor... the link didn't work as I intended.
