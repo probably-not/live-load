@@ -8,6 +8,13 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.52
+
+One commit from the previous release, and a couple of commits in this release, and we have some parallelization built in to the startup costs.
+
+This should hopefully help speed up the cost of the booting process before we even get to everything. On large clusters (50+), the whole cluster was idle for an hour while everything was connecting up. No good when we're promising elastic ephemeral nodes... so hopefully this will move things along quickly.
+
+
 ## 0.0.1-rc.51
 
 A bit of a mistake on my part for setting up the throttles, with multiple nodes, we can't change the rate multiple times.
