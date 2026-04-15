@@ -36,8 +36,10 @@ import {
 import type {
   ChartSelection,
   MetricUnit,
+  ParsedBucket,
   ParsedScenarioEntry,
 } from "../types";
+import { Tooltip } from "./Tooltip";
 
 // ─── ScenarioFilter ─────────────────────────────────────────────────────────────
 
@@ -360,6 +362,17 @@ function CompareTimeSeries({ scenarios, indices, colors }: CompareTimeSeriesProp
       for (const b of s.global.time_series) offsets.add(b.offset_ms);
     }
     const sortedOffsets = [...offsets].sort((a, b) => a - b);
+
+    // Pre-build offset → bucket maps so lookup is O(1) instead of O(n)
+    const bucketMaps = new Map<number, Map<number, ParsedBucket>>();
+    for (const i of indices) {
+      const s = scenarios[i];
+      if (s.error) continue;
+      const m = new Map<number, ParsedBucket>();
+      for (const b of s.global.time_series) m.set(b.offset_ms, b);
+      bucketMaps.set(i, m);
+    }
+
     return sortedOffsets.map((offset_ms) => {
       const row: Record<string, string | number | null> = {
         t: `${(offset_ms / 1000).toFixed(0)}s`,
@@ -370,7 +383,7 @@ function CompareTimeSeries({ scenarios, indices, colors }: CompareTimeSeriesProp
           row[`s${i}`] = null;
           continue;
         }
-        const b = s.global.time_series.find((bb) => bb.offset_ms === offset_ms);
+        const b = bucketMaps.get(i)?.get(offset_ms);
         if (!b) {
           row[`s${i}`] = null;
           continue;
@@ -487,63 +500,7 @@ function CompareTimeSeries({ scenarios, indices, colors }: CompareTimeSeriesProp
                 width={40}
               />
               <RechartsTooltip
-                content={(props) => {
-                  // Inline minimal tooltip — Recharts payload typing is loose here
-                  const { active, payload, label } = props as {
-                    active?: boolean;
-                    payload?: { value: number | null; color: string; name: string }[];
-                    label?: string;
-                  };
-                  if (!active || !payload?.length) return null;
-                  const valid = payload.filter((p) => p.value != null);
-                  if (!valid.length) return null;
-                  return (
-                    <div
-                      style={{
-                        background: "var(--t1)",
-                        color: "#f8fafc",
-                        padding: "8px 12px",
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontFamily: "var(--mono)",
-                        lineHeight: 1.7,
-                        boxShadow: "0 4px 12px rgba(0,0,0,.2)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontFamily: "var(--sans)",
-                          fontWeight: 500,
-                          opacity: 0.6,
-                          fontSize: 11,
-                          marginBottom: 2,
-                        }}
-                      >
-                        {label}
-                      </div>
-                      {valid.map((p, i) => (
-                        <div
-                          key={i}
-                          style={{ display: "flex", alignItems: "center", gap: 6 }}
-                        >
-                          <span
-                            style={{
-                              width: 8,
-                              height: 3,
-                              borderRadius: 2,
-                              background: p.color,
-                              flexShrink: 0,
-                            }}
-                          />
-                          <span style={{ opacity: 0.7 }}>{p.name}:</span>
-                          <span style={{ fontWeight: 600, marginLeft: "auto" }}>
-                            {fmtTsValue(p.value, "count")}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                }}
+                content={(props) => <Tooltip {...(props as any)} unit="count" />}
               />
               {indices.map((i) => (
                 <Bar
@@ -575,62 +532,7 @@ function CompareTimeSeries({ scenarios, indices, colors }: CompareTimeSeriesProp
                 width={56}
               />
               <RechartsTooltip
-                content={(props) => {
-                  const { active, payload, label } = props as {
-                    active?: boolean;
-                    payload?: { value: number | null; color: string; name: string }[];
-                    label?: string;
-                  };
-                  if (!active || !payload?.length) return null;
-                  const valid = payload.filter((p) => p.value != null);
-                  if (!valid.length) return null;
-                  return (
-                    <div
-                      style={{
-                        background: "var(--t1)",
-                        color: "#f8fafc",
-                        padding: "8px 12px",
-                        borderRadius: 6,
-                        fontSize: 12,
-                        fontFamily: "var(--mono)",
-                        lineHeight: 1.7,
-                        boxShadow: "0 4px 12px rgba(0,0,0,.2)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontFamily: "var(--sans)",
-                          fontWeight: 500,
-                          opacity: 0.6,
-                          fontSize: 11,
-                          marginBottom: 2,
-                        }}
-                      >
-                        {label}
-                      </div>
-                      {valid.map((p, i) => (
-                        <div
-                          key={i}
-                          style={{ display: "flex", alignItems: "center", gap: 6 }}
-                        >
-                          <span
-                            style={{
-                              width: 8,
-                              height: 3,
-                              borderRadius: 2,
-                              background: p.color,
-                              flexShrink: 0,
-                            }}
-                          />
-                          <span style={{ opacity: 0.7 }}>{p.name}:</span>
-                          <span style={{ fontWeight: 600, marginLeft: "auto" }}>
-                            {fmtTsValue(p.value, chartUnit)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                }}
+                content={(props) => <Tooltip {...(props as any)} unit={chartUnit} />}
               />
               {indices.map((i) => (
                 <Line

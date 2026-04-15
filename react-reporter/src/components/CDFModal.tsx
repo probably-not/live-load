@@ -25,7 +25,7 @@ interface CDFModalProps {
 
 export function CDFModal({ info, onClose }: CDFModalProps) {
   if (!info) return null;
-  const { label, hist, unit, key } = info;
+  const { label, hist, unit, key: metricKey } = info;
   if (!hist.cdf) return null;
   const cdf = hist.cdf;
   const data = cdf.map((v, i) => ({ p: i, v }));
@@ -36,7 +36,7 @@ export function CDFModal({ info, onClose }: CDFModalProps) {
         <div className="Mh">
           <div>
             <div className="Mt">{label} — Distribution</div>
-            <div className="Ms">{key}</div>
+            <div className="Ms">{metricKey}</div>
           </div>
           <button className="Mx" onClick={onClose}>
             ×

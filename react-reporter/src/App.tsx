@@ -57,13 +57,13 @@ export default function App() {
     setActiveIdx(idx);
     setActiveNode(null);
     setView("scenario");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
   const backToCompare = useCallback(() => {
     setView("compare");
     setActiveNode(null);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
   if (error) {
@@ -111,75 +111,67 @@ export default function App() {
             onDrillIn={drillIn}
             onChangeSelection={setSelectedIndices}
           />
+        ) : scenarios[activeIdx].error ? (
+          <>
+            {scenarios.length > 1 && (
+              <button className="Hbk" onClick={backToCompare}>
+                ← Back to comparison
+              </button>
+            )}
+            <div
+              style={{
+                background: "var(--erb)",
+                border: "1px solid var(--er)",
+                borderRadius: 8,
+                padding: "32px 24px",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: "var(--er)",
+                  marginBottom: 8,
+                }}
+              >
+                Scenario Failed
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontSize: 14,
+                  color: "var(--t2)",
+                }}
+              >
+                {scenarios[activeIdx].name}
+              </div>
+              <div
+                style={{
+                  fontFamily: "var(--mono)",
+                  fontSize: 13,
+                  color: "var(--t2)",
+                  marginTop: 12,
+                  background: "var(--s1)",
+                  padding: "12px 16px",
+                  borderRadius: 6,
+                  display: "inline-block",
+                  textAlign: "left",
+                  maxWidth: "100%",
+                  overflow: "auto",
+                }}
+              >
+                {scenarios[activeIdx].reason}
+              </div>
+            </div>
+          </>
         ) : (
-          (() => {
-            const active = scenarios[activeIdx];
-            if (active.error) {
-              return (
-                <>
-                  {scenarios.length > 1 && (
-                    <button className="Hbk" onClick={backToCompare}>
-                      ← Back to comparison
-                    </button>
-                  )}
-                  <div
-                    style={{
-                      background: "var(--erb)",
-                      border: "1px solid var(--er)",
-                      borderRadius: 8,
-                      padding: "32px 24px",
-                      textAlign: "center",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 16,
-                        fontWeight: 600,
-                        color: "var(--er)",
-                        marginBottom: 8,
-                      }}
-                    >
-                      Scenario Failed
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "var(--mono)",
-                        fontSize: 14,
-                        color: "var(--t2)",
-                      }}
-                    >
-                      {active.name}
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "var(--mono)",
-                        fontSize: 13,
-                        color: "var(--t2)",
-                        marginTop: 12,
-                        background: "var(--s1)",
-                        padding: "12px 16px",
-                        borderRadius: 6,
-                        display: "inline-block",
-                        textAlign: "left",
-                        maxWidth: "100%",
-                        overflow: "auto",
-                      }}
-                    >
-                      {active.reason}
-                    </div>
-                  </div>
-                </>
-              );
-            }
-            return (
-              <ScenarioReport
-                scenario={active}
-                activeNode={activeNode}
-                onSelectNode={setActiveNode}
-                onBack={scenarios.length > 1 ? backToCompare : null}
-              />
-            );
-          })()
+          <ScenarioReport
+            scenario={scenarios[activeIdx]}
+            activeNode={activeNode}
+            onSelectNode={setActiveNode}
+            onBack={scenarios.length > 1 ? backToCompare : null}
+          />
         )}
 
         <div className="Ft">
