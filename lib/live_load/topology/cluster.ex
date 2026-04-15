@@ -97,12 +97,24 @@ defmodule LiveLoad.Topology.Cluster do
   end
 
   defp spin_up_nodes(count, cluster_pool_name, initial_nodes) do
-    # TODO: Should this be done in parallel? It may speed things up so that I'm just waiting for all of to boot up at once.
-    Enum.reduce_while(1..count//1, {:ok, initial_nodes}, fn _, {:ok, nodes} ->
-      case wrapped_node_create(cluster_pool_name, 10) do
-        %Cluster.Node{} = cluster_node -> {:cont, {:ok, [cluster_node | nodes]}}
-        {:error, _reason} = error -> {:halt, error}
-      end
+    results =
+      1..count//1
+      |> Task.async_stream(
+        fn _ -> wrapped_node_create(cluster_pool_name, 10) end,
+        # TODO: This should probably be configurable somehow... but I don't want to
+        # start propagating opts right now.
+        max_concurrency: min(8, max(count, 1)),
+        # FLAME.call inside wrapped_node_create already inherits FLAME's timeout,
+        # so setting the timeout to `:infinity` here should probably be safe, and
+        # ensure that the task completes based on the configured timeout.
+        timeout: :infinity,
+        ordered: false
+      )
+      |> Enum.to_list()
+
+    Enum.reduce_while(results, {:ok, initial_nodes}, fn
+      {:ok, %Cluster.Node{} = node}, {:ok, nodes} -> {:cont, {:ok, [node | nodes]}}
+      {:ok, {:error, _} = error}, _acc -> {:halt, error}
     end)
   end
 
