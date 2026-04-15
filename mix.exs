@@ -137,7 +137,8 @@ defmodule LiveLoad.MixProject do
     [
       LiveLoad: [
         LiveLoad,
-        LiveLoad.JSON
+        LiveLoad.JSON,
+        LiveLoad.Reporter.HTML
       ],
       "LiveLoad.Cluster": [
         LiveLoad.Cluster,

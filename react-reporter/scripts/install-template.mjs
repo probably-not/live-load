@@ -14,7 +14,7 @@ const projectRoot = resolve(__dirname, "..");
 const source = resolve(projectRoot, "dist", "index.html");
 const dest =
   process.env.LIVELOAD_TEMPLATE_PATH ||
-  resolve(projectRoot, "..", "priv", "reporter", "template.html");
+  resolve(projectRoot, "..", "priv", "react-reporter", "template.html");
 
 if (!existsSync(source)) {
   console.error(`Source not found: ${source}`);
