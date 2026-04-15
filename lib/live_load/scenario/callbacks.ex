@@ -86,8 +86,8 @@ defmodule LiveLoad.Scenario.Callbacks do
       name = Throttle.name(throttle)
       config = Throttle.to_amoc_config(throttle)
 
-      with {:ok, _} <- :amoc_throttle.start(name, config),
-           :ok <- maybe_add_ramp_to_throttle(name, throttle) do
+      with {:ok, result} <- :amoc_throttle.start(name, config),
+           :ok <- maybe_add_ramp_to_throttle(result, name, throttle) do
         {:cont, :ok}
       else
         error -> {:halt, error}
@@ -95,7 +95,13 @@ defmodule LiveLoad.Scenario.Callbacks do
     end)
   end
 
-  defp maybe_add_ramp_to_throttle(name, throttle) do
+  defp maybe_add_ramp_to_throttle(:already_started, _name, _throttle) do
+    # When we get `:already_started`, we can probably assume that the throttle has been set and the
+    # ramp (if any) has been set, since someone else got `:started` before us.
+    :ok
+  end
+
+  defp maybe_add_ramp_to_throttle(:started, name, throttle) do
     if ramp_up = Throttle.to_amoc_gradual_plan(throttle) do
       :amoc_throttle.change_rate_gradually(name, ramp_up)
     else
