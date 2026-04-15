@@ -8,6 +8,11 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.51
+
+A bit of a mistake on my part for setting up the throttles, with multiple nodes, we can't change the rate multiple times.
+
+
 ## 0.0.1-rc.50
 
 While I've been waiting for all of the scenarios to run in my `LiveLoadBench` project, I had some time to sit and plan out and implement user throttling! `:amoc_throttle` implements a really cool distributed throttling mechanism that [Nelson](https://github.com/NelsonVides) wrote, so I made a bit of a wrapper around it within `LiveLoad.Scenario` so that people can implement a user throttle mechanism!
