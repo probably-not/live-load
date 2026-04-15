@@ -8,6 +8,13 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.53
+
+More edge cases! On the cluster of over 50 nodes, the hand-made ping mechanism that I made to directly ping amoc still failed. So now, I'm doing something a lot hackier... I'm just ensuring that the amoc runner knows who the master node is and setting the state directly. Star based topology instead of a full mesh.
+
+There are limits here to how much I can do, this may be it for using a raw cluster. At some point, I may need to investigate using global groups for sub-clustering and the like... but hopefully that won't be soon..........
+
+
 ## 0.0.1-rc.52
 
 One commit from the previous release, and a couple of commits in this release, and we have some parallelization built in to the startup costs.
