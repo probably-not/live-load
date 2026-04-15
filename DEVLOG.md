@@ -8,6 +8,23 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.56
+
+UI! This was an interesting one. The PR can be seen at https://github.com/probably-not/live-load/pull/3.
+
+As I'm less of a UI guy, this one was heavily AI assisted. I worked with Claude Opus 4.6 (the Web version) to build a single-file embedded HTML SPA that gives me a nice little report to view when outputting the results. It's very nice, and it seems to work pretty well (although it's not super helpful yet as I'm not actually analyzing any of it yet...).
+
+I think that's pretty much it for the conference presentation! I'm going to need to work on that now, and then finalize the package itself later on.
+
+The next ups (since this has helped me track things):
+
+### Next Up TODOs
+
+- Actual examples of a LiveView app and benchmarks (I'll need to set up a demo application and then run benchmarks against it)
+- Clear the TODOs of the guides (so people can see examples and baselines) and polish the documentation of the `LiveLoad` module and the README.md
+- `:amoc_coordinator` implementation within a `LiveLoad.Scenario` to allow multiple users to coordinate together
+
+
 ## 0.0.1-rc.55
 
 A quick follow up where I come out looking like an idiot... I used a link to link the watcher to the caller process, but then when the watcher dies the calling process dies. Monitors man... monitors.
