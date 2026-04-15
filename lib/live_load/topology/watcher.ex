@@ -9,9 +9,12 @@ defmodule LiveLoad.Topology.Watcher do
 
   @impl true
   def init(caller_pid) do
-    # We link to the calling process so that if the calling process has any issues and exits, we close out the resources.
-    # This should probably be passed in as an option somewhere instead of forcing the link.
-    true = Process.link(caller_pid)
-    {:ok, caller_pid}
+    monitor_ref = Process.monitor(caller_pid)
+    {:ok, monitor_ref}
+  end
+
+  @impl true
+  def handle_info({:DOWN, monitor_ref, _, _, _}, monitor_ref) do
+    {:stop, :normal, monitor_ref}
   end
 end
