@@ -8,6 +8,46 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.50
+
+While I've been waiting for all of the scenarios to run in my `LiveLoadBench` project, I had some time to sit and plan out and implement user throttling! `:amoc_throttle` implements a really cool distributed throttling mechanism that [Nelson](https://github.com/NelsonVides) wrote, so I made a bit of a wrapper around it within `LiveLoad.Scenario` so that people can implement a user throttle mechanism!
+
+The way it works is, each scenario can define a custom `throttle/1` callback, which receives the scenario config (from the `config/1` callback) and then may return a list of throttles. These throttles are defined as:
+
+- `LiveLoad.Scenario.Throttle.Rate`: A basic rate limiter which limits to a specific number of events per interval configured.
+- `LiveLoad.Scenario.Throttle.Interarrival`: A rate limiter which defines the amount of time between each event.
+- `LiveLoad.Scenario.Throttle.Parallelism`: A rate limiter which ensures a specific number of concurrent executions.
+
+And through these, they can register and utilize throttles within the runner!
+
+The scenario runner takes care of all of the registration, which then leads to the user just being able to write something like this:
+
+```elixir
+# Super weird throttle here but just as an example, this is a
+# "1 per minute, ramp up to 100 per minute over the course of 5 seconds"
+def throttles(_config) do
+  [
+    :visitors
+    |> Rate.new(1)
+    |> Rate.ramp(100, duration: to_timeout(second: 5))
+  ]
+end
+```
+
+and then use the throttle within their run like so:
+
+```elixir
+def run(%LiveLoad.Scenario.Context{} = context, _user_id, _config) do
+  context
+  |> throttle(:visitors)
+  |> navigate("https://live-load-bench.fly.dev/")
+  |> ensure_liveview()
+  |> wait_for_liveview()
+end
+```
+
+Super cool! Huge shoutout to [Nelson](https://github.com/NelsonVides) for making this so user friendly. I only hit one snag, which I fixed pretty quickly - the whole "peer nodes hidden" rule that I used when I made `FlamePeer` and the `AmocPeer` in the topology supervisor... they didn't play well with the `:pg` integration that `:amoc_throttle` uses. No matter! I added an option to `FlamePeer` and removed the hidden arg from its startup, and things started working beautifully!
+
 ## 0.0.1-rc.49
 
 Lowering the contexts per core definitely helped! But I keep hitting this node creation timeout on Fly's infra. I'm going to add some retries for now and see if that helps, it should hopefully solve some of these issues.
