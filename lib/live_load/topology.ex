@@ -9,26 +9,16 @@ defmodule LiveLoad.Topology do
   def setup(scenario, topology_opts \\ []) do
     case DynamicSupervisor.start_child(
            {:via, PartitionSupervisor, {LiveLoad.Topology.DynamicSupervisor, scenario}},
-           Supervisor.child_spec({__MODULE__, {scenario, topology_opts}}, restart: :temporary)
+           Supervisor.child_spec({__MODULE__, {scenario, topology_opts, self()}}, restart: :temporary)
          ) do
-      {:ok, pid} when is_pid(pid) ->
-        # We link to the calling process so that if the calling process has any issues and exits, we close out the resources.
-        # This should probably be passed in as an option somewhere instead of forcing the link.
-        Process.link(pid)
-        {:ok, pid}
-
-      {:error, {:already_started, _pid}} ->
-        {:error, :scenario_is_already_running}
-
-      {:error, _reason} = error ->
-        error
+      {:ok, pid} when is_pid(pid) -> {:ok, pid}
+      {:error, {:already_started, _pid}} -> {:error, :scenario_is_already_running}
+      {:error, _reason} = error -> error
     end
   end
 
   def teardown(scenario) do
     with {:lookup, [{pid, _}]} <- {:lookup, Registry.lookup(LiveLoad.Registry, scenario)},
-         # Because we linked in the setup, we need to unlink. Otherwise the termination will kill our calling process... not good.
-         true <- Process.unlink(pid),
          :ok <-
            DynamicSupervisor.terminate_child(
              {:via, PartitionSupervisor, {LiveLoad.Topology.DynamicSupervisor, scenario}},
@@ -137,22 +127,23 @@ defmodule LiveLoad.Topology do
     end
   end
 
-  def start_link({scenario, topology_opts}) do
+  def start_link({scenario, topology_opts, caller_pid}) do
     # I probably don't really need a registry here if I'm just using the scenario, since the scenario is a module name.
     # I could just use the atom directly... But it feels weird to use the scenario as a name directly on the topology
     # when the topology is not actually the scenario, it's the entire topology of the load test.
-    Supervisor.start_link(__MODULE__, topology_opts, name: supervisor_name(scenario))
+    Supervisor.start_link(__MODULE__, {topology_opts, caller_pid}, name: supervisor_name(scenario))
   end
 
   @impl true
-  def init(topology_opts) do
+  def init({topology_opts, caller_pid}) do
     amoc_peer_opts = topology_opts[:amoc_peer_opts] || []
 
     children = [
       Topology.AmocPeer.child_spec(amoc_peer_opts, id: :amoc_peer, restart: :temporary, significant: true),
       Supervisor.child_spec(Topology.Runner, id: :runner, restart: :temporary, significant: true),
       Supervisor.child_spec(Topology.Cluster, id: :cluster, restart: :temporary, significant: true),
-      Supervisor.child_spec(Collector, id: :collector, restart: :temporary, significant: true)
+      Supervisor.child_spec(Collector, id: :collector, restart: :temporary, significant: true),
+      Supervisor.child_spec({LiveLoad.Topology.Watcher, caller_pid}, id: :watcher, restart: :temporary, significant: true)
     ]
 
     Supervisor.init(children, strategy: :one_for_one, auto_shutdown: :any_significant)
