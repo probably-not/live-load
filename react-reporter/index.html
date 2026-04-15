@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LiveLoad Report</title>
+    <script>
+      // The Elixir reporter replaces the placeholder string below with a
+      // base64-encoded gzip of the LiveLoad result JSON. In dev mode, the
+      // placeholder is left untouched and the loader fetches dev-data.json
+      // from /public instead.
+      window.__LIVELOAD_DATA__ = "__LIVELOAD_DATA_INJECTION_POINT_DO_NOT_REMOVE__";
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
