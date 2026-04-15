@@ -37,8 +37,17 @@ defmodule LiveLoad.Topology.Cluster do
 
   def preconnect_mesh(%Cluster{} = cluster) do
     results =
-      Map.new(cluster.pool_nodes, fn %Cluster.Node{} = cluster_node ->
-        {cluster_node.node, Cluster.Node.preconnect(cluster_node, cluster.pool_node_names, to_timeout(minute: 1))}
+      cluster.pool_nodes
+      |> Task.async_stream(
+        fn %Cluster.Node{} = cluster_node ->
+          Cluster.Node.preconnect(cluster_node, cluster.pool_node_names, to_timeout(minute: 1))
+        end,
+        max_concurrency: min(8, max(length(cluster.pool_nodes), 1)),
+        timeout: :infinity
+      )
+      |> Enum.zip(cluster.pool_nodes)
+      |> Map.new(fn {{:ok, node_results}, %Cluster.Node{node: node}} ->
+        {node, node_results}
       end)
 
     failures =
