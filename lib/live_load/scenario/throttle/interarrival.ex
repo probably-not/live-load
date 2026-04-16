@@ -47,7 +47,7 @@ defmodule LiveLoad.Scenario.Throttle.Interarrival do
   ## Options
 
     * `:duration`: The duration of the gradual ramp up in milliseconds
-    * `:steps`: The number of steps to take while ramping up. Requires am `:interval` value.
+    * `:steps`: The number of steps to take while ramping up. Requires an `:interval` value.
     * `:interval`: The interval at which to take each step. Requires a `:step` value.
   """
   @spec ramp(interarrival :: t(), target :: Ramp.target(), ramp_opts :: [Ramp.option()]) :: t()

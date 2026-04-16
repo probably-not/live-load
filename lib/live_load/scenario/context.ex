@@ -27,12 +27,12 @@ defmodule LiveLoad.Scenario.Context do
   - A scenario will be marked with an error whenever any error, exception, or exit occurs while an operation is running.
 
   The reason for this mutual exclusivity is to preserve the reason for a scenario not completing. Errors are unexpected
-  occurences that may happen for any number of reasons and are marked as such to ensure that any consumers of LiveLoad
+  occurrences that may happen for any number of reasons and are marked as such to ensure that any consumers of LiveLoad
   are able to understand what errors are happening in their application while load testing their sites. However, halting
   is manually marked and is a decision by the writer of the scenario. Halting can be used to simply short-circuit a scenario
   should the writer decide that it can be short-circuited at any point during the scenario's run.
 
-  As such, when calling `halt/1`, a scenario will only be marked has halted if no error has occured in the pipeline in order
+  As such, when calling `halt/1`, a scenario will only be marked as halted if no error has occurred in the pipeline in order
   to preserve the reason for the scenario not completing.
 
   Two helper functions, `halted?/1` and `failed?/1` are provided in order to determine if a scenario failed or was halted manually.

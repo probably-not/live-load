@@ -74,19 +74,6 @@ defmodule LiveLoad.Cluster.Node do
 
     :ok = ensure_required_app_started!(:os_mon, reason)
 
-    reason = """
-    `LiveLoad.Cluster` uses the `:os_mon` application in order to calculate
-    the correct number of nodes for the load test to run. This calculation
-    is done by checking the details of the FLAME node, including checking
-    the available disk space, memory, CPUs, and schedulers available.
-
-    `:os_mon` is included in LiveLoad's mix.exs as part of the `:extra_applications`
-    list, so if the FLAME node has been created with the current release code,
-    it should be properly handled and should not be causing an error.
-    """
-
-    :ok = ensure_required_app_started!(:os_mon, reason)
-
     # TODO: I need to get the actual limits of the current node.
     # This is sort of a "best-effort get the available resources for the node" situation.
     # It doesn't account for Kubernetes and containerization and stuff... I haven't dealt with that
@@ -132,7 +119,7 @@ defmodule LiveLoad.Cluster.Node do
 
         Please file issues at: https://github.com/probably-not/live-load/issues.
 
-        The following error was received when ensuring that `:os_mon` is started:
+        The following error was received when ensuring that `:#{app_name}` is started:
 
         #{inspect(reason)}
         """
