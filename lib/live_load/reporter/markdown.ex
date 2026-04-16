@@ -4,13 +4,6 @@ defmodule LiveLoad.Reporter.Markdown do
   # that is being used to just inspect the outputs of a run. The `LiveLoad.Result`
   # struct contains the final output of a run, but with all of the metrics that I'm
   # adding and collecting, it's... a lot. So I needed a simple reporting mechanism.
-  # TODO: Real UI is a huge thing here. I'm not a big UI person, so I will probably
-  # end up delegating the UI concept and generation to Claude. I find that Claude is
-  # quite good at generating the classic UI formats, so instead of me breaking my head
-  # trying to figure out the best way to display things in nice charts, I'll let Claude
-  # take care of that. A good amount of the markdown generation here was already generated
-  # by Claude Opus 4.6 for me - I gave it the structure of `LiveLoad.Result` and told it
-  # to create a debugging Markdown script that gives me a report I can use.
 
   alias LiveLoad.Result
 
