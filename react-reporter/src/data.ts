@@ -26,33 +26,20 @@ const DEV_MODE_PREFIX = "__LIVELOAD_DATA_INJECTION";
 
 /** Decompress a base64-encoded gzip blob into the parsed JSON. */
 async function decompressData(b64: string): Promise<RawData> {
+  // Decode base64 to bytes
   const raw = atob(b64);
   const bytes = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
 
-  const ds = new DecompressionStream("gzip");
-  const writer = ds.writable.getWriter();
-  writer.write(bytes);
-  writer.close();
+  // Feed the bytes through DecompressionStream via Response, which
+  // correctly handles backpressure and stream lifecycle for payloads
+  // of any size. The manual writer/reader loop we had before worked
+  // for small payloads but truncated large ones because writer.write()
+  // and writer.close() are async and weren't being awaited.
+  const blob = new Blob([bytes]);
+  const stream = blob.stream().pipeThrough(new DecompressionStream("gzip"));
+  const text = await new Response(stream).text();
 
-  const reader = ds.readable.getReader();
-  const chunks: Uint8Array[] = [];
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-
-  let total = 0;
-  for (const c of chunks) total += c.length;
-  const result = new Uint8Array(total);
-  let offset = 0;
-  for (const c of chunks) {
-    result.set(c, offset);
-    offset += c.length;
-  }
-
-  const text = new TextDecoder().decode(result);
   return JSON.parse(text) as RawData;
 }
 
