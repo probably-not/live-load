@@ -8,6 +8,12 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.57
+
+Pre-OSS release of a bunch of fixes! I had some typos throughout my docs, and some leftover TODOs that were no longer relevant. Gone!
+
+And, a bug in the UI reporter: huge runs were causing the JSON encoded strings in the browser to be WAY TOO BIG, so I added some protections there.
+
 ## 0.0.1-rc.56
 
 UI! This was an interesting one. The PR can be seen at https://github.com/probably-not/live-load/pull/3.
