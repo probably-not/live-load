@@ -30,18 +30,24 @@ export function parseHist(
 ): ParsedHistogramStats {
   if (!h || h.count === 0) return { count: 0, empty: true };
   const v = h.values;
+
+  // Full 101-point curve (aggregate histograms) vs trimmed 4-point
+  // (time-series bucket histograms, trimmed by the reporter to stay
+  // under browser string size limits).
+  const isTrimmed = v.length <= 10; // safe threshold
+
   return {
     count: h.count,
     sum: h.sum,
-    min: v[0],
-    p50: v[50],
-    p75: v[75],
-    p90: v[90],
-    p95: v[95],
-    p99: v[99],
-    max: v[100],
+    min: isTrimmed ? undefined : v[0],
+    p50: isTrimmed ? v[0] : v[50],
+    p75: isTrimmed ? undefined : v[75],
+    p90: isTrimmed ? undefined : v[90],
+    p95: isTrimmed ? v[1] : v[95],
+    p99: isTrimmed ? v[2] : v[99],
+    max: isTrimmed ? v[3] : v[100],
     mean: h.sum / h.count,
-    cdf: v,
+    cdf: isTrimmed ? undefined : v,
     empty: false,
   };
 }

@@ -61,7 +61,9 @@ export async function loadData(): Promise<RawScenarioEntry[]> {
 
   if (isUnreplaced) {
     // Dev mode: fetch JSON from public/
-    const path = (import.meta.env.VITE_DEV_DATA_PATH as string | undefined) || "/dev-data.json";
+    const path =
+      (import.meta.env.VITE_DEV_DATA_PATH as string | undefined) ||
+      "/dev-data.json";
     const response = await fetch(path);
     if (!response.ok) {
       throw new Error(

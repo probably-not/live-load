@@ -21,9 +21,27 @@ defmodule LiveLoad.Reporter.HTML do
     path = Application.app_dir(:live_load, Path.join(["priv", "react-reporter", "template.html"]))
     template = File.read!(path)
 
-    payload =
-      results
-      |> Enum.map(fn
+    payload = encode_payload(results)
+
+    case :binary.match(template, @template_data_placeholder) do
+      :nomatch ->
+        raise RuntimeError, """
+        `LiveLoad.Reporter.HTML` template is missing the data
+        placeholder for injecting run data into the template.
+        """
+
+      {_, _} ->
+        :binary.replace(template, @template_data_placeholder, payload)
+    end
+  end
+
+  # With the exploded results we are hitting V8's string limits with just absolutely gigantic json structures...
+  # If the JSON is going to be huge, this will trim it into something manageable.
+  @max_json_bytes 400 * 1024 * 1024
+
+  defp encode_payload(results) do
+    entries =
+      Enum.map(results, fn
         {_scenario, %LiveLoad.Result{} = result} ->
           result
 
@@ -36,20 +54,65 @@ defmodule LiveLoad.Reporter.HTML do
             value: inspect(unknown, limit: :infinity, printable_limit: :infinity, pretty: true)
           }
       end)
-      |> LiveLoad.JSON.encode_to_iodata!()
-      |> IO.iodata_to_binary()
-      |> :zlib.gzip()
-      |> Base.encode64()
 
-    case :binary.match(template, @template_data_placeholder) do
-      :nomatch ->
-        raise RuntimeError, """
-        `LiveLoad.Reporter.HTML` template is missing the data
-        placeholder for injecting run data into the template.
-        """
+    json = LiveLoad.JSON.encode!(entries)
 
-      {_, _} ->
-        :binary.replace(template, @template_data_placeholder, payload)
-    end
+    json =
+      if byte_size(json) > @max_json_bytes do
+        entries
+        |> trim_data_to_significant_quantiles()
+        |> LiveLoad.JSON.encode_to_iodata!()
+        |> IO.iodata_to_binary()
+      else
+        json
+      end
+
+    json
+    |> :zlib.gzip()
+    |> Base.encode64()
+  end
+
+  defp trim_data_to_significant_quantiles(results) do
+    Enum.map(results, fn
+      {scenario, %LiveLoad.Result{} = result} ->
+        {scenario, trim_result(result)}
+
+      other ->
+        other
+    end)
+  end
+
+  defp trim_result(%LiveLoad.Result{} = result) do
+    %{result | global: trim_scenario_result(result.global), nodes: Enum.map(result.nodes, &trim_node_result/1)}
+  end
+
+  defp trim_node_result(%LiveLoad.Result.NodeResult{status: :ok, result: result} = node_result) do
+    %{node_result | result: trim_scenario_result(result)}
+  end
+
+  defp trim_node_result(node_result), do: node_result
+
+  defp trim_scenario_result(%LiveLoad.Result.ScenarioResult{} = result) do
+    %{result | time_series: Enum.map(result.time_series, &trim_bucket/1)}
+  end
+
+  defp trim_bucket(%LiveLoad.Result.Bucket{} = bucket) do
+    histograms =
+      Map.new(bucket.histograms, fn {k, dh} ->
+        {k, trim_dimensioned_histogram(dh)}
+      end)
+
+    %{bucket | histograms: histograms}
+  end
+
+  defp trim_dimensioned_histogram(%LiveLoad.Result.DimensionedHistogram{} = histogram) do
+    by = Map.new(histogram.by, fn {k, quantiles} -> {k, trim_quantiles(quantiles)} end)
+    %{histogram | aggregate: trim_quantiles(histogram.aggregate), by: by}
+  end
+
+  @significant_quantiles [50, 95, 99, 100]
+
+  defp trim_quantiles(%LiveLoad.Result.PrecomputedQuantiles{} = quantiles) do
+    %{quantiles | values: Enum.map(@significant_quantiles, &Enum.at(quantiles.values, &1))}
   end
 end
