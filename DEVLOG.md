@@ -8,6 +8,12 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.0.1-rc.58
+
+Even with all of the work that I put in to removing all of `:amoc`'s bottlenecks and deadlocks that ended with hacks that set the state of `:amoc_cluster` directly, I am still hitting these huge idle times. I did a bit of tracing to try and figure it out, and I found a couple of sequential loops that still take a while to run.
+
+This release is a brute-forced hack that should be upstreamed to `:amoc` itself, but for the purposes of now, I am manually replicating these sequential loops but in parallel. Releasing this as a test, if it works then I'll keep it in at least until I open an issue for it at the upstream.
+
 ## 0.0.1-rc.57
 
 Pre-OSS release of a bunch of fixes! I had some typos throughout my docs, and some leftover TODOs that were no longer relevant. Gone!
