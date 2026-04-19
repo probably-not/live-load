@@ -73,7 +73,7 @@ defmodule LiveLoad.Topology.AmocPeer do
   def run_distributed_scenario(server, scenario, users, opts, runners) do
     peer = peer(server)
 
-    case LiveLoad.Topology.AmocDist.do_parallel(peer, scenario, users, opts) do
+    case :rpc.call(peer, :amoc_dist, :do, [scenario, users, opts]) do
       {:ok, result} -> {:ok, result}
       other -> {:error, {:failed_to_run_distributed_load_test, other, Diagnostics.diagnose_runners(runners)}}
     end
