@@ -77,7 +77,6 @@ defmodule LiveLoad.Topology.AmocDist do
 
   defp setup_single_runner(peer, runner, scenario, settings) do
     with :ok <- set_runner_master(runner, peer),
-         {:ok, _} <- distribute_modules(peer, runner),
          :ok <- start_scenario(runner, scenario, settings) do
       :rpc.cast(peer, :gen_server, :cast, [:amoc_cluster, {:add_slave, runner}])
       :ok
@@ -91,22 +90,6 @@ defmodule LiveLoad.Topology.AmocDist do
     end
   catch
     kind, reason -> {:error, {:set_master_node_failed, kind, reason}}
-  end
-
-  defp distribute_modules(peer, runner) do
-    case :rpc.call(peer, :amoc_code_server, :distribute_modules, [runner]) do
-      results when is_list(results) ->
-        bad = Enum.reject(results, fn {_mod, status} -> status == :ok end)
-
-        if bad == [] do
-          {:ok, results}
-        else
-          {:error, {:distribute_modules_failed, bad}}
-        end
-
-      {:badrpc, reason} ->
-        {:error, {:distribute_modules_rpc_failed, reason}}
-    end
   end
 
   defp start_scenario(runner, scenario, settings) do
