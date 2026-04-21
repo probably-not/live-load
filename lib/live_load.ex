@@ -1,6 +1,70 @@
 defmodule LiveLoad do
   @moduledoc """
-  #{"./README.md" |> Path.expand() |> File.read!() |> String.split("<!-- README START -->") |> Enum.at(1) |> String.split("<!-- README END -->") |> List.first() |> String.trim()}
+  A load testing framework for simulating real, distributed, live load on your application.
+
+  `LiveLoad` uses real browser automation to simulate actual user interactions with your Phoenix LiveView application.
+  Each simulated user is a real browser context: it navigates, clicks, fills forms, and waits for LiveView
+  events to complete, exactly the way a real user would. LiveLoad collects LiveView-aware metrics from both sides:
+  HTTP and WebSocket telemetry from the browser, plus instrumentation for things like `phx-*-loading` DOM patching
+  and connection lifecycle events.
+
+  ## Quick Start
+
+  ```elixir
+  defmodule MyApp.LoadTest.BrowseScenario do
+    use LiveLoad.Scenario
+
+    @impl true
+    def run(context, _user_id, _config) do
+      context
+      |> navigate("https://myapp.com/")
+      |> wait_for_liveview()
+      |> click("#some-button")
+      |> wait_for_phx_loading_completion(:click, "#some-button")
+    end
+  end
+  ```
+
+  Then run it:
+
+  ```elixir
+  results = LiveLoad.run(
+    scenario: MyApp.LoadTest.BrowseScenario,
+    users: 25,
+    scenario_duration: to_timeout(minute: 5)
+  )
+  ```
+
+  For distributed runs across multiple nodes via `FLAME`:
+
+  ```elixir
+  results = LiveLoad.run(
+    scenario: MyApp.LoadTest.BrowseScenario,
+    users: 1_000,
+    distributed?: true,
+    flame_backend: FLAME.FlyBackend,
+    cluster_opts: [
+      flame_backend_opts: [app: :my_runner_app, cpus: 8, memory_mb: 16 * 1024],
+      max_allowed_nodes: 100
+    ]
+  )
+  ```
+
+  ## Reporting
+
+  The `LiveLoad.Result` struct returned for each scenario is fully JSON-serializable and contains
+  histograms, time-series data, dimensional breakdowns, and per-node results. You can write it to a file,
+  pipe it into your own analysis, or use one of the built-in reporters:
+
+  ```elixir
+  # Generate a self-contained HTML report
+  html = LiveLoad.Reporter.HTML.render!(results)
+  File.write!("liveload_report.html", html)
+  ```
+
+  For a more complete walkthrough of everything you can do inside a `LiveLoad.Scenario`,
+  from basic navigation to throttles and assigns, head to the
+  [Writing Your First Scenario guide](guides/writing_your_first_scenario.md).
   """
 
   alias LiveLoad.Browser
@@ -188,9 +252,9 @@ defmodule LiveLoad do
   Which scenarios are run is determined by the options given. The following options are mutually
   exclusive, and take priority in the order listed:
 
-  1. `t:scenario_opt/0` — a single `LiveLoad.Scenario` module.
-  2. `t:scenarios_opt/0` — a list of `LiveLoad.Scenario` modules.
-  3. `t:otp_app_opt/0` — an OTP application atom. LiveLoad will scan the given application for all
+  1. `t:scenario_opt/0`: a single `LiveLoad.Scenario` module.
+  2. `t:scenarios_opt/0`: a list of `LiveLoad.Scenario` modules.
+  3. `t:otp_app_opt/0`: an OTP application atom. LiveLoad will scan the given application for all
      modules implementing the `LiveLoad.Scenario` behaviour and run each of them.
 
   ## Scenario Configuration
