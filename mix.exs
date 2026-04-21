@@ -99,7 +99,7 @@ defmodule LiveLoad.MixProject do
 
   defp docs do
     [
-      main: "devlog",
+      main: "LiveLoad",
       api_reference: false,
       # TODO: A logo?
       # logo: something?
