@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Hex version badge](https://img.shields.io/hexpm/v/live_load.svg)](https://hex.pm/packages/live_load)
 
+![LiveLoad Logo](./assets/logo.svg "LiveLoad")
+
 A load testing framework for simulating real, distributed, live load on your application.
 
 ## Why LiveLoad?

@@ -101,8 +101,7 @@ defmodule LiveLoad.MixProject do
     [
       main: "LiveLoad",
       api_reference: false,
-      # TODO: A logo?
-      # logo: something?
+      logo: "assets/logo.svg",
       source_ref: "v#{@version}",
       source_url: @source_url,
       extras: extras(),
