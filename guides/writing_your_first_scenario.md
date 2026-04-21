@@ -17,7 +17,7 @@ If you've ever used `Plug.Conn`, the API should feel familiar. The scenario cont
 
 ## The Basics
 
-A scenario module needs three things: `use LiveLoad.Scenario`, a `run/3` callback, and that's it. 
+A scenario module needs three things: `use LiveLoad.Scenario`, a `c:LiveLoad.Scenario.run/3` callback, and that's it. 
 
 ```elixir
 defmodule MyApp.LoadTest.HomepageScenario do
@@ -50,18 +50,18 @@ This will start 10 simulated users, each in their own isolated browser context, 
 
 Here's what happens when your scenario runs:
 
-1. **`config/1`** is called once per node with any extra options you passed to `LiveLoad.run/1`. It returns a config value that gets passed to every `run/3` call.
-2. **`throttles/1`** is called once per node with the config from step 1. It returns a list of throttles to register for this scenario (more on these later).
-3. Each user gets its own `LiveLoad.Scenario.Context` wrapping an isolated browser context.
-4. **`run/3`** is called in a loop for each user, receiving the context, user ID, and config. The loop continues until the configured `:scenario_duration` has elapsed.
-5. The context returned from one iteration of `run/3` becomes the input to the next iteration. Assigns survive across iterations! You can use data from a previous iteration in the next one.
+1. **`c:LiveLoad.Scenario.config/1`** is called once per node with any extra options you passed to `LiveLoad.run/1`. It returns a config value that gets passed to every `c:LiveLoad.Scenario.run/3` call.
+2. **`c:LiveLoad.Scenario.throttles/1`** is called once per node with the config from step 1. It returns a list of throttles to register for this scenario (more on these later).
+3. Each user gets its own `LiveLoad.Scenario.Context` wrapping an isolated `LiveLoad.Browser.Context`.
+4. **`c:LiveLoad.Scenario.run/3`** is called in a loop for each user, receiving the context, user ID, and config. The loop continues until the configured `:scenario_duration` has elapsed.
+5. The context returned from one iteration of `c:LiveLoad.Scenario.run/3` becomes the input to the next iteration. Assigns survive across iterations! You can use data from a previous iteration in the next one.
 6. Once the duration expires, the current iteration finishes and the user process terminates cleanly.
 
-Both `config/1` and `throttles/1` have default implementations that return `{:ok, %{}}` and `[]` respectively, so you only need to override them if you actually need configuration or throttling.
+Both `c:LiveLoad.Scenario.config/1` and `c:LiveLoad.Scenario.throttles/1` have default implementations that return `{:ok, %{}}` and `[]` respectively, so you only need to override them if you actually need configuration or throttling.
 
-## The `config/1` Callback
+## The `c:LiveLoad.Scenario.config/1` Callback
 
-Any options you pass to `LiveLoad.run/1` that aren't consumed by LiveLoad itself get forwarded to `config/1`. This is how you pass scenario-specific settings like a base URL, credentials, or test data.
+Any options you pass to `LiveLoad.run/1` that aren't consumed by LiveLoad itself get forwarded to `c:LiveLoad.Scenario.config/1`. This is how you pass scenario-specific settings like a base URL, credentials, or test data.
 
 ```elixir
 defmodule MyApp.LoadTest.LoginScenario do
@@ -115,14 +115,14 @@ def run(context, _user_id, _config) do
 end
 ```
 
-If the `click("#product-1")` call fails (maybe the element doesn't exist), everything after it is skipped. The error gets recorded on the context, and the runner captures it for reporting.
+If the `LiveLoad.Scenario.Context.click/2` call fails (maybe the element doesn't exist), everything after it is skipped. The error gets recorded on the context, and the runner captures it for reporting.
 
 ## Navigation
 
 Two functions for getting around:
 
-- **`navigate(context, url)`**: navigates to the given URL.
-- **`reload(context)`**: reloads the current page.
+- `LiveLoad.Scenario.Context.navigate/2`: navigates to the given URL.
+- `LiveLoad.Scenario.Context.reload/1`: reloads the current page.
 
 ```elixir
 context
@@ -148,7 +148,7 @@ fill(context, "#email", "user@example.com")
 fill(context, "#search", "elixir load testing")
 ```
 
-Passing an empty string clears the input. There's also a dedicated `clear/2` that does the same thing:
+Passing an empty string clears the input. There's also a dedicated `LiveLoad.Scenario.Context.clear/2` that does the same thing:
 
 ```elixir
 clear(context, "#search")
@@ -156,7 +156,7 @@ clear(context, "#search")
 
 ### Keyboard Input
 
-`press/3` focuses an element and activates a key:
+`LiveLoad.Scenario.Context.press/3` focuses an element and activates a key:
 
 ```elixir
 press(context, "#search", "Enter")
@@ -192,7 +192,7 @@ drag_and_drop(context, "#draggable-item", "#drop-zone")
 
 ### Waiting For Elements
 
-`wait_for_selector/2` waits until an element matching the selector appears on the page:
+`LiveLoad.Scenario.Context.wait_for_selector/2` waits until an element matching the selector appears on the page:
 
 ```elixir
 wait_for_selector(context, ".results-loaded")
@@ -204,8 +204,8 @@ These are the functions that make LiveLoad different from generic browser automa
 
 ### Detecting and Waiting For LiveView
 
-- **`ensure_liveview/1`** checks that the current page has a LiveView mounted (it waits for `[data-phx-session]`).
-- **`wait_for_liveview/1`** waits for the LiveView to be fully connected (it waits for `.phx-connected`).
+- `LiveLoad.Scenario.Context.ensure_liveview/1` checks that the current page has a LiveView mounted (it waits for `[data-phx-session]`).
+- `LiveLoad.Scenario.Context.wait_for_liveview/1` waits for the LiveView to be fully connected (it waits for `.phx-connected`).
 
 ```elixir
 context
@@ -216,7 +216,7 @@ context
 
 ### Waiting For Event Completion
 
-When you trigger a LiveView event (like a click or form submission), Phoenix adds CSS classes like `phx-click-loading` to the target element while the event is in-flight. `wait_for_phx_loading_completion/3` waits for that class to be removed, which means the server has processed the event and the DOM has been patched.
+When you trigger a LiveView event (like a click or form submission), Phoenix adds CSS classes like `phx-click-loading` to the target element while the event is in-flight. `LiveLoad.Scenario.Context.wait_for_phx_loading_completion/3` waits for that class to be removed, which means the server has processed the event and the DOM has been patched.
 
 ```elixir
 context
@@ -236,7 +236,7 @@ The loading types correspond to the event types that Phoenix uses, which, as of 
 
 ### Submitting Forms
 
-`submit_form/2` is a convenience that clicks the submit button inside a form and then waits for the `phx-submit-loading` class to clear:
+`LiveLoad.Scenario.Context.submit_form/2` is a convenience that clicks the submit button inside a form and then waits for the `phx-submit-loading` class to clear:
 
 ```elixir
 context
@@ -245,7 +245,7 @@ context
 |> submit_form("#login-form")
 ```
 
-Under the hood, this clicks `#login-form [type=submit]` and then calls `wait_for_phx_loading_completion(:submit, "#login-form")`.
+Under the hood, this clicks `#login-form [type=submit]` and then calls `LiveLoad.Scenario.Context.wait_for_phx_loading_completion/3` with `:submit` and the form selector.
 
 ## Extracting Values From The Page
 
@@ -322,7 +322,7 @@ clear_assign(context, :counter)
 reset_assigns(context)
 ```
 
-Since the context carries across loop iterations, `reset_assigns/1` is useful when you want each iteration to start clean:
+Since the context carries across loop iterations, `LiveLoad.Scenario.Context.reset_assigns/1` is useful when you want each iteration to start clean:
 
 ```elixir
 def run(context, _user_id, _config) do
@@ -383,7 +383,7 @@ This is particularly useful when data from a previous step or iteration drives w
 
 ### Halting
 
-`halt/1` manually stops the pipeline and prevents further iterations for this user:
+`LiveLoad.Scenario.Context.halt/1` manually stops the pipeline and prevents further iterations for this user:
 
 ```elixir
 def run(context, _user_id, _config) do
@@ -400,13 +400,13 @@ defp maybe_halt(context), do: context
 
 A halted context will not loop again! The user process immediately terminates and the user is marked as "succeeded".
 
-You can check if a context is halted with the `halted?/1` guard.
+You can check if a context is halted with the `LiveLoad.Scenario.Context.halted?/1` guard.
 
 ### Errors
 
-Errors happen automatically when an operation fails (element not found, navigation timeout, etc.). They're captured on the context and prevent any further operations from running.
+Errors happen automatically when an operation fails (element not found, navigation timeout, etc.). They're captured on the context as a `LiveLoad.Scenario.Error` and prevent any further operations from running.
 
-You can also manually mark a context as failed with `fail/2`:
+You can also manually mark a context as failed with `LiveLoad.Scenario.Context.fail/2`:
 
 ```elixir
 def run(context, _user_id, _config) do
@@ -421,7 +421,7 @@ defp check_status(%{assigns: %{status: "error"}} = context), do: fail(context, :
 defp check_status(context), do: context
 ```
 
-Halting and errors are mutually exclusive. This means that if an error has already occurred, calling `halt/1` is a no-op. This is done to preserve the actual reason the scenario stopped. Similarly, if a context is already failed, calling `fail/2` again is a no-op to preserve the original error.
+Halting and errors are mutually exclusive. This means that if an error has already occurred, calling `LiveLoad.Scenario.Context.halt/1` is a no-op. This is done to preserve the actual reason the scenario stopped. Similarly, if a context is already failed, calling `LiveLoad.Scenario.Context.fail/2` again is a no-op to preserve the original error.
 
 A failed context, like a halted one, will not loop again. The user process will terminate and be marked as "failed".
 
@@ -429,7 +429,7 @@ A failed context, like a halted one, will not loop again. The user process will 
 
 Throttles are cluster-wide rate limiting mechanisms. They're useful when you want to control _how fast_ your simulated users perform actions, rather than just _how many_ users there are. The throttling is smoothed, so if you set a rate of 100 per minute, you get roughly one execution every 600ms, not 100 at the start of each minute.
 
-Define throttles in the `throttles/1` callback and use them in `run/3` with `throttle/2`:
+Define throttles in the `c:LiveLoad.Scenario.throttles/1` callback and use them in `c:LiveLoad.Scenario.run/3` with `LiveLoad.Scenario.Context.throttle/2`:
 
 ```elixir
 defmodule MyApp.LoadTest.CheckoutScenario do
@@ -455,7 +455,7 @@ defmodule MyApp.LoadTest.CheckoutScenario do
 end
 ```
 
-The `throttle(:checkouts)` call will block the user process until the throttle allows it through.
+The `LiveLoad.Scenario.Context.throttle/2` call will block the user process until the throttle allows it through.
 
 ### Throttle Types
 
@@ -493,7 +493,7 @@ Parallelism.new(:checkouts, 5)
 
 ### Ramping Up
 
-`Rate` and `Interarrival` throttles support gradual ramp-ups, so you can start slow and increase load over time.
+`LiveLoad.Scenario.Throttle.Rate` and `LiveLoad.Scenario.Throttle.Interarrival` throttles support gradual ramp-ups, so you can start slow and increase load over time.
 
 ```elixir
 # Start at 10 per minute, ramp to 100 per minute over 5 minutes
@@ -568,7 +568,7 @@ reset_context_storage(context)
 Two timeout values control the execution:
 
 - **`:scenario_duration`** (default: 10 minutes): how long the scenario loops for. Once this expires, the current iteration finishes and the user terminates.
-- **`:iteration_timeout`** (default: 2 minutes): the maximum time for a single iteration of `run/3`. If your scenario doesn't complete within this window, the user process is killed and the failure is recorded.
+- **`:iteration_timeout`** (default: 2 minutes): the maximum time for a single iteration of `c:LiveLoad.Scenario.run/3`. If your scenario doesn't complete within this window, the user process is killed and the failure is recorded.
 
 Neither accepts `:infinity`. The timeouts must complete, a test must not run forever.
 
