@@ -127,7 +127,6 @@ defmodule LiveLoad.MixProject do
   defp extras do
     [
       "guides/writing_your_first_scenario.md",
-      "guides/phoenix_baselines.md",
       "DEVLOG.md": [title: "Devlog"],
       "CHANGELOG.md": [title: "Changelog"]
     ]
