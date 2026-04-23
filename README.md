@@ -139,6 +139,16 @@ results = LiveLoad.run(
 
 LiveLoad handles the cluster formation, browser provisioning, and user distribution across nodes automatically. Each node gets its own browser instance, and users are distributed evenly across the cluster. When the test finishes, metrics from all nodes are merged into a single `LiveLoad.Result`.
 
+## Project Status
+
+LiveLoad is in active early development. The architecture works and is tested against real applications, but there are rough edges that are being actively worked on.
+
+**Current limitations:**
+
+- **WebSocket metrics only:** LiveLoad collects Phoenix.Socket-level metrics (frame sizes, frame rates) cleanly over WebSocket connections. If your app falls back to longpolling, those frame-level metrics won't be captured directly, since longpolling is just HTTP requests from the telemetry collection. All HTTP request metrics are collected however they are not filtered down into the longpolling fallback URL. **Browser-level LiveView metrics (mount times, `phx-*-loading` durations) are recorded regardless of transport.**
+- **Cluster startup time at scale:** AMoC's cluster gossip protocol hits bottlenecks on larger clusters. LiveLoad works around this, but forming clusters above ~50 nodes still involves noticeable idle time during setup. This doesn't affect your results, since the load test duration timer starts after the cluster is ready, but it does mean you'll be waiting a bit before things kick off and it can affect your costs when running large load tests. **This is being actively worked on in order to lower costs and optimize the cluster startup times.**
+- **Infrastructure ceiling:** The maximum number of concurrent users depends on your infrastructure provider's limits. Each browser context consumes real memory. LiveLoad calculates how many users fit per node based on available resources, but at roughly 2 users per CPU core under active LiveView scenarios, you'll need a meaningful number of nodes for large tests. **I am actively tracking other headless browser implementations such as LightPanda and Obscura to see whether switching to alternative implementations can help optimize the number of users that can be simulated per machine. Additionally, the `LiveLoad.Browser.Connection` module is a behaviour, allowing you to implement your own browser modules.**
+
 ## Documentation
 
 Full documentation is available on [HexDocs](https://hexdocs.pm/live_load).
