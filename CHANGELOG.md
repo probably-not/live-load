@@ -118,6 +118,15 @@ html = LiveLoad.Reporter.HTML.render!(results)
 File.write!("liveload_report.html", html)
 ```
 
+## v0.1.1 (2026-04-23)
+
+### Enhancements
+
+#### Docs
+
+  * [LiveLoad.Reporter.Markdown] Make sure that the `LiveLoad.Reporter.Markdown` module is scoped properly in the docs.
+
+
 ## v0.1.0 (2026-04-23)
 
 ### Enhancements
