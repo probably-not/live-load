@@ -1,23 +1,25 @@
 defmodule LiveLoad.Reporter.Markdown do
-  @moduledoc false
-  # `LiveLoad.Reporter.Markdown` is a very very simple Markdown-based reporter
-  # that is being used to just inspect the outputs of a run. The `LiveLoad.Result`
-  # struct contains the final output of a run, but with all of the metrics that I'm
-  # adding and collecting, it's... a lot. So I needed a simple reporting mechanism.
+  @moduledoc """
+  `LiveLoad.Reporter.Markdown` is a very very simple Markdown-based reporter
+  that can be used to just inspect the outputs of a run in a basic markdown report.
+  """
 
   alias LiveLoad.Result
 
   @quantiles [p50: 50, p90: 90, p95: 95, p99: 99]
 
-  def write!(results, path \\ "liveload_report.md") do
-    markdown =
-      IO.iodata_to_binary([
-        "# LiveLoad Report\n",
-        "Generated: #{DateTime.to_iso8601(DateTime.utc_now())}\n",
-        Enum.map_join(results, "\n---\n\n", &scenario_section/1)
-      ])
+  @doc """
+  Render a markdown report from the result of `LiveLoad.run/1`.
 
-    File.write!(path, markdown)
+  Returns a `t:binary/0` which can then be used to write to a file, served over a web server, etc.
+  """
+  @spec render!(results :: %{LiveLoad.Scenario.t() => LiveLoad.scenario_result()}) :: binary()
+  def render!(results) when is_map(results) do
+    IO.iodata_to_binary([
+      "# LiveLoad Report\n",
+      "Generated: #{DateTime.to_iso8601(DateTime.utc_now())}\n",
+      Enum.map_join(results, "\n---\n\n", &scenario_section/1)
+    ])
   end
 
   defp scenario_section({_scenario, {:error, reason}}) do

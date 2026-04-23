@@ -8,6 +8,10 @@ So... welcome to the LiveLoad Devlog! Where I, [**@probably-not**](https://githu
 The Devlog is going to follow a similar structure to the Changelog. As I work and find "release-points" that make sense to me in some arbitrary way,
 I'll cut a release, and update the Devlog. The Changelog is going to be fully reset, and basically irrelevant (until I actually make a real release).
 
+## 0.1.0
+
+It's official, I'm readying for the 0.1.0 release and publicizing this repo, which means that I probably won't continue to push things into this Devlog anymore. I should probably turn this into a series of posts or something... that way it can live on in my blog (if I ever get around to setting it up...).
+
 ## 0.0.1-rc.59
 
 Whelp, it didn't work. So, reverted!
