@@ -84,6 +84,12 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 ```
 
+### Other Optimizations
+
+Depending on the scale that you are testing, you may also want to optimize other parts of the BEAM, such as the overlapping partitions protection (LiveLoad's clusters are dynamic and initialize and tear down very fast so many of the overlapping partitions are not actual issues), the distribution buffer size (since LiveLoad create large clusters, the amount of traffic over distribution can be very large), the setup and tick time (to avoid networking hiccups causing a node disconnection on infrastructure providers like Fly.io), and the async thread pool (Playwright communicates over STDIO, which can mean a lot of IO running on the machines).
+
+An example of a repo that contains these sets of optimizations can be found at https://github.com/probably-not/live-load-bench.
+
 ## Quick Example
 
 Define a scenario:
