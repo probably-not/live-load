@@ -87,7 +87,7 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
     PlaywrightEx.Supervisor.connection_name(__MODULE__.Playwright)
   end
 
-  @default_playwright_version "1.59.1"
+  @default_playwright_version "1.62.0"
   def playwright_version_from_env do
     Application.get_env(:live_load, :playwright_version, @default_playwright_version)
   end

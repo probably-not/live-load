@@ -16,7 +16,7 @@ defmodule Mix.Tasks.LiveLoad.Install do
   ## Examples
 
       $ mix live_load.install
-      $ mix live_load.install 1.59.1
+      $ mix live_load.install 1.62.0
   """
   use Mix.Task
 
