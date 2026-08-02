@@ -26,6 +26,6 @@
   "recase": {:hex, :recase, "0.9.1", "82d2e2e2d4f9e92da1ce5db338ede2e4f15a50ac1141fc082b80050b9f49d96e", [:mix], [], "hexpm", "19ba03ceb811750e6bec4a015a9f9e45d16a8b9e09187f6d72c3798f454710f3"},
   "remixed_remix": {:hex, :remixed_remix, "2.0.2", "17305cc2219193c5c443fb5e59e7c67e77a70a80db55fa95068355c0de3bd575", [:mix], [], "hexpm", "2d73083e2e1ad31f742275323c4ad3c184924932346721447e8e5905326a99c4"},
   "statistex": {:hex, :statistex, "1.1.1", "73612aa7f79e53c30569be065fd121e380f1cf57bc4c2da5b41be9246da18df9", [:mix], [], "hexpm", "310c4b49b34adf683de3103639006bed233ab54c08a4add65a531448e653857c"},
-  "styler": {:hex, :styler, "1.11.0", "35010d970689a23c2bcc8e97bd8bf7d20e3561d60c49be84654df5c37d051a9c", [:mix], [], "hexpm", "70f36165d0cf238a32b7a456fdef6a9c72e77e657d7ac4a0ace33aeba3f2b8c0"},
+  "styler": {:hex, :styler, "1.12.2", "1aa2942295645df48d42365f7191cc8b9f6fc4c35d15491f6fbd80ee815256b0", [:mix], [], "hexpm", "a82baeb6d81e35ee1c4cf8af08e141e8d7872a1d442f6fefce29817869e77a01"},
   "telemetry": {:hex, :telemetry, "1.4.2", "a0cb522801dffb1c49fe6e30561badffc7b6d0e180db1300df759faa22062855", [:rebar3], [], "hexpm", "928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1"},
 }
