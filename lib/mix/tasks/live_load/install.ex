@@ -20,7 +20,13 @@ defmodule Mix.Tasks.LiveLoad.Install do
   """
   use Mix.Task
 
-  @base_url URI.new!("https://playwright.azureedge.net/builds/driver")
+  # Playwright's old azureedge endpoints are now returning 404 for the newer builds.
+  # Looks like it's a necessary evil to install and run things via a shimmed node local for Playwright.
+  # This is pretty close to what others are doing in their Playwright forks, so I'm going to keep this here
+  # so that people can still avoid needing to know anything about node for using LiveLoad.
+  @npm_registry URI.new!("https://registry.npmjs.org")
+  @nodejs_dist URI.new!("https://nodejs.org/dist")
+  @nodejs_version "24.18.0"
 
   @doc false
   def run([]) do
@@ -30,8 +36,6 @@ defmodule Mix.Tasks.LiveLoad.Install do
 
   def run([version]) do
     Application.ensure_all_started([:inets, :ssl])
-
-    platform = platform()
 
     priv_dir = Application.app_dir(:live_load, ["priv", "playwright"])
     File.mkdir_p!(priv_dir)
@@ -43,46 +47,56 @@ defmodule Mix.Tasks.LiveLoad.Install do
     File.mkdir_p!(driver_dir)
     File.mkdir_p!(browsers_dir)
 
-    zip_url =
-      @base_url
-      |> URI.append_path("/playwright-#{version}-#{platform}.zip")
+    install_driver!(driver_dir, version)
+    install_browsers!(driver_dir, browsers_dir)
+    bundle!(versioned_path, driver_dir, browsers_dir)
+  end
+
+  defp install_driver!(driver_dir, version) do
+    Mix.shell().info("Downloading Playwright driver #{version}")
+
+    url =
+      @npm_registry
+      |> URI.append_path("/playwright-core/-/playwright-core-#{version}.tgz")
       |> URI.to_string()
 
-    zip_path = Path.join(versioned_path, "playwright-driver.zip")
+    body = download!(url, "Playwright driver #{version}")
+    :ok = :erl_tar.extract({:binary, body}, [:compressed, {:cwd, String.to_charlist(driver_dir)}])
 
-    Mix.shell().info("Downloading Playwright driver #{version} for #{platform}")
+    install_nodejs!(driver_dir)
+    write_wrapper!(driver_dir)
+  end
 
-    :ok = :public_key.cacerts_load()
+  defp install_nodejs!(driver_dir) do
+    platform = nodejs_platform()
+    archive = "node-v#{@nodejs_version}-#{platform}"
 
-    ssl_opts = [
-      verify: :verify_peer,
-      cacerts: :public_key.cacerts_get(),
-      depth: 3,
-      customize_hostname_check: [
-        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-      ]
-    ]
+    Mix.shell().info("Downloading Node.js #{@nodejs_version} for #{platform}")
 
-    body =
-      case :httpc.request(:get, {String.to_charlist(zip_url), []}, [ssl: ssl_opts], body_format: :binary) do
-        {:ok, {{_, 200, _}, _, body}} ->
-          body
+    url =
+      @nodejs_dist
+      |> URI.append_path("/v#{@nodejs_version}/#{archive}.tar.gz")
+      |> URI.to_string()
 
-        {:ok, {{_, status, _}, _, _}} ->
-          Mix.raise("Failed to download Playwright driver #{version} for #{platform}: HTTP #{status} from #{zip_url}")
+    body = download!(url, "Node.js #{@nodejs_version} for #{platform}")
 
-        {:error, reason} ->
-          Mix.raise("Failed to download Playwright driver #{version} for #{platform}: #{inspect(reason)}")
-      end
+    tmp_dir = Path.join(driver_dir, "_node")
+    File.mkdir_p!(tmp_dir)
 
-    File.write!(zip_path, body)
-
-    {:ok, _} = :zip.unzip(String.to_charlist(zip_path), cwd: String.to_charlist(driver_dir))
-    File.rm!(zip_path)
+    :ok =
+      :erl_tar.extract({:binary, body}, [
+        :compressed,
+        {:cwd, String.to_charlist(tmp_dir)},
+        {:files, [String.to_charlist("#{archive}/bin/node")]}
+      ])
 
     node_path = Path.join(driver_dir, "node")
+    File.rename!(Path.join([tmp_dir, archive, "bin", "node"]), node_path)
     File.chmod!(node_path, 0o755)
+    File.rm_rf!(tmp_dir)
+  end
 
+  defp write_wrapper!(driver_dir) do
     wrapper_path = Path.join(driver_dir, "playwright-driver")
 
     File.write!(wrapper_path, """
@@ -91,7 +105,10 @@ defmodule Mix.Tasks.LiveLoad.Install do
     """)
 
     File.chmod!(wrapper_path, 0o755)
+  end
 
+  defp install_browsers!(driver_dir, browsers_dir) do
+    node_path = Path.join(driver_dir, "node")
     cli_path = Path.join([driver_dir, "package", "cli.js"])
 
     Mix.shell().info("Installing Chromium")
@@ -106,7 +123,9 @@ defmodule Mix.Tasks.LiveLoad.Install do
       {_, 0} -> :ok
       {_, code} -> Mix.raise("Playwright Chromium installation failed with exit code #{code}")
     end
+  end
 
+  defp bundle!(versioned_path, driver_dir, browsers_dir) do
     archive_path = Path.join(versioned_path, "playwright_bundle.tar.gz")
 
     :ok =
@@ -125,19 +144,44 @@ defmodule Mix.Tasks.LiveLoad.Install do
     Mix.shell().info("Compressed playwright to #{archive_path}")
   end
 
-  # credo:disable-for-lines:14 Credo.Check.Refactor.CyclomaticComplexity
-  defp platform do
-    {_, os_name} = :os.type()
+  defp download!(url, description) do
+    :ok = :public_key.cacerts_load()
+
+    ssl_opts = [
+      verify: :verify_peer,
+      cacerts: :public_key.cacerts_get(),
+      depth: 3,
+      customize_hostname_check: [
+        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+      ]
+    ]
+
+    case :httpc.request(:get, {String.to_charlist(url), []}, [ssl: ssl_opts], body_format: :binary) do
+      {:ok, {{_, 200, _}, _, body}} ->
+        body
+
+      {:ok, {{_, status, _}, _, _}} ->
+        Mix.raise("Failed to download #{description}: HTTP #{status} from #{url}")
+
+      {:error, reason} ->
+        Mix.raise("Failed to download #{description}: #{inspect(reason)}")
+    end
+  end
+
+  defp nodejs_platform do
     arch = to_string(:erlang.system_info(:system_architecture))
 
-    cond do
-      os_name == :darwin and arch =~ "aarch64" -> "mac-arm64"
-      os_name == :darwin and arch =~ "arm" -> "mac-arm64"
-      os_name == :darwin -> "mac"
-      os_name == :linux and arch =~ "aarch64" -> "linux-arm64"
-      os_name == :linux and arch =~ "arm" -> "linux-arm64"
-      os_name == :linux -> "linux"
-      true -> "win32_x64"
+    cpu =
+      cond do
+        arch =~ "aarch64" -> "arm64"
+        arch =~ "arm" -> "arm64"
+        true -> "x64"
+      end
+
+    case :os.type() do
+      {:unix, :darwin} -> "darwin-#{cpu}"
+      {:unix, :linux} -> "linux-#{cpu}"
+      {family, name} -> Mix.raise("Unsupported platform: #{family}/#{name}")
     end
   end
 end
