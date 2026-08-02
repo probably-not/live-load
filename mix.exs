@@ -77,7 +77,7 @@ defmodule LiveLoad.MixProject do
       {:poison, "~> 6.0", optional: true},
       ## Testing and Development Dependencies
       {:flame_peer, "~> 1.0.2", only: [:dev, :test]},
-      {:git_hooks, "~> 0.8.0", only: [:dev], runtime: false},
+      {:git_hooks, "~> 0.9.0", only: [:dev], runtime: false},
       {:styler, "~> 1.11", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.40.1", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
