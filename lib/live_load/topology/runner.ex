@@ -4,11 +4,17 @@ defmodule LiveLoad.Topology.Runner do
   use GenServer
 
   def setup!(server, runner_node, browser_connection_adapter, browser_connection_opts, collector_pid, timeout) do
-    GenServer.call(
-      server,
-      {:setup, runner_node, browser_connection_adapter, browser_connection_opts, collector_pid},
-      timeout
-    )
+    # Assertive, but I should probably do error handling at some point...
+    {:ok, pid} =
+      :rpc.block_call(
+        runner_node,
+        LiveLoad.Scenario.Topology,
+        :setup,
+        [{browser_connection_adapter, browser_connection_opts, collector_pid}],
+        timeout
+      )
+
+    GenServer.call(server, {:link, pid}, timeout)
   end
 
   def start_link(_opts) do
@@ -21,16 +27,7 @@ defmodule LiveLoad.Topology.Runner do
   end
 
   @impl true
-  def handle_call({:setup, runner_node, browser_connection_adapter, browser_connection_opts, collector_pid}, _from, links) do
-    # Assertive, but I should probably do error handling at some point...
-    {:ok, pid} =
-      :rpc.block_call(
-        runner_node,
-        LiveLoad.Scenario.Topology,
-        :setup,
-        [{browser_connection_adapter, browser_connection_opts, collector_pid}]
-      )
-
+  def handle_call({:link, pid}, _from, links) do
     # Link the topology from the runner node to the current topology. If we go down or lose connection, everything should come down.
     Process.link(pid)
     {:reply, :ok, [pid | links]}
