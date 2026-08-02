@@ -71,7 +71,7 @@ defmodule LiveLoad.MixProject do
       {:amoc, "~> 4.1", runtime: false},
       {:telemetry, "~> 1.0"},
       {:playwright_ex, "~> 0.6.0"},
-      {:ddskerl, "~> 0.4.3"},
+      {:ddskerl, "~> 0.5.0"},
       ## Optional Dependencies
       {:jason, "~> 1.4", optional: true},
       {:poison, "~> 6.0", optional: true},
