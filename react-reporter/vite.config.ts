@@ -22,7 +22,7 @@ export default defineConfig({
     copyPublicDir: false,
     rollupOptions: {
       output: {
-        inlineDynamicImports: true,
+        codeSplitting: false,
       },
     },
   },
