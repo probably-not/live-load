@@ -84,7 +84,10 @@ defmodule LiveLoad.Topology do
           collector_pid,
           scenario_setup_timeout
         ),
-        max_concurrency: min(8, max(length(cluster.pool_node_names), 1)),
+        # Uncapped concurrency because these are each tasks that are handled on the runner nodes
+        # and there's no API or resource waits here. Capping actually slows this down a lot,
+        # because then we have to wait for slots to open up and the setup can take around 40 seconds.
+        max_concurrency: max(length(cluster.pool_node_names), 1),
         ordered: false,
         timeout: :infinity
       )
