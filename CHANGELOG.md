@@ -118,6 +118,24 @@ html = LiveLoad.Reporter.HTML.render!(results)
 File.write!("liveload_report.html", html)
 ```
 
+## v0.1.2 (2026-08-10)
+
+### Enhancements
+
+#### Core
+
+  * [LiveLoad.Topology] Wrap the `LiveLoad.Topology.Runner.setup!` call in a `Task.async_stream` so that it runs concurrently across all pool nodes.
+  * [LiveLoad.Topology.Runner] Move the `:rpc.block_call` out of the GenServer so that it can be called concurrently without blocking callers.
+
+#### Browser
+
+  * [Mix.Tasks.LiveLoad.Install] Move the Playwright download to NPM and use the official packages there now that the Azure Edge CDN endpoints have been deprecated.
+  * [Mix.Tasks.LiveLoad.Install] Add `--no-bundle` option to create an unbundled and ready to run Playwright instance.
+
+#### Dependencies
+
+  * [mix.exs] Update dependencies across the board, upgrade the tooling to the latest Elixir and OTP versions.
+
 ## v0.1.1 (2026-04-23)
 
 ### Enhancements
