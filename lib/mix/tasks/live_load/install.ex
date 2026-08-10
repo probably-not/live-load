@@ -12,11 +12,22 @@ defmodule Mix.Tasks.LiveLoad.Install do
   This must be run with the version of Playwright that is going to be used.
   The default version is #{LiveLoad.Browser.Connection.Playwright.Supervisor.playwright_version_from_env()}.
 
+  ## Options
+
+    * `--no-bundle` - does not bundle and compress the Playwright driver and browser.
+      Leaving the driver and browser compressed means that when running a load test,
+      the startup time pays a cost for unpacking the archive. Depending on the size of
+      the load test, this may take a while, as each node needs to unpack and then set up
+      the browser. Using this flag will leave the Playwright driver and browser unbundled,
+      which may result in a higher release bundle as a tradeoff.
+
 
   ## Examples
 
       $ mix live_load.install
+      $ mix live_load.install --no-bundle
       $ mix live_load.install 1.62.0
+      $ mix live_load.install 1.62.0 --no-bundle
   """
   use Mix.Task
 
@@ -28,13 +39,13 @@ defmodule Mix.Tasks.LiveLoad.Install do
   @nodejs_dist URI.new!("https://nodejs.org/dist")
   @nodejs_version "24.18.0"
 
-  @doc false
-  def run([]) do
-    default_version = LiveLoad.Browser.Connection.Playwright.Supervisor.playwright_version_from_env()
-    run([default_version])
-  end
+  @switches [no_bundle: :boolean]
 
-  def run([version]) do
+  @doc false
+  def run(args) do
+    {opts, argv} = OptionParser.parse!(args, strict: @switches)
+    version = version!(argv)
+
     Application.ensure_all_started([:inets, :ssl])
 
     priv_dir = Application.app_dir(:live_load, ["priv", "playwright"])
@@ -49,7 +60,19 @@ defmodule Mix.Tasks.LiveLoad.Install do
 
     install_driver!(driver_dir, version)
     install_browsers!(driver_dir, browsers_dir)
-    bundle!(versioned_path, driver_dir, browsers_dir)
+
+    if Keyword.get(opts, :no_bundle, false) do
+      no_bundle!(versioned_path, driver_dir, browsers_dir)
+    else
+      bundle!(versioned_path, driver_dir, browsers_dir)
+    end
+  end
+
+  defp version!([]), do: LiveLoad.Browser.Connection.Playwright.Supervisor.playwright_version_from_env()
+  defp version!([version]), do: version
+
+  defp version!(argv) do
+    Mix.raise("Expected a single Playwright version, got: #{Enum.join(argv, ", ")}")
   end
 
   defp install_driver!(driver_dir, version) do
@@ -140,9 +163,24 @@ defmodule Mix.Tasks.LiveLoad.Install do
 
     File.rm_rf!(driver_dir)
     File.rm_rf!(browsers_dir)
+    File.rm_rf!(bin_dir(versioned_path))
 
     Mix.shell().info("Compressed playwright to #{archive_path}")
   end
+
+  defp no_bundle!(versioned_path, driver_dir, browsers_dir) do
+    bin_dir = bin_dir(versioned_path)
+    File.rm_rf!(bin_dir)
+    File.mkdir_p!(bin_dir)
+
+    File.rename!(driver_dir, Path.join(bin_dir, "driver"))
+    File.rename!(browsers_dir, Path.join(bin_dir, "browsers"))
+    File.rm_rf!(Path.join(versioned_path, "playwright_bundle.tar.gz"))
+
+    Mix.shell().info("Decompressed playwright to #{bin_dir}")
+  end
+
+  defp bin_dir(versioned_path), do: Path.join(versioned_path, "bin")
 
   defp download!(url, description) do
     :ok = :public_key.cacerts_load()

@@ -74,8 +74,8 @@ defmodule LiveLoad.Topology do
     {scenario_setup_timeout, opts} = Keyword.pop(opts, :scenario_setup_timeout, to_timeout(minute: 2))
 
     :ok =
-      Enum.each(
-        cluster.pool_node_names,
+      cluster.pool_node_names
+      |> Task.async_stream(
         &Topology.Runner.setup!(
           runner_pid,
           &1,
@@ -83,8 +83,15 @@ defmodule LiveLoad.Topology do
           browser_connection_opts,
           collector_pid,
           scenario_setup_timeout
-        )
+        ),
+        # Uncapped concurrency because these are each tasks that are handled on the runner nodes
+        # and there's no API or resource waits here. Capping actually slows this down a lot,
+        # because then we have to wait for slots to open up and the setup can take around 40 seconds.
+        max_concurrency: max(length(cluster.pool_node_names), 1),
+        ordered: false,
+        timeout: :infinity
       )
+      |> Stream.run()
 
     try do
       with :ok <- Collector.watch_cluster(collector_pid, cluster.pool_node_names),
