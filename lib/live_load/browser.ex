@@ -33,6 +33,15 @@ defmodule LiveLoad.Browser do
 
   @doc """
   Delegates to the connection implementation on the browser and runs
+  the `c:LiveLoad.Browser.Connection.metadata/0` callback found on the implementation.
+  """
+  @spec metadata(browser :: Browser.t()) :: Connection.metadata()
+  def metadata(%Browser{connection: {mod, _opts}}) do
+    mod.metadata()
+  end
+
+  @doc """
+  Delegates to the connection implementation on the browser and runs
   the `c:LiveLoad.Browser.Connection.new_context/1` callback found on the implementation.
   """
   @spec new_context(browser :: Browser.t()) :: {:ok, Browser.Context.t()} | {:error, term()}

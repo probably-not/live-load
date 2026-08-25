@@ -15,6 +15,36 @@ defmodule LiveLoad.Browser.Connection do
   @type option() :: LiveLoad.Browser.Connection.Playwright.connection_option() | {atom(), term()}
   @type opts() :: [option()]
 
+  @typedoc """
+  Level of the support status that a feature has in specific connection implementations.
+
+  These are used by the `c:LiveLoad.Browser.Connection.metadata/0` callback in order to
+  allow different browser implementations to define which features they may not fully support.
+
+  The different status levels represent different workarounds:
+  - `:estimated`: Useful for when certain telemetry may not be fully supported as emitted by a browser,
+    but can be estimated by different means.
+  - `:instrumented`: Useful for when an implementation does not support the native telemetry of specific metrics,
+    but the telemetry support can be instrumented manually via JavaScript injections into the browser.
+  - `:unsupported`: Used when a feature or metrics is completely unsupported and cannot be estimated or instrumented manually.
+  """
+  @type support_status() :: :estimated | :instrumented | :unsupported
+
+  @typedoc "Metadata returned by the `c:LiveLoad.Browser.Connection.metadata/0` callback to signal the support levels of various features and metrics."
+  @type metadata() :: %{
+          adapter: String.t(),
+          unsupported_metrics: %{optional(String.t()) => support_status()},
+          unsupported_features: %{optional(String.t()) => support_status()}
+        }
+
+  @doc """
+  Different browser implementations may have different levels of implementation for certain features in the browser,
+  such as storage implementations, or telemetry signals availability. In order to surface this information to the result and
+  whoever is viewing the result, this callback can be implemented by a connection implementation in order to return information
+  about different support statuses for various features.
+  """
+  @callback metadata() :: metadata()
+
   ####################################
   ##### Resource Usage Callbacks #####
   ####################################
@@ -159,6 +189,10 @@ defmodule LiveLoad.Browser.Connection do
       @doc false
       def drain_metrics(browser), do: :ok
       defoverridable drain_metrics: 1
+
+      @doc false
+      def metadata, do: %{adapter: inspect(__MODULE__), unsupported_metrics: %{}, unsupported_features: %{}}
+      defoverridable metadata: 0
 
       @doc false
       def before_start(browser), do: {:ok, browser}

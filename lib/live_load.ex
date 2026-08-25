@@ -379,9 +379,11 @@ defmodule LiveLoad do
   end
 
   defp run_scenario(scenario, run_config, opts) do
+    browser_connection_adapter = Keyword.fetch!(opts, :browser_connection_adapter)
+
     with {:ok, _topology_pid} <- LiveLoad.Topology.setup(scenario),
          {:ok, results} <- do_scenario(scenario, run_config[:distributed?], run_config, opts) do
-      LiveLoad.Result.new(scenario, results)
+      LiveLoad.Result.new(scenario, results, browser_connection_adapter.metadata())
     end
   after
     LiveLoad.Topology.teardown(scenario)
