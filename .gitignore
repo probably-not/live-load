@@ -2,6 +2,7 @@
 local-experiments/
 priv/plts
 priv/playwright/
+priv/lightpanda/
 priv/expert/
 
 # The directory Mix will write compiled artifacts to.
