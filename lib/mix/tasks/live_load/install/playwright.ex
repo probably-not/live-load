@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.LiveLoad.Install do
+defmodule Mix.Tasks.LiveLoad.Install.Playwright do
   @shortdoc "Downloads and installs the necessary Playwright driver and browser binaries for LiveLoad"
 
   @moduledoc """
@@ -24,10 +24,10 @@ defmodule Mix.Tasks.LiveLoad.Install do
 
   ## Examples
 
-      $ mix live_load.install
-      $ mix live_load.install --no-bundle
-      $ mix live_load.install 1.62.0
-      $ mix live_load.install 1.62.0 --no-bundle
+      $ mix live_load.install.playwright
+      $ mix live_load.install.playwright --no-bundle
+      $ mix live_load.install.playwright 1.62.0
+      $ mix live_load.install.playwright 1.62.0 --no-bundle
   """
   use Mix.Task
 
