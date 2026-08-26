@@ -166,7 +166,8 @@ defmodule LiveLoad.MixProject do
       ],
       "Browser.Connection": [
         LiveLoad.Browser.Connection,
-        LiveLoad.Browser.Connection.Playwright
+        LiveLoad.Browser.Connection.Playwright,
+        LiveLoad.Browser.Connection.Lightpanda
       ]
     ]
   end
