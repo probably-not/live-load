@@ -3,7 +3,7 @@ defmodule LiveLoad.Browser.Connection.Lightpanda do
   An implementation of `LiveLoad.Browser.Connection` that uses the `Mint.WebSocket` library to communicate with a Lightpanda CDP instance.
 
   This implementation is experimental as not everything is implemented on Lightpanda. The details of unsupported features and metrics can
-  be found through the `LiveLoad.Browser.Connection.Lightpanda.metadata/0` function. These details will also be present on any `LiveLoad.Result`
+  be found through the `c:LiveLoad.Browser.Connection.metadata/0` callback on the adapter. These details will also be present on any `LiveLoad.Result`
   generated using this connection implementation.
   """
 
