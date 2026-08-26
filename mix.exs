@@ -72,6 +72,13 @@ defmodule LiveLoad.MixProject do
       {:telemetry, "~> 1.0"},
       {:playwright_ex, "~> 0.7.1", optional: true},
       {:mint_web_socket, "~> 1.0", optional: true},
+      # erlexec is sort of optional since it's only for
+      # the Lightpanda connector, but I don't like the idea
+      # of forcing the user to set it alongside mint_web_socket.
+      # What I should probably do is make the connection implementations
+      # separate packages, and then make them optional and check for whatever
+      # module is passed to be loaded instead.
+      {:erlexec, "~> 2.0"},
       {:ddskerl, "~> 0.5.0"},
       ## Optional Dependencies
       {:jason, "~> 1.4", optional: true},
