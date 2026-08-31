@@ -5,6 +5,13 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
   alias LiveLoad.Browser.Connection.Playwright.Decompressor
 
   def start_link(opts) do
+    if not Code.ensure_loaded?(PlaywrightEx) do
+      raise RuntimeError, """
+      Using `LiveLoad.Browser.Connection.Playwright` browser implementation requires
+      `{:playwright_ex, "~> 0.7.1"}` in your application dependencies."
+      """
+    end
+
     validations = [
       :playwright_cli_path,
       name: __MODULE__,

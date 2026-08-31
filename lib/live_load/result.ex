@@ -16,6 +16,7 @@ defmodule LiveLoad.Result do
     The `LiveLoad.Result` contains all of the necessary information already fully calculated, allowing any reporter to do whatever they want with it.
   """
 
+  alias LiveLoad.Browser.Connection
   alias LiveLoad.Scenario
   alias LiveLoad.Telemetry
 
@@ -180,33 +181,43 @@ defmodule LiveLoad.Result do
           bucket_width_ms: pos_integer(),
           global: ScenarioResult.t(),
           nodes: [NodeResult.t()],
+          browser_metadata: Connection.metadata(),
           quantile_points: [float()]
         }
 
   LiveLoad.JSON.derive_encoder()
 
   @enforce_keys [:name, :generated_at, :liveload_version, :bucket_width_ms, :global, :nodes, :quantile_points]
-  defstruct [:name, :generated_at, :liveload_version, :bucket_width_ms, :global, :nodes, :quantile_points]
+  defstruct [
+    :name,
+    :generated_at,
+    :liveload_version,
+    :bucket_width_ms,
+    :global,
+    :nodes,
+    :quantile_points,
+    :browser_metadata
+  ]
 
   @typedoc false
   @type result() :: Telemetry.Result.t() | :error
 
   @doc false
-  @spec new(scenario :: Scenario.t(), node_results :: %{node() => result()}) ::
+  @spec new(scenario :: Scenario.t(), node_results :: %{node() => result()}, browser_metadata :: Connection.metadata()) ::
           t() | {:error, :all_nodes_failed} | {:error, :no_results}
-  def new(scenario, node_results) when map_size(node_results) > 0 do
+  def new(scenario, node_results, browser_metadata) when map_size(node_results) > 0 do
     if Enum.any?(node_results, fn {_node, value} -> is_struct(value, Telemetry.Result) end) do
-      build_result(scenario, node_results)
+      build_result(scenario, node_results, browser_metadata)
     else
       {:error, :all_nodes_failed}
     end
   end
 
-  def new(_scenario, _node_results) do
+  def new(_scenario, _node_results, _browser_metadata) do
     {:error, :no_results}
   end
 
-  defp build_result(scenario, node_results) do
+  defp build_result(scenario, node_results, browser_metadata) do
     successful_results =
       node_results
       |> Map.values()
@@ -280,6 +291,7 @@ defmodule LiveLoad.Result do
       liveload_version: liveload_version(),
       quantile_points: @quantile_points,
       bucket_width_ms: bucket_width_ms,
+      browser_metadata: browser_metadata,
       global: %ScenarioResult{
         duration_ms: (max_bucket + 1) * bucket_width_ms,
         histograms: precompute_histograms(merged_sketches),

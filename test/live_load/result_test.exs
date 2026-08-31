@@ -30,6 +30,10 @@ defmodule LiveLoad.ResultTest do
     Enum.reduce(values, :ddskerl_std.new(%{error: @error_rate}), &:ddskerl_std.insert(&2, &1))
   end
 
+  defp browser_metadata do
+    %{adapter: "Test", unsupported_metrics: %{}, unsupported_features: %{}}
+  end
+
   defp telemetry_result(attrs) do
     defaults = %{
       total: 0,
@@ -51,29 +55,41 @@ defmodule LiveLoad.ResultTest do
   describe "users aggregation" do
     test "single node" do
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 100, succeeded: 95, failed: 5)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 100, succeeded: 95, failed: 5)
+          },
+          browser_metadata()
+        )
 
       assert result.global.users == %Users{total: 100, succeeded: 95, failed: 5}
     end
 
     test "multiple nodes sum correctly" do
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 100, succeeded: 90, failed: 10),
-          node2: telemetry_result(total: 50, succeeded: 48, failed: 2)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 100, succeeded: 90, failed: 10),
+            node2: telemetry_result(total: 50, succeeded: 48, failed: 2)
+          },
+          browser_metadata()
+        )
 
       assert result.global.users == %Users{total: 150, succeeded: 138, failed: 12}
     end
 
     test "per-node users are preserved individually" do
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 100, succeeded: 90, failed: 10),
-          node2: telemetry_result(total: 50, succeeded: 48, failed: 2)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 100, succeeded: 90, failed: 10),
+            node2: telemetry_result(total: 50, succeeded: 48, failed: 2)
+          },
+          browser_metadata()
+        )
 
       users_by_node =
         Map.new(result.nodes, fn %NodeResult{node: n, result: r} -> {n, r.users} end)
@@ -92,14 +108,18 @@ defmodule LiveLoad.ResultTest do
       s = sketch(values)
 
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 100,
-              succeeded: 100,
-              sketches: %{scenario_duration_us: s}
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 100,
+                succeeded: 100,
+                sketches: %{scenario_duration_us: s}
+              )
+          },
+          browser_metadata()
+        )
 
       histogram = result.global.histograms["scenario_duration_us"]
       assert %DimensionedHistogram{} = histogram
@@ -128,14 +148,18 @@ defmodule LiveLoad.ResultTest do
       s = sketch([42_000])
 
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 1,
-              succeeded: 1,
-              sketches: %{scenario_duration_us: s}
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 1,
+                succeeded: 1,
+                sketches: %{scenario_duration_us: s}
+              )
+          },
+          browser_metadata()
+        )
 
       histogram = result.global.histograms["scenario_duration_us"]
       assert histogram.aggregate.count == 1
@@ -152,18 +176,22 @@ defmodule LiveLoad.ResultTest do
       dim_b = sketch([200, 300])
 
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 3,
-              succeeded: 3,
-              sketches: %{
-                :http_request_duration_us => flat_sketch,
-                {:http_request_duration_us, "document"} => dim_a,
-                {:http_request_duration_us, "fetch"} => dim_b
-              }
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 3,
+                succeeded: 3,
+                sketches: %{
+                  :http_request_duration_us => flat_sketch,
+                  {:http_request_duration_us, "document"} => dim_a,
+                  {:http_request_duration_us, "fetch"} => dim_b
+                }
+              )
+          },
+          browser_metadata()
+        )
 
       histogram = result.global.histograms["http_request_duration_us"]
 
@@ -182,14 +210,18 @@ defmodule LiveLoad.ResultTest do
 
     test "sketch with no dimensional data has empty by map" do
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 1,
-              succeeded: 1,
-              sketches: %{scenario_duration_us: sketch([100])}
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 1,
+                succeeded: 1,
+                sketches: %{scenario_duration_us: sketch([100])}
+              )
+          },
+          browser_metadata()
+        )
 
       histogram = result.global.histograms["scenario_duration_us"]
       assert map_size(histogram.by) == 0
@@ -201,18 +233,22 @@ defmodule LiveLoad.ResultTest do
   describe "counter materialization" do
     test "aggregated counter with dimensional breakdown" do
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 10,
-              succeeded: 10,
-              counters: %{
-                :liveview_navigations => 25,
-                {:liveview_navigations, "patch"} => 18,
-                {:liveview_navigations, "redirect"} => 7
-              }
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 10,
+                succeeded: 10,
+                counters: %{
+                  :liveview_navigations => 25,
+                  {:liveview_navigations, "patch"} => 18,
+                  {:liveview_navigations, "redirect"} => 7
+                }
+              )
+          },
+          browser_metadata()
+        )
 
       counter = result.global.counters["liveview_navigations"]
       assert %DimensionedCounter{} = counter
@@ -222,18 +258,22 @@ defmodule LiveLoad.ResultTest do
 
     test "internal counters are filtered from output" do
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 10,
-              succeeded: 10,
-              counters: %{
-                scenario_users_started: 10,
-                scenario_users_completed: 10,
-                liveview_navigations: 5
-              }
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 10,
+                succeeded: 10,
+                counters: %{
+                  scenario_users_started: 10,
+                  scenario_users_completed: 10,
+                  liveview_navigations: 5
+                }
+              )
+          },
+          browser_metadata()
+        )
 
       refute Map.has_key?(result.global.counters, "scenario_users_started")
       refute Map.has_key?(result.global.counters, "scenario_users_completed")
@@ -242,14 +282,18 @@ defmodule LiveLoad.ResultTest do
 
     test "counter with no dimensional data has empty by map" do
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 1,
-              succeeded: 1,
-              counters: %{liveview_navigations: 5}
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 1,
+                succeeded: 1,
+                counters: %{liveview_navigations: 5}
+              )
+          },
+          browser_metadata()
+        )
 
       assert map_size(result.global.counters["liveview_navigations"].by) == 0
     end
@@ -265,20 +309,24 @@ defmodule LiveLoad.ResultTest do
       node2_sketch = sketch(Enum.to_list(51..100))
 
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 50,
-              succeeded: 50,
-              sketches: %{scenario_duration_us: node1_sketch}
-            ),
-          node2:
-            telemetry_result(
-              total: 50,
-              succeeded: 50,
-              sketches: %{scenario_duration_us: node2_sketch}
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 50,
+                succeeded: 50,
+                sketches: %{scenario_duration_us: node1_sketch}
+              ),
+            node2:
+              telemetry_result(
+                total: 50,
+                succeeded: 50,
+                sketches: %{scenario_duration_us: node2_sketch}
+              )
+          },
+          browser_metadata()
+        )
 
       merged = result.global.histograms["scenario_duration_us"].aggregate
 
@@ -294,28 +342,32 @@ defmodule LiveLoad.ResultTest do
 
     test "dimensional sketches merge across nodes" do
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 10,
-              succeeded: 10,
-              sketches: %{
-                :http_request_duration_us => sketch([100, 200]),
-                {:http_request_duration_us, "document"} => sketch([100]),
-                {:http_request_duration_us, "fetch"} => sketch([200])
-              }
-            ),
-          node2:
-            telemetry_result(
-              total: 10,
-              succeeded: 10,
-              sketches: %{
-                :http_request_duration_us => sketch([300, 400]),
-                {:http_request_duration_us, "document"} => sketch([300]),
-                {:http_request_duration_us, "fetch"} => sketch([400])
-              }
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 10,
+                succeeded: 10,
+                sketches: %{
+                  :http_request_duration_us => sketch([100, 200]),
+                  {:http_request_duration_us, "document"} => sketch([100]),
+                  {:http_request_duration_us, "fetch"} => sketch([200])
+                }
+              ),
+            node2:
+              telemetry_result(
+                total: 10,
+                succeeded: 10,
+                sketches: %{
+                  :http_request_duration_us => sketch([300, 400]),
+                  {:http_request_duration_us, "document"} => sketch([300]),
+                  {:http_request_duration_us, "fetch"} => sketch([400])
+                }
+              )
+          },
+          browser_metadata()
+        )
 
       histogram = result.global.histograms["http_request_duration_us"]
 
@@ -329,26 +381,30 @@ defmodule LiveLoad.ResultTest do
 
     test "sketch present on only one node still appears in merged result" do
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 10,
-              succeeded: 10,
-              sketches: %{
-                :http_request_duration_us => sketch([100]),
-                {:http_request_duration_us, "document"} => sketch([100])
-              }
-            ),
-          node2:
-            telemetry_result(
-              total: 10,
-              succeeded: 10,
-              sketches: %{
-                :http_request_duration_us => sketch([200]),
-                {:http_request_duration_us, "fetch"} => sketch([200])
-              }
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 10,
+                succeeded: 10,
+                sketches: %{
+                  :http_request_duration_us => sketch([100]),
+                  {:http_request_duration_us, "document"} => sketch([100])
+                }
+              ),
+            node2:
+              telemetry_result(
+                total: 10,
+                succeeded: 10,
+                sketches: %{
+                  :http_request_duration_us => sketch([200]),
+                  {:http_request_duration_us, "fetch"} => sketch([200])
+                }
+              )
+          },
+          browser_metadata()
+        )
 
       histogram = result.global.histograms["http_request_duration_us"]
 
@@ -361,28 +417,32 @@ defmodule LiveLoad.ResultTest do
   describe "cross-node counter merge" do
     test "counters from two nodes sum correctly" do
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 50,
-              succeeded: 50,
-              counters: %{
-                :liveview_navigations => 100,
-                {:liveview_navigations, "patch"} => 80,
-                {:liveview_navigations, "redirect"} => 20
-              }
-            ),
-          node2:
-            telemetry_result(
-              total: 50,
-              succeeded: 50,
-              counters: %{
-                :liveview_navigations => 75,
-                {:liveview_navigations, "patch"} => 50,
-                {:liveview_navigations, "redirect"} => 25
-              }
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 50,
+                succeeded: 50,
+                counters: %{
+                  :liveview_navigations => 100,
+                  {:liveview_navigations, "patch"} => 80,
+                  {:liveview_navigations, "redirect"} => 20
+                }
+              ),
+            node2:
+              telemetry_result(
+                total: 50,
+                succeeded: 50,
+                counters: %{
+                  :liveview_navigations => 75,
+                  {:liveview_navigations, "patch"} => 50,
+                  {:liveview_navigations, "redirect"} => 25
+                }
+              )
+          },
+          browser_metadata()
+        )
 
       counter = result.global.counters["liveview_navigations"]
       assert counter.aggregate == 175
@@ -419,15 +479,19 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 15,
-              succeeded: 15,
-              time_series: time_series,
-              counters: %{scenario_users_started: 15, scenario_users_completed: 15}
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 15,
+                succeeded: 15,
+                time_series: time_series,
+                counters: %{scenario_users_started: 15, scenario_users_completed: 15}
+              )
+          },
+          browser_metadata()
+        )
 
       active_users = Enum.map(result.global.time_series, & &1.active_users)
       assert active_users == [10, 12, 5, 0]
@@ -446,15 +510,19 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 5,
-              succeeded: 5,
-              time_series: time_series,
-              counters: %{scenario_users_started: 5, scenario_users_completed: 5}
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 5,
+                succeeded: 5,
+                time_series: time_series,
+                counters: %{scenario_users_started: 5, scenario_users_completed: 5}
+              )
+          },
+          browser_metadata()
+        )
 
       node_result = hd(result.nodes)
       node_active = Enum.map(node_result.result.time_series, & &1.active_users)
@@ -463,23 +531,27 @@ defmodule LiveLoad.ResultTest do
 
     test "active users carry through buckets where no telemetry fired" do
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 3,
-              succeeded: 3,
-              time_series: %{
-                0 => %{
-                  sketches: %{},
-                  counters: %{scenario_users_started: 3}
-                },
-                2 => %{
-                  sketches: %{},
-                  counters: %{scenario_users_completed: 3}
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 3,
+                succeeded: 3,
+                time_series: %{
+                  0 => %{
+                    sketches: %{},
+                    counters: %{scenario_users_started: 3}
+                  },
+                  2 => %{
+                    sketches: %{},
+                    counters: %{scenario_users_completed: 3}
+                  }
                 }
-              }
-            )
-        })
+              )
+          },
+          browser_metadata()
+        )
 
       active_users_by_offset =
         Map.new(result.global.time_series, fn %Bucket{offset_ms: offset, active_users: active} ->
@@ -514,9 +586,13 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series)
+          },
+          browser_metadata()
+        )
 
       offsets = Enum.map(result.global.time_series, & &1.offset_ms)
       assert offsets == [0, 5_000, 10_000]
@@ -530,9 +606,13 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series, bucket_width_ms: 2_000)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series, bucket_width_ms: 2_000)
+          },
+          browser_metadata()
+        )
 
       offsets = Enum.map(result.global.time_series, & &1.offset_ms)
       assert offsets == [0, 2_000, 4_000, 6_000, 8_000, 10_000, 12_000, 14_000]
@@ -554,9 +634,13 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 2, succeeded: 2, time_series: time_series)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 2, succeeded: 2, time_series: time_series)
+          },
+          browser_metadata()
+        )
 
       bucket = hd(result.global.time_series)
       assert %Bucket{} = bucket
@@ -578,9 +662,13 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series)
+          },
+          browser_metadata()
+        )
 
       # max bucket is 5, so duration = (5 + 1) * 5000 = 30000
       assert result.global.duration_ms == 30_000
@@ -593,9 +681,13 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 1, succeeded: 1, time_series: time_series)
+          },
+          browser_metadata()
+        )
 
       node_result = hd(result.nodes)
 
@@ -622,10 +714,14 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 2, succeeded: 2, time_series: ts1, start_system_time: sys_time),
-          node2: telemetry_result(total: 2, succeeded: 2, time_series: ts2, start_system_time: sys_time)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 2, succeeded: 2, time_series: ts1, start_system_time: sys_time),
+            node2: telemetry_result(total: 2, succeeded: 2, time_series: ts2, start_system_time: sys_time)
+          },
+          browser_metadata()
+        )
 
       # Both nodes contributed to both buckets
       assert length(result.global.time_series) == 2
@@ -657,10 +753,14 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 2, succeeded: 2, time_series: ts1, start_system_time: sys_time_node1),
-          node2: telemetry_result(total: 1, succeeded: 1, time_series: ts2, start_system_time: sys_time_node2)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 2, succeeded: 2, time_series: ts1, start_system_time: sys_time_node1),
+            node2: telemetry_result(total: 1, succeeded: 1, time_series: ts2, start_system_time: sys_time_node2)
+          },
+          browser_metadata()
+        )
 
       # Global timeline: bucket 0 (node1 only), bucket 1 (both nodes), no bucket 2 from node2
       # node1 has buckets 0,1. node2's bucket 0 shifts to global bucket 1.
@@ -690,24 +790,28 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 10,
-              succeeded: 10,
-              time_series: ts1,
-              start_system_time: sys_time,
-              counters: %{scenario_users_started: 10, scenario_users_completed: 10}
-            ),
-          node2:
-            telemetry_result(
-              total: 5,
-              succeeded: 5,
-              time_series: ts2,
-              start_system_time: sys_time,
-              counters: %{scenario_users_started: 5, scenario_users_completed: 5}
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 10,
+                succeeded: 10,
+                time_series: ts1,
+                start_system_time: sys_time,
+                counters: %{scenario_users_started: 10, scenario_users_completed: 10}
+              ),
+            node2:
+              telemetry_result(
+                total: 5,
+                succeeded: 5,
+                time_series: ts2,
+                start_system_time: sys_time,
+                counters: %{scenario_users_started: 5, scenario_users_completed: 5}
+              )
+          },
+          browser_metadata()
+        )
 
       active = Enum.map(result.global.time_series, & &1.active_users)
 
@@ -722,22 +826,26 @@ defmodule LiveLoad.ResultTest do
   describe "node results" do
     test "each node gets its own materialized result" do
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 10,
-              succeeded: 10,
-              sketches: %{scenario_duration_us: sketch(Enum.to_list(1..10))},
-              counters: %{liveview_navigations: 20}
-            ),
-          node2:
-            telemetry_result(
-              total: 5,
-              succeeded: 5,
-              sketches: %{scenario_duration_us: sketch(Enum.to_list(100..104))},
-              counters: %{liveview_navigations: 8}
-            )
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 10,
+                succeeded: 10,
+                sketches: %{scenario_duration_us: sketch(Enum.to_list(1..10))},
+                counters: %{liveview_navigations: 20}
+              ),
+            node2:
+              telemetry_result(
+                total: 5,
+                succeeded: 5,
+                sketches: %{scenario_duration_us: sketch(Enum.to_list(100..104))},
+                counters: %{liveview_navigations: 8}
+              )
+          },
+          browser_metadata()
+        )
 
       assert length(result.nodes) == 2
 
@@ -754,9 +862,13 @@ defmodule LiveLoad.ResultTest do
 
     test "node names are stringified" do
       result =
-        Result.new(Example, %{
-          :runner@host1 => telemetry_result(total: 1, succeeded: 1)
-        })
+        Result.new(
+          Example,
+          %{
+            :runner@host1 => telemetry_result(total: 1, succeeded: 1)
+          },
+          browser_metadata()
+        )
 
       assert hd(result.nodes).node == "runner@host1"
     end
@@ -773,10 +885,14 @@ defmodule LiveLoad.ResultTest do
       }
 
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 1, succeeded: 1, time_series: ts1),
-          node2: telemetry_result(total: 1, succeeded: 1, time_series: ts2)
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 1, succeeded: 1, time_series: ts1),
+            node2: telemetry_result(total: 1, succeeded: 1, time_series: ts2)
+          },
+          browser_metadata()
+        )
 
       nodes_by_name = Map.new(result.nodes, &{&1.node, &1.result})
 
@@ -791,15 +907,19 @@ defmodule LiveLoad.ResultTest do
   describe "failed nodes" do
     test "all nodes failed returns error result" do
       # Expected: return something reporters can handle, not crash
-      assert {:error, :all_nodes_failed} = Result.new(Example, %{node1: :error, node2: :error})
+      assert {:error, :all_nodes_failed} = Result.new(Example, %{node1: :error, node2: :error}, browser_metadata())
     end
 
     test "mixed success and failure — merged results exclude failed nodes" do
       result =
-        Result.new(Example, %{
-          node1: telemetry_result(total: 100, succeeded: 95, failed: 5),
-          node2: :error
-        })
+        Result.new(
+          Example,
+          %{
+            node1: telemetry_result(total: 100, succeeded: 95, failed: 5),
+            node2: :error
+          },
+          browser_metadata()
+        )
 
       # Global users should only reflect node1
       assert result.global.users.total == 100
@@ -814,17 +934,21 @@ defmodule LiveLoad.ResultTest do
 
     test "failed node with successful nodes doesn't break time series merge" do
       result =
-        Result.new(Example, %{
-          node1:
-            telemetry_result(
-              total: 10,
-              succeeded: 10,
-              time_series: %{
-                0 => %{sketches: %{}, counters: %{scenario_users_started: 10, scenario_users_completed: 10}}
-              }
-            ),
-          node2: :error
-        })
+        Result.new(
+          Example,
+          %{
+            node1:
+              telemetry_result(
+                total: 10,
+                succeeded: 10,
+                time_series: %{
+                  0 => %{sketches: %{}, counters: %{scenario_users_started: 10, scenario_users_completed: 10}}
+                }
+              ),
+            node2: :error
+          },
+          browser_metadata()
+        )
 
       assert is_list(result.global.time_series)
     end
