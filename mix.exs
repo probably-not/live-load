@@ -70,7 +70,7 @@ defmodule LiveLoad.MixProject do
       {:flame, "~> 0.5.3"},
       {:amoc, "~> 4.1", runtime: false},
       {:telemetry, "~> 1.0"},
-      {:playwright_ex, "~> 0.7.1"},
+      {:playwright_ex, "~> 0.8.0"},
       {:ddskerl, "~> 0.5.0"},
       ## Optional Dependencies
       {:jason, "~> 1.4", optional: true},
