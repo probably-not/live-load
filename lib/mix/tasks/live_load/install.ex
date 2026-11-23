@@ -26,8 +26,8 @@ defmodule Mix.Tasks.LiveLoad.Install do
 
       $ mix live_load.install
       $ mix live_load.install --no-bundle
-      $ mix live_load.install 1.62.0
-      $ mix live_load.install 1.62.0 --no-bundle
+      $ mix live_load.install 1.65.1
+      $ mix live_load.install 1.65.1 --no-bundle
   """
   use Mix.Task
 

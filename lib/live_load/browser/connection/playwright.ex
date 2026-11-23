@@ -1,11 +1,12 @@
 defmodule LiveLoad.Browser.Connection.Playwright do
   @moduledoc """
-  An implementation of `LiveLoad.Browser.Connection` that uses the `PlaywrightEx` library to run and communicate with a Playwright instance.
+  An implementation of `LiveLoad.Browser.Connection` that uses the `Playwright` library (Hex package `playwright_ex`) to run and communicate with a Playwright instance.
   """
 
   use LiveLoad.Browser.Connection
 
   alias LiveLoad.Browser
+  alias LiveLoad.Browser.Connection.Playwright.JsLogger
   alias LiveLoad.Browser.Connection.Playwright.Metrics
   alias LiveLoad.Browser.Connection.Playwright.Supervisor
   alias LiveLoad.Browser.Context
@@ -37,9 +38,6 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @impl true
   @doc false
   def drain_metrics(%Browser{} = browser) do
-    playwright_browser = browser.private.playwright_connection_browser
-    _ = PlaywrightEx.Connection.initializer!(Supervisor.playwright_connection_name(), playwright_browser.guid)
-
     :ok =
       browser.supervisor_pid
       |> Browser.Supervisor.connection_pid!()
@@ -54,17 +52,10 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def new_context(%Browser{} = browser) do
     playwright_browser = browser.private.playwright_connection_browser
 
-    with {:ok, context} <-
-           PlaywrightEx.Browser.new_context(playwright_browser.guid,
-             connection: Supervisor.playwright_connection_name(),
-             timeout: command_timeout(browser)
-           ),
-         {:ok, _} <-
-           PlaywrightEx.BrowserContext.add_init_script(context.guid,
-             source: browser_telemetry_script!(),
-             connection: Supervisor.playwright_connection_name(),
-             timeout: command_timeout(browser)
-           ) do
+    with {:ok, context} <- Playwright.Browser.new_context(playwright_browser),
+         :ok <- Playwright.BrowserContext.set_default_timeout(context, command_timeout(browser)),
+         :ok <- JsLogger.attach(context),
+         {:ok, _} <- Playwright.BrowserContext.add_init_script(context, browser_telemetry_script!()) do
       browser
       |> Context.new()
       |> Context.put_private(:playwright_connection_context, context)
@@ -78,11 +69,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
     playwright_context = context.private.playwright_connection_context
 
     with {:ok, storage_state} <-
-           PlaywrightEx.BrowserContext.storage_state(playwright_context.guid,
-             indexedDB: true,
-             connection: Supervisor.playwright_connection_name(),
-             timeout: command_timeout(context.browser)
-           ) do
+           Playwright.BrowserContext.storage_state(playwright_context, indexed_db: true) do
       {:ok, {context, storage_state}}
     end
   end
@@ -92,13 +79,11 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def restore_context_storage(%Context{} = context, snapshot) when is_map(snapshot) do
     playwright_context = context.private.playwright_connection_context
 
-    with {:ok, _} <-
-           PlaywrightEx.BrowserContext.set_storage_state(playwright_context.guid,
+    with :ok <-
+           Playwright.BrowserContext.set_storage_state(playwright_context, %{
              cookies: snapshot[:cookies] || snapshot["cookies"] || [],
-             origins: snapshot[:origins] || snapshot["origins"] || [],
-             connection: Supervisor.playwright_connection_name(),
-             timeout: command_timeout(context.browser)
-           ) do
+             origins: snapshot[:origins] || snapshot["origins"] || []
+           }) do
       {:ok, context}
     end
   end
@@ -114,13 +99,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def reset_context_storage(%Context{} = context) do
     playwright_context = context.private.playwright_connection_context
 
-    with {:ok, _} <-
-           PlaywrightEx.BrowserContext.set_storage_state(playwright_context.guid,
-             cookies: [],
-             origins: [],
-             connection: Supervisor.playwright_connection_name(),
-             timeout: command_timeout(context.browser)
-           ) do
+    with :ok <- Playwright.BrowserContext.set_storage_state(playwright_context, %{cookies: [], origins: []}) do
       {:ok, context}
     end
   end
@@ -149,13 +128,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def stop_context(%Context{} = context) do
     if playwright_context = context.private[:playwright_connection_context] do
-      with {:ok, _} <-
-             PlaywrightEx.BrowserContext.close(playwright_context.guid,
-               connection: Supervisor.playwright_connection_name(),
-               timeout: command_timeout(context.browser)
-             ) do
-        :ok
-      end
+      Playwright.BrowserContext.close(playwright_context)
     else
       :ok
     end
@@ -165,13 +138,13 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def navigate(%Context{} = context, url) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, _} <- do_navigate(frame, url, command_timeout(context.browser)) do
+      with {:ok, _} <- do_navigate(frame, url) do
         {:ok, context}
       end
     else
       with {:ok, context} <- initialize_context_frame(context),
            frame = context.private.playwright_connection_frame,
-           {:ok, _} <- do_navigate(frame, url, command_timeout(context.browser)) do
+           {:ok, _} <- do_navigate(frame, url) do
         {:ok, context}
       end
     end
@@ -180,12 +153,8 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @impl true
   @doc false
   def reload(%Context{} = context) do
-    if page_id = context.private[:playwright_connection_page_id] do
-      with {:ok, _} <-
-             PlaywrightEx.Page.reload(page_id,
-               connection: Supervisor.playwright_connection_name(),
-               timeout: command_timeout(context.browser)
-             ) do
+    if page = context.private[:playwright_connection_page] do
+      with {:ok, _} <- Playwright.Page.reload(page) do
         {:ok, context}
       end
     else
@@ -198,11 +167,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def wait_for_selector(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, _} <-
-             PlaywrightEx.Frame.wait_for_selector(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+             Playwright.Frame.wait_for_selector(frame, selector) do
         {:ok, context}
       end
     else
@@ -214,12 +179,8 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def click(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, _} <-
-             PlaywrightEx.Frame.click(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+      with :ok <-
+             Playwright.Frame.click(frame, selector) do
         {:ok, context}
       end
     else
@@ -231,13 +192,8 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def fill(%Context{} = context, selector, value) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, _} <-
-             PlaywrightEx.Frame.fill(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               value: value,
-               timeout: command_timeout(context.browser)
-             ) do
+      with :ok <-
+             Playwright.Frame.fill(frame, selector, value) do
         {:ok, context}
       end
     else
@@ -249,13 +205,8 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def press(%Context{} = context, selector, key) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, _} <-
-             PlaywrightEx.Frame.press(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               key: key,
-               timeout: command_timeout(context.browser)
-             ) do
+      with :ok <-
+             Playwright.Frame.press(frame, selector, key) do
         {:ok, context}
       end
     else
@@ -267,12 +218,8 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def check(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, _} <-
-             PlaywrightEx.Frame.check(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+      with :ok <-
+             Playwright.Frame.check(frame, selector) do
         {:ok, context}
       end
     else
@@ -284,12 +231,8 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def uncheck(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, _} <-
-             PlaywrightEx.Frame.uncheck(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+      with :ok <-
+             Playwright.Frame.uncheck(frame, selector) do
         {:ok, context}
       end
     else
@@ -302,12 +245,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def select_option(%Context{} = context, selector, value) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, _} <-
-             PlaywrightEx.Frame.select_option(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               options: value,
-               timeout: command_timeout(context.browser)
-             ) do
+             Playwright.Frame.select_option(frame, selector, value) do
         {:ok, context}
       end
     else
@@ -325,12 +263,8 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def focus(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, _} <-
-             PlaywrightEx.Frame.focus(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+      with :ok <-
+             Playwright.Frame.focus(frame, selector) do
         {:ok, context}
       end
     else
@@ -342,12 +276,10 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def blur(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, _} <-
-             PlaywrightEx.Frame.blur(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+      with :ok <-
+             frame
+             |> Playwright.Frame.locator(selector)
+             |> Playwright.Locator.blur() do
         {:ok, context}
       end
     else
@@ -359,12 +291,8 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def hover(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, _} <-
-             PlaywrightEx.Frame.hover(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+      with :ok <-
+             Playwright.Frame.hover(frame, selector) do
         {:ok, context}
       end
     else
@@ -376,13 +304,8 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   @doc false
   def drag_and_drop(%Context{} = context, source, target) do
     if frame = context.private[:playwright_connection_frame] do
-      with {:ok, _} <-
-             PlaywrightEx.Frame.drag_and_drop(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               source: PlaywrightEx.Selector.build(source),
-               target: PlaywrightEx.Selector.build(target),
-               timeout: command_timeout(context.browser)
-             ) do
+      with :ok <-
+             Playwright.Frame.drag_and_drop(frame, source, target) do
         {:ok, context}
       end
     else
@@ -395,10 +318,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def page_content(%Context{} = context) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, content} <-
-             PlaywrightEx.Frame.content(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               timeout: command_timeout(context.browser)
-             ) do
+             Playwright.Frame.content(frame) do
         {:ok, {context, content}}
       end
     else
@@ -411,11 +331,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def inner_html(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, inner_html} <-
-             PlaywrightEx.Frame.inner_html(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+             Playwright.Frame.inner_html(frame, selector) do
         {:ok, {context, inner_html}}
       end
     else
@@ -428,11 +344,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def inner_text(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, inner_text} <-
-             PlaywrightEx.Frame.inner_text(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+             Playwright.Frame.inner_text(frame, selector) do
         {:ok, {context, inner_text}}
       end
     else
@@ -445,11 +357,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def text_content(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, text_content} <-
-             PlaywrightEx.Frame.text_content(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+             Playwright.Frame.text_content(frame, selector) do
         {:ok, {context, text_content}}
       end
     else
@@ -462,11 +370,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def input_value(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, input_value} <-
-             PlaywrightEx.Frame.input_value(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+             Playwright.Frame.input_value(frame, selector) do
         {:ok, {context, input_value}}
       end
     else
@@ -479,12 +383,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def get_attribute(%Context{} = context, selector, name) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, attribute} <-
-             PlaywrightEx.Frame.get_attribute(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               name: name,
-               timeout: command_timeout(context.browser)
-             ) do
+             Playwright.Frame.get_attribute(frame, selector, name) do
         {:ok, {context, attribute}}
       end
     else
@@ -497,11 +396,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def visible?(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, attribute} <-
-             PlaywrightEx.Frame.is_visible(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+             Playwright.Frame.is_visible(frame, selector) do
         {:ok, {context, attribute}}
       end
     else
@@ -514,11 +409,7 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   def checked?(%Context{} = context, selector) do
     if frame = context.private[:playwright_connection_frame] do
       with {:ok, attribute} <-
-             PlaywrightEx.Frame.is_checked(frame.guid,
-               connection: Supervisor.playwright_connection_name(),
-               selector: PlaywrightEx.Selector.build(selector),
-               timeout: command_timeout(context.browser)
-             ) do
+             Playwright.Frame.is_checked(frame, selector) do
         {:ok, {context, attribute}}
       end
     else
@@ -529,22 +420,19 @@ defmodule LiveLoad.Browser.Connection.Playwright do
   defp initialize_context_frame(%Context{} = context) do
     playwright_context = context.private.playwright_connection_context
 
-    case PlaywrightEx.BrowserContext.new_page(playwright_context.guid,
-           connection: Supervisor.playwright_connection_name(),
-           timeout: command_timeout(context.browser)
-         ) do
-      {:ok, %{guid: page_id, main_frame: frame}} ->
+    case Playwright.BrowserContext.new_page(playwright_context) do
+      {:ok, page} ->
         metrics =
           context.browser.supervisor_pid
           |> Browser.Supervisor.connection_pid!()
           |> Supervisor.metrics_pid!()
 
-        :ok = Metrics.watch_page(metrics, page_id)
+        :ok = Metrics.watch_page(metrics, page)
 
         context =
           context
-          |> Context.put_private(:playwright_connection_page_id, page_id)
-          |> Context.put_private(:playwright_connection_frame, frame)
+          |> Context.put_private(:playwright_connection_page, page)
+          |> Context.put_private(:playwright_connection_frame, Playwright.Page.main_frame(page))
 
         {:ok, context}
 
@@ -553,21 +441,22 @@ defmodule LiveLoad.Browser.Connection.Playwright do
     end
   end
 
-  defp do_navigate(frame, %URI{} = url, timeout) do
-    do_navigate(frame, URI.to_string(url), timeout)
+  defp do_navigate(frame, %URI{} = url) do
+    do_navigate(frame, URI.to_string(url))
   end
 
-  defp do_navigate(frame, url, timeout) when is_binary(url) do
-    PlaywrightEx.Frame.goto(frame.guid, connection: Supervisor.playwright_connection_name(), url: url, timeout: timeout)
+  defp do_navigate(frame, url) when is_binary(url) do
+    Playwright.Frame.goto(frame, url)
   end
 
   @impl true
   @doc false
   def after_start(%Browser{} = browser) do
     with {:ok, playwright_browser} <-
-           PlaywrightEx.launch_browser(:chromium,
+           Supervisor.playwright_instance()
+           |> Playwright.chromium()
+           |> Playwright.BrowserType.launch(
              headless: true,
-             connection: Supervisor.playwright_connection_name(),
              timeout: command_timeout(browser),
              args: [
                "--disable-dev-shm-usage",
