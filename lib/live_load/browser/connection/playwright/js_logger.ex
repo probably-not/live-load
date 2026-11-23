@@ -1,14 +1,30 @@
 defmodule LiveLoad.Browser.Connection.Playwright.JsLogger do
   @moduledoc false
-  @behaviour PlaywrightEx.JsLogger
+  # Logs the console messages and uncaught errors of a browser context's pages,
+  # and turns the browser telemetry the init script logs into telemetry events.
+
+  alias Playwright.BrowserContext
+  alias Playwright.ConsoleMessage
+  alias Playwright.WebError
 
   require Logger
 
-  @impl true
-  def log(_level, "__LIVELOAD||" <> encoded, msg) do
+  def attach(context) do
+    BrowserContext.on(context, :console, fn msg ->
+      log(log_level_from_js(ConsoleMessage.type(msg)), ConsoleMessage.text(msg), msg)
+    end)
+
+    BrowserContext.on(context, :web_error, fn web_error ->
+      log(:error, Exception.message(WebError.error(web_error)), web_error)
+    end)
+
+    :ok
+  end
+
+  defp log(_level, "__LIVELOAD||" <> encoded, %ConsoleMessage{} = msg) do
     case LiveLoad.JSON.decode(encoded) do
       {:ok, %{"kind" => kind} = telemetry} ->
-        emit_telemetry(kind, telemetry, msg.params.page.guid)
+        emit_telemetry(kind, telemetry, page_guid(ConsoleMessage.page(msg)))
 
       {:error, reason} ->
         Logger.error([
@@ -20,8 +36,7 @@ defmodule LiveLoad.Browser.Connection.Playwright.JsLogger do
     end
   end
 
-  @impl true
-  def log(level, text, msg) do
+  defp log(level, text, msg) do
     location = location(msg)
     Logger.log(level, if(location, do: "#{text} (#{location})", else: text))
   end
@@ -116,9 +131,20 @@ defmodule LiveLoad.Browser.Connection.Playwright.JsLogger do
 
   defp browser_duration_to_native(duration), do: System.convert_time_unit(round(duration * 1000), :microsecond, :native)
 
-  defp location(%{params: %{location: %{url: ""}}}), do: nil
-  defp location(%{params: %{location: %{url: url, line_number: 0}}}), do: url
-  defp location(%{params: %{location: %{url: url, line_number: line}}}), do: "#{url}:#{line}"
-  defp location(%{params: %{location: %{url: url}}}), do: url
+  defp log_level_from_js("error"), do: :error
+  defp log_level_from_js("debug"), do: :debug
+  defp log_level_from_js(_), do: :info
+
+  defp page_guid(nil), do: nil
+  defp page_guid(page), do: page.guid
+
+  defp location(%ConsoleMessage{} = msg) do
+    case ConsoleMessage.location(msg) do
+      %{url: ""} -> nil
+      %{url: url, lineNumber: 0} -> url
+      %{url: url, lineNumber: line} -> "#{url}:#{line}"
+    end
+  end
+
   defp location(_), do: nil
 end

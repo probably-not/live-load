@@ -15,7 +15,8 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
     opts = Keyword.validate!(opts, validations)
 
     {name, opts} = Keyword.pop!(opts, :name)
-    {timeout, opts} = Keyword.pop!(opts, :startup_timeout)
+    # `Playwright.Supervisor` has no startup timeout: it returns once the driver is ready.
+    {_startup_timeout, opts} = Keyword.pop!(opts, :startup_timeout)
     {playwright_version, opts} = Keyword.pop!(opts, :playwright_version)
 
     {playwright_cli_path, _opts} =
@@ -38,22 +39,20 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
     #     """
     # end
 
-    Supervisor.start_link(__MODULE__, {playwright_cli_path, browsers_path(playwright_version), timeout}, name: name)
+    Supervisor.start_link(__MODULE__, {playwright_cli_path, browsers_path(playwright_version)}, name: name)
   end
 
   @impl true
-  def init({playwright_cli_path, browsers_path, timeout}) do
+  def init({playwright_cli_path, browsers_path}) do
     children = [
-      {PlaywrightEx.Supervisor,
+      {Playwright.Supervisor,
        [
          name: __MODULE__.Playwright,
          executable: playwright_cli_path,
-         env: %{"PLAYWRIGHT_BROWSERS_PATH" => browsers_path},
-         timeout: timeout,
-         js_logger: LiveLoad.Browser.Connection.Playwright.JsLogger
+         env: %{"PLAYWRIGHT_BROWSERS_PATH" => browsers_path}
        ]},
       Supervisor.child_spec(
-        {LiveLoad.Browser.Connection.Playwright.Metrics, playwright_connection_name()},
+        {LiveLoad.Browser.Connection.Playwright.Metrics, []},
         id: :metrics
       )
     ]
@@ -83,11 +82,11 @@ defmodule LiveLoad.Browser.Connection.Playwright.Supervisor do
     end
   end
 
-  def playwright_connection_name do
-    PlaywrightEx.Supervisor.connection_name(__MODULE__.Playwright)
+  def playwright_instance do
+    Playwright.instance(__MODULE__.Playwright)
   end
 
-  @default_playwright_version "1.62.0"
+  @default_playwright_version "1.65.1"
   def playwright_version_from_env do
     Application.get_env(:live_load, :playwright_version, @default_playwright_version)
   end

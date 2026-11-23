@@ -26,7 +26,7 @@ LiveLoad is built on three foundations that compose naturally because they're al
 
 - [**AMoC**](https://github.com/esl/amoc). A distributed load testing framework by Erlang Solutions. A user is just a process. Want 10,000 users? AMoC spins up 10,000 processes across the nodes it's connected to.
 - [**FLAME**](https://github.com/phoenixframework/flame). Elastic, ephemeral nodes. Spin up machines for a test, and they disappear when it's done. FLAME nodes are just BEAM nodes, so they join your cluster and you send work to them.
-- [**Playwright**](https://github.com/ftes/playwright_ex). Real browsers via PlaywrightEx. Each user gets an isolated browser context (basically a unique incognito tab), so we only need one browser per node.
+- [**Playwright**](https://github.com/ftes/playwright_ex). Real browsers via playwright_ex. Each user gets an isolated browser context (basically a unique incognito tab), so we only need one browser per node.
 
 No custom RPC layer, no node-discovery protocol, no work-distribution scheduler. The BEAM does everything for us.
 
